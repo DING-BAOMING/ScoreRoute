@@ -89,7 +89,7 @@ func (r *SampleRepo) Exists(modelKey string) (bool, error) {
 }
 
 func (r *SampleRepo) SaveSample(modelKey, requestContent, responseContent string, tokenCount int) error {
-	if tokenCount < 1000 {
+	if tokenCount < 500 {
 		return nil
 	}
 

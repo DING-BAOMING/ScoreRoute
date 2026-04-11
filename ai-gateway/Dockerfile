@@ -1,0 +1,36 @@
+FROM alpine:3.19
+
+RUN apk add --no-cache go git musl-dev gcc
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+
+COPY . ./
+
+RUN GOTOOLCHAIN=auto go get modernc.org/sqlite@v1.28.0 && \
+    GOTOOLCHAIN=auto go get github.com/spf13/viper@v1.18.2 && \
+    GOTOOLCHAIN=auto go get github.com/golang-jwt/jwt/v5@v5.2.0 && \
+    GOTOOLCHAIN=auto go get github.com/google/uuid@v1.5.0 && \
+    GOTOOLCHAIN=auto go get github.com/gin-gonic/gin@v1.9.1 && \
+    GOTOOLCHAIN=auto go get github.com/pkoukk/tiktoken-go@v0.1.4
+
+RUN GOTOOLCHAIN=auto go mod download
+
+RUN CGO_ENABLED=1 GOOS=linux go build -ldflags "-s -w" -o server ./cmd/server
+
+RUN mkdir -p web/dist && \
+    cp -r /app/web/dist ./web/ || true
+
+RUN mkdir -p /app/logs /app/data /app/cache
+
+ENV PORT=3000
+ENV DATABASE_PATH=/app/data/gateway.db
+ENV LOG_PATH=/app/logs
+ENV TIKTOKEN_CACHE_DIR=/app/cache
+ENV ADMIN_PASSWORD=dbm52100
+ENV JWT_SECRET=ai-gateway-secret-key-2024
+
+EXPOSE 3000
+
+CMD ["./server"]

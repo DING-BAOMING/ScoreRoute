@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: ai-gateway
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./cache:/app/cache
+    environment:
+      - PORT=3000
+      - DATABASE_PATH=/app/data/gateway.db
+      - LOG_PATH=/app/logs
+      - ADMIN_PASSWORD=dbm52100
+      - JWT_SECRET=ai-gateway-secret-key-2024
+    networks:
+      - ai-gateway-network
+
+networks:
+  ai-gateway-network:
+    driver: bridge

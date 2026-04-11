@@ -124,3 +124,51 @@ type SampleRequest struct {
 	ResponseContent string `json:"response_content" binding:"required"`
 	TokenCount     int    `json:"token_count" binding:"required"`
 }
+
+type SampleAnalysisConfig struct {
+	ID        int64     `json:"id"`
+	Format    string    `json:"format"`
+	BaseURL   string    `json:"base_url"`
+	APIKey    string    `json:"api_key"`
+	ModelName string    `json:"model_name"`
+	Enabled   int       `json:"enabled"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type SampleAnalysisLog struct {
+	ID            int64     `json:"id"`
+	ModelKey      string    `json:"model_key"`
+	AnalysisTime  time.Time `json:"analysis_time"`
+	DeleteTime    time.Time `json:"delete_time,omitempty"`
+	Success       int       `json:"success"`
+	ErrorMessage  string    `json:"error_message,omitempty"`
+	Score         int       `json:"score"`
+	AnalysisDetails string   `json:"analysis_details,omitempty"`
+}
+
+type SampleRating struct {
+	ID                       int64     `json:"id"`
+	ModelKey                 string    `json:"model_key"`
+	Score                    int       `json:"score"`
+	ToolCallingScore         int       `json:"tool_calling_score"`
+	CompletenessScore        int       `json:"completeness_score"`
+	ContextUnderstandingScore int       `json:"context_understanding_score"`
+	ErrorHandlingScore       int       `json:"error_handling_score"`
+	ResponseQualityScore     int       `json:"response_quality_score"`
+	AnalyzedAt               time.Time `json:"analyzed_at"`
+	ExpiresAt                time.Time `json:"expires_at"`
+}
+
+type SampleAnalysisConfigRequest struct {
+	Format    string `json:"format" binding:"required"`
+	BaseURL   string `json:"base_url" binding:"required"`
+	APIKey    string `json:"api_key" binding:"required"`
+	ModelName string `json:"model_name" binding:"required"`
+	Enabled   int    `json:"enabled"`
+}
+
+type SampleRatingRequest struct {
+	ModelKey string `json:"model_key" binding:"required"`
+	Score    int    `json:"score" binding:"required,min=1,max=100"`
+}

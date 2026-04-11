@@ -88,6 +88,20 @@ func Setup() *gin.Engine {
 			samples.DELETE("/:id", handler.NewSampleHandler().Delete)
 			samples.DELETE("/cleanup", handler.NewSampleHandler().Cleanup)
 		}
+
+		sampleAnalysis := api.Group("/sample-analysis")
+		{
+			sampleAnalysisHandler := handler.NewSampleAnalysisHandler()
+			sampleAnalysis.GET("/config", sampleAnalysisHandler.GetConfig)
+			sampleAnalysis.POST("/config", sampleAnalysisHandler.SaveConfig)
+			sampleAnalysis.POST("/config/test", sampleAnalysisHandler.TestConfig)
+			sampleAnalysis.POST("/run", sampleAnalysisHandler.RunAnalysis)
+			sampleAnalysis.GET("/logs", sampleAnalysisHandler.GetLogs)
+			sampleAnalysis.GET("/logs/stats", sampleAnalysisHandler.GetLogStats)
+			sampleAnalysis.GET("/ratings", sampleAnalysisHandler.GetRatings)
+			sampleAnalysis.GET("/ratings/map", sampleAnalysisHandler.GetRatingsMap)
+			sampleAnalysis.PUT("/ratings", sampleAnalysisHandler.UpdateRating)
+		}
 	}
 
 	v1 := r.Group("/v1")

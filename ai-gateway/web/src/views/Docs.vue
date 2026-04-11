@@ -150,7 +150,7 @@
 
             <h3>样本保存规则</h3>
             <ul>
-              <li><strong>Token数量要求:</strong> 只保存响应Token数 >= 1000 的请求</li>
+              <li><strong>Token数量要求:</strong> 只保存响应Token数 >= 500 的请求</li>
               <li><strong>模型去重:</strong> 每个模型只保存一个最新样本</li>
               <li><strong>有效期:</strong> 样本保存7天，到期后自动删除</li>
               <li><strong>异步保存:</strong> 样本保存不影响API响应速度</li>

@@ -6,6 +6,7 @@
 - **SUDO ACCESS**: Use `sudo docker ...` for Docker operations (e.g., `sudo docker build`, `sudo docker-compose up -d`)
 - **WORKING DIRECTORY**: `/home/ubuntu/OpenCode/ai-gateway/`
 - **SERVER**: Running on `localhost:3000` (Docker container named `ai-gateway`)
+- **GIT**: Initialized with first commit - use `git log` to see history
 
 ## Important Reminders
 

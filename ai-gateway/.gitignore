@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build output
+web/dist/
+
+# Environment
+.env
+.env.local
+
+# Cache
+cache/
+logs/
+
+# Database
+data/*.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+server
+
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out

@@ -1,0 +1,241 @@
+# AI Gateway 开发计划 - 完整版
+
+## 一、需求遗漏补充
+
+### 1.1 遗漏的功能点
+1. **登录凭证固定**：密码固定为 `dbm52100`
+2. **模型获取功能**：需要从API（如NVIDIA）获取可用模型列表
+3. **模型测试功能**：测试模型是否可用
+4. **轮询状态持久化**：call_count需要在数据库持久化
+5. **流式响应支持**：SSE/Streaming响应处理
+6. **健康检查功能**：渠道可用性检测
+7. **前端加载状态**：显示API调用状态
+8. **Token计数同步**：轮询后计数器更新
+
+### 1.2 逻辑漏洞补充
+
+| 漏洞 | 描述 | 解决方案 |
+|------|------|----------|
+| 并发安全问题 | 多个请求同时读取+更新call_count | 使用数据库原子操作 UPDATE SET call_count = call_count + 1 |
+| 流式响应日志 | Streaming响应无法预知token数量 | 使用启发式估算或分段记录 |
+| 模型禁用处理 | 禁用模型时正在调用的请求 | 返回503 Service Unavailable |
+| Key验证时序 | key可能在请求处理中被禁用 | 在请求开始时锁定key状态 |
+| 日志轮转实现 | 需要配置logrotate | 提供docker-compose中的日志配置 |
+
+---
+
+## 二、技术方案（稳定性优先）
+
+### 2.1 架构决策
+
+| 组件 | 选择 | 理由 |
+|------|------|------|
+| 后端 | Go + Gin | OneAPI验证过的成熟方案 |
+| 前端 | Vue3 + Element Plus | 中文友好，组件完善 |
+| 数据库 | SQLite | 单用户场景足够，零运维 |
+| 日志 | 文件 + logrotate | 轻量可靠 |
+| 部署 | Docker Compose | 一键部署 |
+
+### 2.2 核心数据结构
+
+```sql
+-- 渠道表（API接入）
+CREATE TABLE channels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    format TEXT NOT NULL,           -- openai, anthropic, etc
+    type TEXT NOT NULL,             -- chat, embedding, etc
+    base_url TEXT NOT NULL,
+    api_key TEXT NOT NULL,
+    enabled INTEGER DEFAULT 1,
+    priority INTEGER DEFAULT 0,     -- 优先级（可选）
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 模型表
+CREATE TABLE models (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    enabled INTEGER DEFAULT 1,
+    call_count INTEGER DEFAULT 0,   -- 轮询计数器
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (channel_id) REFERENCES channels(id)
+);
+
+-- 令牌表（接出API）
+CREATE TABLE tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT UNIQUE NOT NULL,       -- sk-xxxx
+    name TEXT NOT NULL,
+    format TEXT NOT NULL,
+    type TEXT NOT NULL,
+    model_name TEXT NOT NULL,
+    enabled INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 调用日志表
+CREATE TABLE call_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token_name TEXT,                -- 接出API名
+    channel_name TEXT,              -- 接入渠道名
+    model_name TEXT,
+    latency_ms INTEGER,
+    token_used INTEGER DEFAULT 0,
+    status INTEGER,
+    error TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 系统配置
+CREATE TABLE config (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);
+```
+
+---
+
+## 三、开发步骤详细计划
+
+### Step 1: 项目初始化 [已完成分析]
+
+### Step 2: 创建项目结构
+```
+ai-gateway/
+├── cmd/server/main.go
+├── internal/
+│   ├── config/
+│   ├── model/
+│   ├── handler/
+│   ├── service/
+│   ├── middleware/
+│   ├── repository/
+│   └── router/
+├── web/
+├── docs/
+├── Dockerfile
+├── docker-compose.yml
+└── .env
+```
+
+### Step 3: 开发后端核心
+- [ ] 3.1 配置加载
+- [ ] 3.2 数据库初始化
+- [ ] 3.3 登录认证 (密码: dbm52100)
+- [ ] 3.4 渠道管理 CRUD
+- [ ] 3.5 模型管理 CRUD
+- [ ] 3.6 令牌管理 CRUD
+- [ ] 3.7 轮询调度器
+- [ ] 3.8 API代理 (支持流式)
+- [ ] 3.9 日志系统
+
+### Step 4: 开发前端
+- [ ] 4.1 登录页面
+- [ ] 4.2 仪表盘
+- [ ] 4.3 接入管理页面
+- [ ] 4.4 接出管理页面
+- [ ] 4.5 日志查看页面
+
+### Step 5: Docker部署
+- [ ] 5.1 Dockerfile
+- [ ] 5.2 docker-compose.yml
+- [ ] 5.3 Nginx配置
+
+### Step 6: 部署测试
+- [ ] 6.1 构建镜像
+- [ ] 6.2 启动服务
+- [ ] 6.3 访问 api.029101.xyz
+- [ ] 6.4 登录测试 (dbm52100)
+
+### Step 7: API接入测试
+- [ ] 7.1 接入NVIDIA API
+  - 格式: OpenAI
+  - 类型: Chat
+  - 基础URL: https://integrate.api.nvidia.com/v1
+  - Key: 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
+- [ ] 7.2 测试模型: minimaxai/minimax-m2.5
+- [ ] 7.3 测试模型: z-ai/glm5
+
+### Step 8: Minimax接入
+- [ ] 8.1 添加Minimax渠道
+- [ ] 8.2 接入模型: minimax2.7
+- [ ] 8.3 Key: sk-cp-b_AQ0cgiHiXPwqwCYW2E0MPyhdSqg7QL7PWS6hRegW0x0m-aVYmKz28kGUYCW5f2bSMtVw9mIaW7tp8AC0aDZRyrQf7B9BQybARhkBJq_WW04IKz4TRYhzI
+
+### Step 9: 轮询测试
+- [ ] 9.1 创建接出API
+- [ ] 9.2 发起多次请求
+- [ ] 9.3 验证轮询调用不同渠道
+- [ ] 9.4 查看日志确认
+
+### Step 10: 全功能验收
+- [ ] 10.1 页面加载正常
+- [ ] 10.2 显示内容正常
+- [ ] 10.3 登录功能完整
+- [ ] 10.4 所有需求满足
+- [ ] 10.5 逻辑无漏洞
+
+### Step 11: 技术债处理
+- [ ] 11.1 代码审查
+- [ ] 11.2 错误处理完善
+- [ ] 11.3 安全性检查
+- [ ] 11.4 性能优化
+
+---
+
+## 四、执行日志
+
+| 步骤 | 状态 | 完成时间 | 备注 |
+|------|------|----------|------|
+| 1.需求分析 | ⏳ | - | 完善中 |
+| 2.项目结构 | ⏸️ | - | 待开始 |
+| 3.后端开发 | ⏸️ | - | 待开始 |
+| 4.前端开发 | ⏸️ | - | 待开始 |
+| 5.Docker部署 | ⏸️ | - | 待开始 |
+| 6.部署测试 | ⏸️ | - | 待开始 |
+| 7-9.API接入 | ⏸️ | - | 待开始 |
+| 10.全功能验收 | ⏸️ | - | 待开始 |
+| 11.技术债处理 | ⏸️ | - | 待开始 |
+
+---
+
+## 五、登录凭证
+
+- **用户名**: admin
+- **密码**: dbm52100
+
+---
+
+## 六、待接入API信息
+
+### NVIDIA API (baoming)
+- 名称: baoming
+- Key: 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
+- 基础URL: https://integrate.api.nvidia.com/v1
+- 格式: OpenAI
+- 类型: Chat
+- 测试模型: minimaxai/minimax-m2.5, z-ai/glm5
+
+### JDBook
+- 名称: JDBook
+- Key: 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
+- 基础URL: https://integrate.api.nvidia.com/v1
+- 格式: OpenAI
+- 类型: Chat
+
+### baoming_ai
+- 名称: baoming_ai
+- Key: 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
+- 基础URL: https://integrate.api.nvidia.com/v1
+- 格式: OpenAI
+- 类型: Chat
+
+### Minimax
+- 名称: Minimax
+- Key: sk-cp-b_AQ0cgiHiXPwqwCYW2E0MPyhdSqg7QL7PWS6hRegW0x0m-aVYmKz28kGUYCW5f2bSMtVw9mIaW7tp8AC0aDZRyrQf7B9BQybARhkBJq_WW04IKz4TRYhzI
+- 基础URL: https://api.minimax.chat/v1
+- 格式: OpenAI
+- 类型: Chat
+- 测试模型: minimax2.7

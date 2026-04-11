@@ -1,0 +1,126 @@
+package model
+
+import "time"
+
+type Channel struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	Format    string    `json:"format"`
+	BaseURL   string    `json:"base_url"`
+	APIKey    string    `json:"api_key"`
+	Enabled   int       `json:"enabled"`
+	CallCount int       `json:"call_count"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type Model struct {
+	ID         int64     `json:"id"`
+	ChannelID  int64     `json:"channel_id"`
+	Name       string    `json:"name"`
+	Type       string    `json:"type"` // chat, embedding, etc.
+	Enabled    int       `json:"enabled"`
+	CallCount  int       `json:"call_count"`
+	CreatedAt  time.Time `json:"created_at"`
+	ChannelName string   `json:"channel_name,omitempty"`
+	Format     string    `json:"format,omitempty"`
+}
+
+type Token struct {
+	ID        int64     `json:"id"`
+	Key       string    `json:"key"`
+	Name      string    `json:"name"`
+	Format    string    `json:"format"`
+	Type      string    `json:"type"`
+	ModelName string    `json:"model_name"`
+	Enabled   int       `json:"enabled"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type CallLog struct {
+	ID           int64     `json:"id"`
+	TokenName    string    `json:"token_name"`
+	ChannelName  string    `json:"channel_name"`
+	ModelName    string    `json:"model_name"`
+	LatencyMs    int       `json:"latency_ms"`
+	TokenUsed    int       `json:"token_used"`
+	Status       int       `json:"status"`
+	Error        string    `json:"error,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// Request/Response DTOs
+type LoginRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+type LoginResponse struct {
+	Token string `json:"token"`
+}
+
+type ChannelRequest struct {
+	Name    string `json:"name" binding:"required"`
+	Format  string `json:"format" binding:"required"`
+	BaseURL string `json:"base_url" binding:"required"`
+	APIKey  string `json:"api_key" binding:"required"`
+	Enabled int    `json:"enabled"`
+}
+
+type ModelRequest struct {
+	ChannelID int64  `json:"channel_id" binding:"required"`
+	Name      string `json:"name" binding:"required"`
+	Type      string `json:"type"` // chat, embedding, etc.
+	Enabled   int    `json:"enabled"`
+}
+
+type TokenRequest struct {
+	Name      string `json:"name" binding:"required"`
+	Format    string `json:"format" binding:"required"`
+	Type      string `json:"type" binding:"required"`
+	ModelName string `json:"model_name"`
+	Enabled   int    `json:"enabled"`
+}
+
+type APIResponse struct {
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data,omitempty"`
+}
+
+type PageResult struct {
+	Total int64       `json:"total"`
+	Items interface{} `json:"items"`
+}
+
+type UserRating struct {
+	ID         int64     `json:"id"`
+	ModelName  string    `json:"model_name"`
+	UserRating int       `json:"user_rating"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+type UserRatingRequest struct {
+	ModelName  string `json:"model_name" binding:"required"`
+	UserRating int    `json:"user_rating" binding:"required,min=1,max=100"`
+}
+
+type Sample struct {
+	ID              int64     `json:"id"`
+	ModelKey        string    `json:"model_key"`
+	RequestContent string    `json:"request_content"`
+	ResponseContent string   `json:"response_content"`
+	TokenCount     int       `json:"token_count"`
+	CreatedAt      time.Time `json:"created_at"`
+	ExpiresAt      time.Time `json:"expires_at"`
+	RemainingDays  int       `json:"remaining_days,omitempty"`
+	RemainingMinutes int     `json:"remaining_minutes,omitempty"`
+}
+
+type SampleRequest struct {
+	ModelKey        string `json:"model_key" binding:"required"`
+	RequestContent string `json:"request_content" binding:"required"`
+	ResponseContent string `json:"response_content" binding:"required"`
+	TokenCount     int    `json:"token_count" binding:"required"`
+}

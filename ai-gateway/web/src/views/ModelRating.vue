@@ -17,10 +17,11 @@
         </template>
         <template #default>
           <ul style="margin: 5px 0 0 0; padding-left: 20px">
-            <li><b>成功率</b> (32%): 成功请求占总请求的比例</li>
-            <li><b>延迟分数</b> (24%): 基于平均延迟计算，延迟越低分数越高</li>
-            <li><b>稳定性</b> (24%): 基于样本量计算，样本越多评分越可靠</li>
-            <li><b>用户评分</b> (20%): 用户对模型的评分（1-100标准化）</li>
+            <li><b>成功率</b> (28%): 成功请求占总请求的比例</li>
+            <li><b>延迟分数</b> (21%): 基于平均延迟计算，延迟越低分数越高</li>
+            <li><b>稳定性</b> (21%): 基于样本量计算，样本越多评分越可靠</li>
+            <li><b>用户评分</b> (15%): 用户对模型的评分（1-100标准化）</li>
+            <li><b>样本分析</b> (15%): 基于样本分析评分，评估工具调用、完整性等</li>
           </ul>
         </template>
       </el-alert>
@@ -81,11 +82,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { logAPI, userRatingAPI } from '../api'
+import { logAPI, userRatingAPI, sampleAnalysisAPI } from '../api'
 
 const loading = ref(false)
 const modelStats = ref([])
 const userRatings = ref({})
+const sampleRatings = ref({})
 
 onMounted(() => {
   loadData()
@@ -94,23 +96,35 @@ onMounted(() => {
 async function loadData() {
   loading.value = true
   try {
-    const [statsRes, ratingsRes] = await Promise.all([
+    const [statsRes, ratingsRes, sampleRatingsRes] = await Promise.all([
       logAPI.modelStats(),
-      userRatingAPI.listDeduplicated()
+      userRatingAPI.listDeduplicated(),
+      sampleAnalysisAPI.getRatingsMap()
     ])
     
-    if (statsRes.code === 0 && ratingsRes.code === 0) {
+    if (statsRes.code === 0) {
       const ratingsMap = {}
-      ;(ratingsRes.data || []).forEach(r => {
-        ratingsMap[r.model_name.toLowerCase()] = r.user_rating
-      })
+      if (ratingsRes.code === 0) {
+        ;(ratingsRes.data || []).forEach(r => {
+          ratingsMap[r.model_name.toLowerCase()] = r.user_rating
+        })
+      }
       userRatings.value = ratingsMap
+      
+      const sampleRatingsMap = {}
+      if (sampleRatingsRes.code === 0) {
+        ;(Object.values(sampleRatingsRes.data || {}) || []).forEach(r => {
+          sampleRatingsMap[r.model_key.toLowerCase()] = r.score
+        })
+      }
+      sampleRatings.value = sampleRatingsMap
       
       const stats = statsRes.data || []
       const scored = stats.map(s => {
         const userRating = getUserRatingForModel(s.model_name)
-        const score = calculateScore(s, userRating)
-        return { ...s, score, user_rating: userRating }
+        const sampleRating = getSampleRatingForModel(s.model_name)
+        const score = calculateScore(s, userRating, sampleRating)
+        return { ...s, score, user_rating: userRating, sample_rating: sampleRating }
       })
       scored.sort((a, b) => b.score - a.score)
       scored.forEach((s, i) => s.rank = i + 1)
@@ -127,6 +141,12 @@ function getUserRatingForModel(modelName) {
   if (!modelName) return 50
   const normalized = normalizeModelName(modelName)
   return userRatings.value[normalized.toLowerCase()] || 50
+}
+
+function getSampleRatingForModel(modelName) {
+  if (!modelName) return 0
+  const normalized = normalizeModelName(modelName)
+  return sampleRatings.value[normalized.toLowerCase()] || 0
 }
 
 function normalizeModelName(name) {
@@ -167,11 +187,12 @@ function normalizeMinimaxModel(name) {
   return lower
 }
 
-function calculateScore(stat, userRating) {
-  const successWeight = 0.32
-  const latencyWeight = 0.24
-  const reliabilityWeight = 0.24
-  const userRatingWeight = 0.20
+function calculateScore(stat, userRating, sampleRating) {
+  const successWeight = 0.28
+  const latencyWeight = 0.21
+  const reliabilityWeight = 0.21
+  const userRatingWeight = 0.15
+  const sampleRatingWeight = 0.15
 
   const successRate = stat.success_rate / 100
 
@@ -190,8 +211,9 @@ function calculateScore(stat, userRating) {
   }
 
   const normalizedUserRating = userRating / 100
+  const normalizedSampleRating = sampleRating / 100
 
-  return successRate * successWeight + latencyScore * latencyWeight + reliabilityScore * reliabilityWeight + normalizedUserRating * userRatingWeight
+  return successRate * successWeight + latencyScore * latencyWeight + reliabilityScore * reliabilityWeight + normalizedUserRating * userRatingWeight + normalizedSampleRating * sampleRatingWeight
 }
 
 const displayList = computed(() => {

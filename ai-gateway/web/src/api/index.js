@@ -83,4 +83,16 @@ export const sampleAPI = {
   cleanup: () => api.post('/samples/cleanup')
 }
 
+export const sampleAnalysisAPI = {
+  getConfig: () => api.get('/sample-analysis/config'),
+  saveConfig: (data) => api.post('/sample-analysis/config', data),
+  testConfig: (data) => api.post('/sample-analysis/config/test', data),
+  runAnalysis: () => api.post('/sample-analysis/run'),
+  getLogs: () => api.get('/sample-analysis/logs'),
+  getLogStats: () => api.get('/sample-analysis/logs/stats'),
+  getRatings: () => api.get('/sample-analysis/ratings'),
+  getRatingsMap: () => api.get('/sample-analysis/ratings/map'),
+  updateRating: (data) => api.put('/sample-analysis/ratings', data)
+}
+
 export default api

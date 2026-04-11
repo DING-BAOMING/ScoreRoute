@@ -3,6 +3,7 @@ package service
 import (
 	"ai-gateway/internal/model"
 	"ai-gateway/internal/repository"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -93,7 +94,20 @@ func (s *SampleAnalysisService) AnalyzeSample(sample *model.Sample) (*AnalysisRe
 
 	prompt := s.buildAnalysisPrompt(sample)
 
-	httpReq, err := http.NewRequest("POST", config.BaseURL+"/chat/completions", strings.NewReader(prompt))
+	requestBody := map[string]interface{}{
+		"model": config.ModelName,
+		"messages": []map[string]string{
+			{"role": "user", "content": prompt},
+		},
+		"max_tokens": 500,
+	}
+
+	bodyBytes, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	httpReq, err := http.NewRequest("POST", config.BaseURL+"/chat/completions", bytes.NewReader(bodyBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -120,50 +134,34 @@ func (s *SampleAnalysisService) AnalyzeSample(sample *model.Sample) (*AnalysisRe
 }
 
 func (s *SampleAnalysisService) buildAnalysisPrompt(sample *model.Sample) string {
-	prompt := `You are an AI agent evaluation expert. Analyze the following sample and rate the model's performance for agentic tasks.
+	requestContent, _ := json.Marshal(sample.RequestContent)
+	responseContent, _ := json.Marshal(sample.ResponseContent)
+	
+	prompt := fmt.Sprintf(`You are an AI agent evaluation expert. Analyze the following sample and rate the model's performance for agentic tasks.
 
 ## Evaluation Criteria (1-100 scale each):
 
-1. **Tool Calling Score (30% weight)**: Does the model correctly identify when to call tools? Does it call the right tools with correct parameters? Look for patterns like:
-   - Function calling syntax: function_call object
-   - Explicit tool mentions in response
-   - Proper tool result handling
+1. **Tool Calling Score (30%% weight)**: Does the model correctly identify when to call tools? Does it call the right tools with correct parameters? Look for patterns like function_call objects, explicit tool mentions, etc.
 
-2. **Completeness Score (25% weight)**: Does the response fully address the user's request?
-   - Are all parts of the request addressed?
-   - Is the response complete and not truncated?
+2. **Completeness Score (25%% weight)**: Does the response fully address the user's request? Are all parts addressed? Is it complete?
 
-3. **Context Understanding (20% weight)**: Does the model understand the context?
-   - Does it reference previous context appropriately?
-   - Does it maintain conversation coherence?
+3. **Context Understanding (20%% weight)**: Does the model understand the context? Does it maintain conversation coherence?
 
-4. **Error Handling (15% weight)**: How does it handle ambiguous or missing information?
-   - Does it ask for clarification when needed?
-   - Does it make reasonable assumptions?
+4. **Error Handling (15%% weight)**: How does it handle ambiguous or missing information? Does it ask for clarification when needed?
 
-5. **Response Quality (10% weight)**: General response quality
-   - Clarity and coherence
-   - Proper formatting
+5. **Response Quality (10%% weight)**: General response quality - clarity and formatting.
 
 ## Sample to Analyze:
 
-**Model**: ` + sample.ModelKey + `
-**Request**: ` + sample.RequestContent + `
-**Response**: ` + sample.ResponseContent + `
+**Model**: %s
+**Request**: %s
+**Response**: %s
 
 ## Output Format:
-Return ONLY a JSON object with this exact structure, no additional text:
-{
-  "score": 85,
-  "tool_calling_score": 90,
-  "completeness_score": 85,
-  "context_understanding_score": 80,
-  "error_handling_score": 75,
-  "response_quality_score": 90,
-  "reasoning": "Brief explanation of the scores"
-}
+Return ONLY a valid JSON object with this exact structure, no markdown or additional text:
+{"score":85,"tool_calling_score":90,"completeness_score":85,"context_understanding_score":80,"error_handling_score":75,"response_quality_score":90,"reasoning":"Brief explanation"}
 
-Analyze carefully and return the JSON only.`
+Analyze and return ONLY the JSON.`, sample.ModelKey, string(requestContent), string(responseContent))
 
 	return prompt
 }
@@ -187,16 +185,41 @@ func (s *SampleAnalysisService) parseAnalysisResponse(body []byte) (*AnalysisRes
 
 	content := resp.Choices[0].Message.Content
 	content = strings.TrimSpace(content)
+
+	var result AnalysisResult
+	
+	if err := json.Unmarshal([]byte(content), &result); err == nil && result.Score > 0 {
+		return &result, nil
+	}
+
 	content = strings.TrimPrefix(content, "```json")
 	content = strings.TrimPrefix(content, "```")
 	content = strings.TrimSuffix(content, "```")
 	content = strings.TrimSpace(content)
 
-	var result AnalysisResult
-	if err := json.Unmarshal([]byte(content), &result); err != nil {
-		return nil, fmt.Errorf("failed to parse analysis result: %w", err)
+	if err := json.Unmarshal([]byte(content), &result); err == nil {
+		s.setDefaultScoresIfNeeded(&result)
+		return &result, nil
 	}
 
+	jsonStart := strings.Index(content, "{")
+	jsonEnd := strings.LastIndex(content, "}")
+	if jsonStart != -1 && jsonEnd != -1 && jsonEnd > jsonStart {
+		jsonStr := content[jsonStart : jsonEnd+1]
+		if err := json.Unmarshal([]byte(jsonStr), &result); err == nil {
+			s.setDefaultScoresIfNeeded(&result)
+			return &result, nil
+		}
+	}
+
+	contentPreview := content
+	if len(contentPreview) > 200 {
+		contentPreview = contentPreview[:200] + "..."
+	}
+	return nil, fmt.Errorf("failed to parse analysis result as JSON. Response preview: %s", contentPreview)
+}
+
+func (s *SampleAnalysisService) setDefaultScoresIfNeeded(result *AnalysisResult) {
 	if result.Score == 0 {
 		result.Score = 50
 	}
@@ -215,8 +238,6 @@ func (s *SampleAnalysisService) parseAnalysisResponse(body []byte) (*AnalysisRes
 	if result.ResponseQualityScore == 0 {
 		result.ResponseQualityScore = 50
 	}
-
-	return &result, nil
 }
 
 func (s *SampleAnalysisService) RunScheduledAnalysis(maxSamples int) (int, error) {

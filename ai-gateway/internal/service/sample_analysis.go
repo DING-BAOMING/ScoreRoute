@@ -245,7 +245,7 @@ func (s *SampleAnalysisService) RunScheduledAnalysis(maxSamples int) (int, error
 
 	analyzed := 0
 	for _, sample := range samples {
-		result, err := s.AnalyzeSample(sample)
+		result, err := s.AnalyzeSampleWithRetry(sample, 3)
 		analysisLog := &model.SampleAnalysisLog{
 			ModelKey:     sample.ModelKey,
 			AnalysisTime: time.Now(),
@@ -253,8 +253,9 @@ func (s *SampleAnalysisService) RunScheduledAnalysis(maxSamples int) (int, error
 		}
 
 		if err != nil {
-			analysisLog.ErrorMessage = err.Error()
+			analysisLog.ErrorMessage = fmt.Sprintf("failed after 3 retries: %v", err)
 			analysisLog.Score = 0
+			log.Printf("Sample %s analysis failed after 3 retries: %v", sample.ModelKey, err)
 		} else {
 			analysisLog.Success = 1
 			analysisLog.Score = result.Score
@@ -288,6 +289,30 @@ func (s *SampleAnalysisService) RunScheduledAnalysis(maxSamples int) (int, error
 	}
 
 	return analyzed, nil
+}
+
+func (s *SampleAnalysisService) AnalyzeSampleWithRetry(sample *model.Sample, maxRetries int) (*AnalysisResult, error) {
+	var lastErr error
+	
+	for retry := 0; retry < maxRetries; retry++ {
+		if retry > 0 {
+			backoffDuration := time.Duration(retry*2) * time.Second
+			log.Printf("Retrying sample %s (attempt %d/%d) after %v", sample.ModelKey, retry+1, maxRetries, backoffDuration)
+			time.Sleep(backoffDuration)
+		}
+		
+		result, err := s.AnalyzeSample(sample)
+		if err == nil {
+			return result, nil
+		}
+		lastErr = err
+		
+		if retry < maxRetries-1 {
+			log.Printf("Sample %s analysis attempt %d/%d failed: %v", sample.ModelKey, retry+1, maxRetries, err)
+		}
+	}
+	
+	return nil, fmt.Errorf("all retries exhausted: %w", lastErr)
 }
 
 func (s *SampleAnalysisService) GetLogs(limit int) ([]*model.SampleAnalysisLog, error) {

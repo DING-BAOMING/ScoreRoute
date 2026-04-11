@@ -316,10 +316,15 @@ func parseStreamUsageFromBytes(body []byte) int {
 	var responseText strings.Builder
 	lines := strings.Split(string(body), "\n")
 	for _, line := range lines {
-		if strings.HasPrefix(line, "data: ") {
-			data := strings.TrimPrefix(line, "data: ")
+		line = strings.TrimRight(line, " \t\r")
+		if strings.HasPrefix(line, "data:") {
+			data := strings.TrimPrefix(line, "data:")
+			data = strings.TrimLeft(data, " ")
 			if data == "[DONE]" {
 				break
+			}
+			if !strings.HasPrefix(data, "{") {
+				continue
 			}
 			var chunk struct {
 				Usage struct {
@@ -341,7 +346,7 @@ func parseStreamUsageFromBytes(body []byte) int {
 				if chunk.Usage.TotalTokens > 0 {
 					totalTokens = chunk.Usage.TotalTokens
 				}
-				if len(chunk.Choices) > 0 {
+				if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
 					responseText.WriteString(chunk.Choices[0].Delta.Content)
 				}
 			}

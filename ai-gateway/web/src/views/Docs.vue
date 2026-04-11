@@ -146,7 +146,7 @@
             <h2>样本分析功能</h2>
             
             <h3>功能说明</h3>
-            <p>样本分析功能用于保存和分析API调用样本，帮助了解模型表现和行为。</p>
+            <p>样本分析功能用于保存和分析API调用样本，帮助了解模型表现和行为，特别适用于Agent场景下的模型评估。</p>
 
             <h3>样本保存规则</h3>
             <ul>
@@ -156,28 +156,38 @@
               <li><strong>异步保存:</strong> 样本保存不影响API响应速度</li>
             </ul>
 
-            <h3>样本组成</h3>
-            <p>每个样本包含:</p>
+            <h3>页面结构（4个板块）</h3>
             <ul>
-              <li><strong>模型标识:</strong> 格式+类型+模型名称 (如: openai_chat_MiniMax-M2.5)</li>
-              <li><strong>请求内容:</strong> 完整的API请求体</li>
-              <li><strong>响应内容:</strong> 完整的API响应体</li>
-              <li><strong>Token数:</strong> 响应的Token使用量</li>
+              <li><strong>样本展示:</strong> 分页展示所有样本，可查看详情和删除</li>
+              <li><strong>样本评分:</strong> 展示模型分析评分结果，可修改评分</li>
+              <li><strong>分析日志:</strong> 展示样本分析过程的实时日志</li>
+              <li><strong>LLM设置:</strong> 配置用于分析的大模型API</li>
             </ul>
 
-            <h3>清理机制</h3>
+            <h3>分析机制</h3>
             <ul>
-              <li><strong>自动清理:</strong> 每小时自动删除过期样本</li>
-              <li><strong>手动清理:</strong> 可通过样本分析页面手动触发清理</li>
+              <li><strong>分析频率:</strong> 每2小时自动分析最多20个样本</li>
+              <li><strong>分析顺序:</strong> 按剩余时间升序（即将过期的优先分析）</li>
+              <li><strong>分析后处理:</strong> 分析完成后自动删除样本</li>
+              <li><strong>评分有效期:</strong> 评分保存7天，过期后自动清理</li>
             </ul>
 
-            <h3>页面功能</h3>
+            <h3>评分体系（1-100分）</h3>
             <ul>
-              <li><strong>统计概览:</strong> 显示总样本数、模型数、平均Token数、过期样本数</li>
-              <li><strong>样本列表:</strong> 按模型名称展示样本</li>
-              <li><strong>查看详情:</strong> 点击查看完整请求/响应内容</li>
-              <li><strong>删除样本:</strong> 手动删除不需要的样本</li>
-              <li><strong>分析功能:</strong> 预留按钮（后续开发）</li>
+              <li><strong>工具调用 (30%):</strong> 是否正确识别并调用工具，参数是否正确</li>
+              <li><strong>完整性 (25%):</strong> 是否完整回复用户请求，无遗漏</li>
+              <li><strong>上下文理解 (20%):</strong> 是否正确理解对话上下文</li>
+              <li><strong>错误处理 (15%):</strong> 错误处理和模糊请求处理能力</li>
+              <li><strong>回复质量 (10%):</strong> 回复的清晰度和格式</li>
+            </ul>
+
+            <h3>模型评分权重（整合到模型评分页面）</h3>
+            <ul>
+              <li><strong>成功率 (28%):</strong> 成功请求占总请求的比例</li>
+              <li><strong>延迟分数 (21%):</strong> 基于平均延迟计算，延迟越低分数越高</li>
+              <li><strong>稳定性 (21%):</strong> 基于样本量计算，样本越多评分越可靠</li>
+              <li><strong>用户评分 (15%):</strong> 用户对模型的评分（1-100）</li>
+              <li><strong>样本分析 (15%):</strong> 基于样本分析评分（Agent能力评估）</li>
             </ul>
 
             <h3>数据结构</h3>
@@ -185,13 +195,57 @@
   id: number,
   model_key: string,        // 格式_类型_模型名称
   request_content: string,  // 请求JSON
-  response_content: string,   // 响应JSON
+  response_content: string, // 响应JSON
   token_count: number,       // Token数
   created_at: string,        // 创建时间
   expires_at: string,       // 过期时间
   remaining_minutes: number, // 剩余分钟数
   remaining_days: number     // 剩余天数
+}
+
+样本评分 {
+  model_key: string,
+  score: number,                    // 总分 1-100
+  tool_calling_score: number,       // 工具调用评分
+  completeness_score: number,        // 完整性评分
+  context_understanding_score: number, // 上下文理解评分
+  error_handling_score: number,     // 错误处理评分
+  response_quality_score: number,   // 回复质量评分
+  analyzed_at: string,              // 分析时间
+  expires_at: string                // 过期时间
+}
+
+分析日志 {
+  id: number,
+  model_key: string,        // 模型名称
+  analysis_time: string,     // 分析时间
+  delete_time: string,      // 删除时间
+  success: number,          // 是否成功 0/1
+  error_message: string,    // 错误信息
+  score: number             // 得分
 }</code></pre>
+
+            <h3>API端点</h3>
+            <ul>
+              <li><strong>GET /api/sample-analysis/config:</strong> 获取LLM配置</li>
+              <li><strong>POST /api/sample-analysis/config:</strong> 保存LLM配置</li>
+              <li><strong>POST /api/sample-analysis/config/test:</strong> 测试LLM连接</li>
+              <li><strong>POST /api/sample-analysis/run:</strong> 手动运行分析</li>
+              <li><strong>GET /api/sample-analysis/logs:</strong> 获取分析日志</li>
+              <li><strong>GET /api/sample-analysis/logs/stats:</strong> 获取日志统计</li>
+              <li><strong>GET /api/sample-analysis/ratings:</strong> 获取评分列表</li>
+              <li><strong>PUT /api/sample-analysis/ratings:</strong> 更新评分</li>
+            </ul>
+
+            <h3>LLM设置说明</h3>
+            <p>在"LLM设置"板块中配置用于分析样本的大模型:</p>
+            <ul>
+              <li><strong>API格式:</strong> OpenAI/Anthropic/Google/Zhipu</li>
+              <li><strong>API地址:</strong> 模型的API端点</li>
+              <li><strong>API Key:</strong> 访问密钥</li>
+              <li><strong>模型名称:</strong> 用于分析的具体模型（如 gpt-4, claude-3-opus）</li>
+              <li><strong>启用开关:</strong> 控制是否启用自动分析</li>
+            </ul>
           </div>
         </el-tab-pane>
       </el-tabs>

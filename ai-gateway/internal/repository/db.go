@@ -95,6 +95,41 @@ func createTables() error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_samples_model_key ON samples(model_key)`,
 		`CREATE INDEX IF NOT EXISTS idx_samples_expires ON samples(expires_at)`,
+		`CREATE TABLE IF NOT EXISTS sample_analysis_config (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			format TEXT NOT NULL DEFAULT 'openai',
+			base_url TEXT NOT NULL,
+			api_key TEXT NOT NULL,
+			model_name TEXT NOT NULL DEFAULT 'gpt-4',
+			enabled INTEGER DEFAULT 1,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS sample_analysis_logs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			model_key TEXT NOT NULL,
+			analysis_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+			delete_time DATETIME,
+			success INTEGER DEFAULT 0,
+			error_message TEXT,
+			score INTEGER DEFAULT 0,
+			analysis_details TEXT
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sample_analysis_logs_model ON sample_analysis_logs(model_key)`,
+		`CREATE INDEX IF NOT EXISTS idx_sample_analysis_logs_time ON sample_analysis_logs(analysis_time)`,
+		`CREATE TABLE IF NOT EXISTS sample_ratings (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			model_key TEXT NOT NULL UNIQUE,
+			score INTEGER DEFAULT 0,
+			tool_calling_score INTEGER DEFAULT 0,
+			completeness_score INTEGER DEFAULT 0,
+			context_understanding_score INTEGER DEFAULT 0,
+			error_handling_score INTEGER DEFAULT 0,
+			response_quality_score INTEGER DEFAULT 0,
+			analyzed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			expires_at DATETIME NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sample_ratings_model ON sample_ratings(model_key)`,
 	}
 
 	for _, query := range queries {

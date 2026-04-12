@@ -42,7 +42,7 @@ func (r *ModelRateLimitRepo) UpsertUsage(modelID int64, ruleIndex int, currentCo
 			 VALUES (?, ?, ?, ?, ?) 
 			 ON CONFLICT(model_id, rule_index) DO UPDATE SET 
 			 current_count = ?, window_start = ?, updated_at = ?`,
-			modelID, ruleIndex, currentCount, windowStart, currentCount, windowStart, time.Now(),
+			modelID, ruleIndex, currentCount, windowStart, time.Now(), currentCount, windowStart, time.Now(),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to upsert model rate limit usage: %w", err)
@@ -53,7 +53,7 @@ func (r *ModelRateLimitRepo) UpsertUsage(modelID int64, ruleIndex int, currentCo
 			 VALUES (?, ?, ?, ?, ?) 
 			 ON CONFLICT(model_id, rule_index) DO UPDATE SET 
 			 current_count = current_count + ?, updated_at = ?`,
-			modelID, ruleIndex, currentCount, windowStart, currentCount, time.Now(),
+			modelID, ruleIndex, currentCount, windowStart, time.Now(), currentCount, time.Now(),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to upsert model rate limit usage: %w", err)

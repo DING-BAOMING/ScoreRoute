@@ -39,15 +39,22 @@ type ChannelRequest struct {
 }
 
 type Model struct {
-	ID         int64     `json:"id"`
-	ChannelID  int64     `json:"channel_id"`
-	Name       string    `json:"name"`
-	Type       string    `json:"type"` // chat, embedding, etc.
-	Enabled    int       `json:"enabled"`
-	CallCount  int       `json:"call_count"`
-	CreatedAt  time.Time `json:"created_at"`
-	ChannelName string   `json:"channel_name,omitempty"`
-	Format     string    `json:"format,omitempty"`
+	ID              int64      `json:"id"`
+	ChannelID       int64      `json:"channel_id"`
+	Name            string     `json:"name"`
+	Type            string     `json:"type"` // chat, embedding, etc.
+	Enabled         int        `json:"enabled"`
+	CallCount      int        `json:"call_count"`
+	RateLimits     string     `json:"rate_limits"`      // JSON array of rate limit rules
+	TotalTokenLimit int64     `json:"total_token_limit"` // 0 = unlimited
+	ExpiresAt       *time.Time `json:"expires_at"`      // nil = never expires
+	TotalCalls     int64      `json:"total_calls"`      // total accumulated calls
+	TotalTokens    int64      `json:"total_tokens"`     // total accumulated tokens
+	CostPerToken   float64    `json:"cost_per_token"`   // cost per token (in base currency)
+	Currency       string     `json:"currency"`         // "CNY" or "USD"
+	CreatedAt      time.Time  `json:"created_at"`
+	ChannelName    string     `json:"channel_name,omitempty"`
+	Format         string     `json:"format,omitempty"`
 }
 
 type Token struct {
@@ -59,6 +66,13 @@ type Token struct {
 	ModelName string    `json:"model_name"`
 	Enabled   int       `json:"enabled"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type SystemConfig struct {
+	ID           int64     `json:"id"`
+	ExchangeRate float64   `json:"exchange_rate"` // CNY to USD rate
+	Currency     string    `json:"currency"`      // base currency for cost calculation
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type CallLog struct {
@@ -84,10 +98,15 @@ type LoginResponse struct {
 }
 
 type ModelRequest struct {
-	ChannelID int64  `json:"channel_id" binding:"required"`
-	Name      string `json:"name" binding:"required"`
-	Type      string `json:"type"` // chat, embedding, etc.
-	Enabled   int    `json:"enabled"`
+	ChannelID       int64      `json:"channel_id" binding:"required"`
+	Name           string     `json:"name" binding:"required"`
+	Type           string     `json:"type"` // chat, embedding, etc.
+	Enabled        int        `json:"enabled"`
+	RateLimits     string     `json:"rate_limits"`
+	TotalTokenLimit int64     `json:"total_token_limit"`
+	ExpiresAt      *time.Time `json:"expires_at"`
+	CostPerToken   float64    `json:"cost_per_token"`
+	Currency       string     `json:"currency"`
 }
 
 type TokenRequest struct {

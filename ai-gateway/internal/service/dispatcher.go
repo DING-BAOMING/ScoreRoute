@@ -733,6 +733,10 @@ func (d *Dispatcher) checkInheritedChannelLimits(modelItem *model.Model, now tim
 		if rule.Type == "tokens" && currentCount >= rule.MaxCount {
 			return fmt.Errorf("inherited channel tokens rate limit exceeded: %d/%d per %s", currentCount, rule.MaxCount, rule.Window)
 		}
+
+		if rule.Type == "billing" && currentCount >= rule.MaxCount {
+			return fmt.Errorf("inherited channel billing limit exceeded: %d/%s per %s (quota exhausted)", currentCount/100, rule.Currency, rule.Window)
+		}
 	}
 
 	return nil
@@ -842,6 +846,8 @@ func (d *Dispatcher) updateInheritedChannelUsage(modelItem *model.Model, tokenUs
 
 		if rule.Type == "tokens" {
 			increment = int64(tokenUsed)
+		} else if rule.Type == "billing" {
+			increment = d.calculateCostInTargetCurrency(tokenUsed, modelItem.CostPerToken, modelItem.Currency, rule.Currency)
 		}
 
 		if usage == nil {
@@ -856,6 +862,8 @@ func (d *Dispatcher) updateInheritedChannelUsage(modelItem *model.Model, tokenUs
 				increment = int64(tokenUsed)
 				if rule.Type == "calls" {
 					increment = 1
+				} else if rule.Type == "billing" {
+					increment = d.calculateCostInTargetCurrency(tokenUsed, modelItem.CostPerToken, modelItem.Currency, rule.Currency)
 				}
 				if err := d.rateLimitRepo.UpsertUsage(channel.ID, idx, increment, windowStart, true); err != nil {
 					log.Printf("failed to upsert inherited rate limit usage for channel %s rule %d: %v", channel.Name, idx, err)

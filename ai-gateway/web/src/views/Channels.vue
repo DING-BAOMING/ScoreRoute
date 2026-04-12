@@ -24,7 +24,8 @@
           <template #default="{ row }">
             <div v-if="row.rate_limits && row.rate_limits !== '[]'" class="rate-limits">
               <span v-for="(rule, idx) in parseRateLimits(row.rate_limits)" :key="idx" class="rate-limit-tag">
-                {{ rule.max_count }}/{{ rule.window }}
+                <span v-if="rule.type === 'billing'">{{ rule.max_count/100 }}{{ rule.currency }}/{{ rule.window }}</span>
+                <span v-else>{{ rule.max_count }}/{{ rule.window }}</span>
               </span>
             </div>
             <span v-else-if="row.total_token_limit > 0" class="token-limit">
@@ -119,24 +120,31 @@
         <el-form-item label="调用频率限制">
           <div class="rate-limit-rules">
             <div v-for="(rule, idx) in rateLimitRules" :key="idx" class="rate-limit-rule">
-              <el-select v-model="rule.type" style="width: 100px">
+              <el-select v-model="rule.type" style="width: 120px" @change="onRuleTypeChange(rule)">
                 <el-option label="调用次数" value="calls" />
                 <el-option label="Token数" value="tokens" />
+                <el-option label="周期计费" value="billing" />
               </el-select>
               <el-input-number v-model="rule.max_count" :min="1" style="width: 120px" />
-              <span style="width: 60px; text-align: center">次/</span>
+              <span v-if="rule.type === 'billing'" style="width: 60px; text-align: center">元/</span>
+              <span v-else style="width: 60px; text-align: center">次/</span>
               <el-select v-model="rule.window" style="width: 100px">
                 <el-option label="分钟" value="minute" />
                 <el-option label="小时" value="hour" />
                 <el-option label="天" value="day" />
                 <el-option label="周" value="week" />
                 <el-option label="月" value="month" />
+                <el-option label="季度" value="quarter" />
                 <el-option label="年" value="year" />
+              </el-select>
+              <el-select v-if="rule.type === 'billing'" v-model="rule.currency" style="width: 90px">
+                <el-option label="人民币" value="CNY" />
+                <el-option label="美元" value="USD" />
               </el-select>
               <el-button type="danger" size="small" @click="removeRateLimitRule(idx)" :disabled="rateLimitRules.length <= 1">删除</el-button>
             </div>
             <el-button type="primary" size="small" @click="addRateLimitRule">添加限制规则</el-button>
-            <div class="form-help">可添加多个限制规则，例如：每5小时最多1500次调用且每天最多3000次</div>
+            <div class="form-help">可添加多个限制规则，例如：每5小时最多1500次调用且每天最多3000次；周期计费使用模型页面设置的汇率计算成本</div>
           </div>
         </el-form-item>
       </el-form>
@@ -247,6 +255,12 @@ function addRateLimitRule() {
 
 function removeRateLimitRule(idx) {
   rateLimitRules.value.splice(idx, 1)
+}
+
+function onRuleTypeChange(rule) {
+  if (rule.type === 'billing' && !rule.currency) {
+    rule.currency = 'CNY'
+  }
 }
 
 function onDialogClosed() {

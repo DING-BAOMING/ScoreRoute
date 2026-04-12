@@ -97,6 +97,30 @@
             </ul>
             <p><strong>提示:</strong> 点击"从API获取可用模型"自动获取渠道支持的模型列表。</p>
 
+            <h4>模型限制设置</h4>
+            <p>可以为模型设置以下限制:</p>
+            <ul>
+              <li><strong>总Token限制</strong> - 模型可用Token总数上限（0表示无限制）</li>
+              <li><strong>模型有效期</strong> - 模型API的过期时间（不设置则永不过期）</li>
+              <li><strong>调用频率限制</strong> - 支持多种时间窗口：
+                <ul>
+                  <li>调用次数限制（每分钟/小时/天/周/月/年）</li>
+                  <li>Token数量限制（每分钟/小时/天/周/月/年）</li>
+                </ul>
+              </li>
+              <li><strong>每Token费用</strong> - 设置模型的调用成本</li>
+              <li><strong>货币单位</strong> - 人民币(CNY)或美元(USD)</li>
+            </ul>
+            <p><strong>重叠限制:</strong> 可以同时设置多个限制规则，例如：每5小时最多1500次调用且每天最多3000次。</p>
+
+            <h4>汇率设置</h4>
+            <p>在"模型管理"页面点击"汇率设置"按钮可以配置:</p>
+            <ul>
+              <li><strong>USD兑换CNY汇率</strong> - 用于统一计算成本</li>
+              <li><strong>默认货币</strong> - 成本计算的默认货币单位</li>
+            </ul>
+            <p><strong>成本计算公式:</strong> 总成本 = Token数 × 每Token成本 × 汇率</p>
+
             <h3>模型调用页面</h3>
             <p>在"模型调用"页面可以:</p>
             <ul>

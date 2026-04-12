@@ -3,15 +3,39 @@ package model
 import "time"
 
 type Channel struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	Format    string    `json:"format"`
-	BaseURL   string    `json:"base_url"`
-	APIKey    string    `json:"api_key"`
-	Enabled   int       `json:"enabled"`
-	CallCount int       `json:"call_count"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID              int64      `json:"id"`
+	Name            string     `json:"name"`
+	Format          string     `json:"format"`
+	BaseURL         string     `json:"base_url"`
+	APIKey          string     `json:"api_key"`
+	Enabled         int        `json:"enabled"`
+	CallCount       int        `json:"call_count"`
+	RateLimits      string     `json:"rate_limits"`       // JSON array of rate limit rules
+	TotalTokenLimit int64      `json:"total_token_limit"` // 0 = unlimited
+	ExpiresAt       *time.Time `json:"expires_at"`        // nil = never expires
+	TotalCalls      int64      `json:"total_calls"`       // total accumulated calls
+	TotalTokens     int64      `json:"total_tokens"`      // total accumulated tokens
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+}
+
+type RateLimitRule struct {
+	Type        string    `json:"type"`         // "calls" or "tokens"
+	Window      string    `json:"window"`       // "minute", "hour", "day", "week", "month", "year"
+	MaxCount    int64     `json:"max_count"`    // maximum allowed in window
+	CurrentCount int64    `json:"current_count"` // current count in window
+	WindowStart time.Time `json:"window_start"`  // when the current window started
+}
+
+type ChannelRequest struct {
+	Name            string     `json:"name" binding:"required"`
+	Format          string     `json:"format" binding:"required"`
+	BaseURL         string     `json:"base_url" binding:"required"`
+	APIKey          string     `json:"api_key" binding:"required"`
+	Enabled         int        `json:"enabled"`
+	RateLimits      string     `json:"rate_limits"`
+	TotalTokenLimit int64      `json:"total_token_limit"`
+	ExpiresAt       *time.Time `json:"expires_at"`
 }
 
 type Model struct {
@@ -57,14 +81,6 @@ type LoginRequest struct {
 
 type LoginResponse struct {
 	Token string `json:"token"`
-}
-
-type ChannelRequest struct {
-	Name    string `json:"name" binding:"required"`
-	Format  string `json:"format" binding:"required"`
-	BaseURL string `json:"base_url" binding:"required"`
-	APIKey  string `json:"api_key" binding:"required"`
-	Enabled int    `json:"enabled"`
 }
 
 type ModelRequest struct {

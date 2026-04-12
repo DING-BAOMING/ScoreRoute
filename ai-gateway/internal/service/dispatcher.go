@@ -21,6 +21,8 @@ type Dispatcher struct {
 	modelService   *ModelService
 	logRepo        *repository.LogRepo
 	sampleRepo     *repository.SampleRepo
+	channelRepo    *repository.ChannelRepo
+	rateLimitRepo  *repository.RateLimitRepo
 	client         *http.Client
 }
 
@@ -30,6 +32,8 @@ func NewDispatcher() *Dispatcher {
 		modelService:   NewModelService(),
 		logRepo:        repository.NewLogRepo(),
 		sampleRepo:     repository.NewSampleRepo(),
+		channelRepo:    repository.NewChannelRepo(),
+		rateLimitRepo:  repository.NewRateLimitRepo(),
 		client: &http.Client{
 			Timeout: 300 * time.Second,
 		},
@@ -137,6 +141,10 @@ func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, i
 		return nil, 0, fmt.Errorf("channel not found for model")
 	}
 
+	if err := d.checkRateLimit(selectedChannel, 0); err != nil {
+		return nil, 429, fmt.Errorf("rate limit exceeded: %w", err)
+	}
+
 	url := strings.TrimSuffix(selectedChannel.BaseURL, "/") + "/chat/completions"
 
 	req["model"] = modelItem.Name
@@ -187,6 +195,10 @@ func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, i
 	}
 
 	d.logCall(token, selectedChannel, modelItem, startTime, tokenUsed, resp.StatusCode, "")
+
+	if resp.StatusCode == 200 {
+		go d.updateChannelUsage(selectedChannel.ID, tokenUsed)
+	}
 
 	if resp.StatusCode == 200 && tokenUsed > 0 {
 		modelKey := selectedChannel.Format + "_" + modelItem.Type + "_" + modelItem.Name
@@ -268,6 +280,10 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 		return nil, 0, fmt.Errorf("channel not found for model")
 	}
 
+	if err := d.checkRateLimit(selectedChannel, 0); err != nil {
+		return nil, 429, fmt.Errorf("rate limit exceeded: %w", err)
+	}
+
 	url := strings.TrimSuffix(selectedChannel.BaseURL, "/") + "/chat/completions"
 
 	req["model"] = modelItem.Name
@@ -302,6 +318,10 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 		log.Printf("warning: streaming response returned 0 tokens for model=%s, channel=%s. NVIDIA streaming API does not provide usage info in streaming chunks.", modelItem.Name, selectedChannel.Name)
 	}
 	d.logCall(token, selectedChannel, modelItem, startTime, tokenUsed, resp.StatusCode, "")
+
+	if resp.StatusCode == 200 {
+		go d.updateChannelUsage(selectedChannel.ID, tokenUsed)
+	}
 
 	if resp.StatusCode == 200 && tokenUsed > 0 {
 		modelKey := selectedChannel.Format + "_" + modelItem.Type + "_" + modelItem.Name
@@ -391,4 +411,145 @@ func (d *Dispatcher) saveSampleAsync(modelKey, requestContent, responseContent s
 	if err := d.sampleRepo.SaveSample(modelKey, requestContent, responseContent, tokenCount); err != nil {
 		log.Printf("failed to save sample: %v", err)
 	}
+}
+
+func (d *Dispatcher) checkRateLimit(channel *model.Channel, tokenUsed int) error {
+	now := time.Now()
+
+	if channel.ExpiresAt != nil && now.After(*channel.ExpiresAt) {
+		return fmt.Errorf("channel expired at %s", channel.ExpiresAt.Format("2006-01-02 15:04:05"))
+	}
+
+	if channel.TotalTokenLimit > 0 && channel.TotalTokens >= channel.TotalTokenLimit {
+		return fmt.Errorf("total token limit exceeded: %d/%d", channel.TotalTokens, channel.TotalTokenLimit)
+	}
+
+	if channel.RateLimits == "" || channel.RateLimits == "[]" {
+		return nil
+	}
+
+	var rules []model.RateLimitRule
+	if err := json.Unmarshal([]byte(channel.RateLimits), &rules); err != nil {
+		log.Printf("failed to parse rate limits for channel %s: %v", channel.Name, err)
+		return nil
+	}
+
+	for idx, rule := range rules {
+		windowDuration := d.getWindowDuration(rule.Window)
+		if windowDuration == 0 {
+			continue
+		}
+
+		usage, err := d.rateLimitRepo.GetUsage(channel.ID, idx)
+		if err != nil {
+			log.Printf("failed to get rate limit usage for channel %s rule %d: %v", channel.Name, idx, err)
+			continue
+		}
+
+		var currentCount int64
+		var windowStart time.Time
+
+		if usage == nil {
+			currentCount = 0
+			windowStart = now
+		} else {
+			currentCount = usage.CurrentCount
+			windowStart = usage.WindowStart
+
+			if now.Sub(windowStart) >= windowDuration {
+				currentCount = 0
+				windowStart = now
+			}
+		}
+
+		if rule.Type == "calls" && currentCount >= rule.MaxCount {
+			return fmt.Errorf("calls rate limit exceeded: %d/%d per %s", currentCount, rule.MaxCount, rule.Window)
+		}
+
+		if rule.Type == "tokens" && currentCount >= rule.MaxCount {
+			return fmt.Errorf("tokens rate limit exceeded: %d/%d per %s", currentCount, rule.MaxCount, rule.Window)
+		}
+	}
+
+	return nil
+}
+
+func (d *Dispatcher) getWindowDuration(window string) time.Duration {
+	switch window {
+	case "minute":
+		return time.Minute
+	case "hour":
+		return time.Hour
+	case "day":
+		return 24 * time.Hour
+	case "week":
+		return 7 * 24 * time.Hour
+	case "month":
+		return 30 * 24 * time.Hour
+	case "year":
+		return 365 * 24 * time.Hour
+	default:
+		return 0
+	}
+}
+
+func (d *Dispatcher) updateChannelUsage(channelID int64, tokenUsed int) error {
+	if err := d.channelRepo.IncrementUsage(channelID, tokenUsed); err != nil {
+		log.Printf("failed to increment channel usage: %v", err)
+	}
+
+	channel, err := d.channelService.GetByID(channelID)
+	if err != nil || channel == nil {
+		return err
+	}
+
+	if channel.RateLimits == "" || channel.RateLimits == "[]" {
+		return nil
+	}
+
+	var rules []model.RateLimitRule
+	if err := json.Unmarshal([]byte(channel.RateLimits), &rules); err != nil {
+		log.Printf("failed to parse rate limits for channel %s: %v", channel.Name, err)
+		return nil
+	}
+
+	now := time.Now()
+	for idx, rule := range rules {
+		windowDuration := d.getWindowDuration(rule.Window)
+		if windowDuration == 0 {
+			continue
+		}
+
+		usage, err := d.rateLimitRepo.GetUsage(channelID, idx)
+		if err != nil {
+			log.Printf("failed to get rate limit usage for channel %s rule %d: %v", channel.Name, idx, err)
+			continue
+		}
+
+		var windowStart time.Time
+		var increment int64 = 1
+
+		if rule.Type == "tokens" {
+			increment = int64(tokenUsed)
+		}
+
+		if usage == nil {
+			windowStart = now
+		} else {
+			windowStart = usage.WindowStart
+			if now.Sub(windowStart) >= windowDuration {
+				windowStart = now
+				increment = int64(tokenUsed)
+				if rule.Type == "calls" {
+					increment = 1
+				}
+			}
+		}
+
+		if err := d.rateLimitRepo.UpsertUsage(channelID, idx, increment, windowStart); err != nil {
+			log.Printf("failed to upsert rate limit usage for channel %s rule %d: %v", channel.Name, idx, err)
+		}
+	}
+
+	return nil
 }

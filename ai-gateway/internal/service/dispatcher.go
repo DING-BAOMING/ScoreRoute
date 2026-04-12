@@ -459,6 +459,7 @@ func (d *Dispatcher) checkRateLimit(channel *model.Channel, tokenUsed int) error
 			if now.Sub(windowStart) >= windowDuration {
 				currentCount = 0
 				windowStart = now
+				d.rateLimitRepo.UpsertUsage(channel.ID, idx, 0, windowStart, true)
 			}
 		}
 
@@ -535,6 +536,9 @@ func (d *Dispatcher) updateChannelUsage(channelID int64, tokenUsed int) error {
 
 		if usage == nil {
 			windowStart = now
+			if err := d.rateLimitRepo.UpsertUsage(channelID, idx, increment, windowStart, true); err != nil {
+				log.Printf("failed to upsert rate limit usage for channel %s rule %d: %v", channel.Name, idx, err)
+			}
 		} else {
 			windowStart = usage.WindowStart
 			if now.Sub(windowStart) >= windowDuration {
@@ -543,11 +547,14 @@ func (d *Dispatcher) updateChannelUsage(channelID int64, tokenUsed int) error {
 				if rule.Type == "calls" {
 					increment = 1
 				}
+				if err := d.rateLimitRepo.UpsertUsage(channelID, idx, increment, windowStart, true); err != nil {
+					log.Printf("failed to upsert rate limit usage for channel %s rule %d: %v", channel.Name, idx, err)
+				}
+			} else {
+				if err := d.rateLimitRepo.UpsertUsage(channelID, idx, increment, windowStart, false); err != nil {
+					log.Printf("failed to upsert rate limit usage for channel %s rule %d: %v", channel.Name, idx, err)
+				}
 			}
-		}
-
-		if err := d.rateLimitRepo.UpsertUsage(channelID, idx, increment, windowStart); err != nil {
-			log.Printf("failed to upsert rate limit usage for channel %s rule %d: %v", channel.Name, idx, err)
 		}
 	}
 

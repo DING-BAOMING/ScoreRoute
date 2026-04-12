@@ -56,6 +56,7 @@ type Model struct {
 	CreatedAt      time.Time  `json:"created_at"`
 	ChannelName    string     `json:"channel_name,omitempty"`
 	Format         string     `json:"format,omitempty"`
+	ChannelRateLimits string   `json:"channel_rate_limits,omitempty"` // channel's rate limits for billing detection
 }
 
 type Token struct {

@@ -15,6 +15,22 @@ func NewModelRepo() *ModelRepo {
 	return &ModelRepo{}
 }
 
+func parseExpiresAt(expiresAtStr sql.NullString) *time.Time {
+	if expiresAtStr.Valid && expiresAtStr.String != "" {
+		t, err := time.Parse("2006-01-02 15:04:05", expiresAtStr.String)
+		if err != nil {
+			t, err = time.Parse("2006-01-02T15:04:05Z07:00", expiresAtStr.String)
+		}
+		if err != nil {
+			t, err = time.Parse("2006-01-02", expiresAtStr.String)
+		}
+		if err == nil {
+			return &t
+		}
+	}
+	return nil
+}
+
 func (r *ModelRepo) Create(req *model.ModelRequest) (*model.Model, error) {
 	modelType := req.Type
 	if modelType == "" {
@@ -65,16 +81,29 @@ func (r *ModelRepo) Delete(id int64) error {
 
 func (r *ModelRepo) GetByID(id int64) (*model.Model, error) {
 	model := &model.Model{}
+	var expiresAtStr sql.NullString
 	err := DB.QueryRow(
 		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
 		 FROM models m LEFT JOIN channels c ON m.channel_id = c.id WHERE m.id=?`,
 		id,
-	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &model.ExpiresAt, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
+	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &expiresAtStr, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
+	}
+	if expiresAtStr.Valid && expiresAtStr.String != "" {
+		t, err := time.Parse("2006-01-02 15:04:05", expiresAtStr.String)
+		if err != nil {
+			t, err = time.Parse("2006-01-02T15:04:05Z07:00", expiresAtStr.String)
+		}
+		if err != nil {
+			t, err = time.Parse("2006-01-02", expiresAtStr.String)
+		}
+		if err == nil {
+			model.ExpiresAt = &t
+		}
 	}
 	return model, nil
 }
@@ -101,9 +130,11 @@ func (r *ModelRepo) List(page, pageSize int) ([]*model.Model, int64, error) {
 	var models []*model.Model
 	for rows.Next() {
 		m := &model.Model{}
-		if err := rows.Scan(&m.ID, &m.ChannelID, &m.Name, &m.Type, &m.Enabled, &m.CallCount, &m.RateLimits, &m.TotalTokenLimit, &m.ExpiresAt, &m.TotalCalls, &m.TotalTokens, &m.CostPerToken, &m.Currency, &m.CreatedAt, &m.ChannelName, &m.Format); err != nil {
+		var expiresAtStr sql.NullString
+		if err := rows.Scan(&m.ID, &m.ChannelID, &m.Name, &m.Type, &m.Enabled, &m.CallCount, &m.RateLimits, &m.TotalTokenLimit, &expiresAtStr, &m.TotalCalls, &m.TotalTokens, &m.CostPerToken, &m.Currency, &m.CreatedAt, &m.ChannelName, &m.Format); err != nil {
 			continue
 		}
+		m.ExpiresAt = parseExpiresAt(expiresAtStr)
 		models = append(models, m)
 	}
 
@@ -128,9 +159,11 @@ func (r *ModelRepo) ListByChannel(channelID int64) ([]*model.Model, error) {
 	var models []*model.Model
 	for rows.Next() {
 		m := &model.Model{}
-		if err := rows.Scan(&m.ID, &m.ChannelID, &m.Name, &m.Type, &m.Enabled, &m.CallCount, &m.RateLimits, &m.TotalTokenLimit, &m.ExpiresAt, &m.TotalCalls, &m.TotalTokens, &m.CostPerToken, &m.Currency, &m.CreatedAt, &m.ChannelName); err != nil {
+		var expiresAtStr sql.NullString
+		if err := rows.Scan(&m.ID, &m.ChannelID, &m.Name, &m.Type, &m.Enabled, &m.CallCount, &m.RateLimits, &m.TotalTokenLimit, &expiresAtStr, &m.TotalCalls, &m.TotalTokens, &m.CostPerToken, &m.Currency, &m.CreatedAt, &m.ChannelName); err != nil {
 			continue
 		}
+		m.ExpiresAt = parseExpiresAt(expiresAtStr)
 		models = append(models, m)
 	}
 
@@ -143,19 +176,21 @@ func (r *ModelRepo) ListByChannel(channelID int64) ([]*model.Model, error) {
 
 func (r *ModelRepo) GetNextModel(channelID int64) (*model.Model, error) {
 	model := &model.Model{}
+	var expiresAtStr sql.NullString
 	err := DB.QueryRow(
 		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
-		 FROM models m LEFT JOIN channels c ON m.channel_id = c.id 
+		 FROM models m LEFT JOIN channels c ON m.channel_id = c.id
 		 WHERE m.channel_id = ? AND m.enabled = 1
 		 ORDER BY m.call_count ASC, m.id ASC LIMIT 1`,
 		channelID,
-	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &model.ExpiresAt, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
+	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &expiresAtStr, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
+	model.ExpiresAt = parseExpiresAt(expiresAtStr)
 
 	DB.Exec(`UPDATE models SET call_count = call_count + 1 WHERE id = ?`, model.ID)
 	DB.Exec(`UPDATE channels SET call_count = call_count + 1 WHERE id = ?`, channelID)
@@ -182,20 +217,22 @@ func (r *ModelRepo) GetNextModelGlobal(format, modelType string) (*model.Model, 
 	DB.Exec(`UPDATE channels SET call_count = call_count + 1 WHERE id = ?`, channelID)
 
 	model := &model.Model{}
+	var expiresAtStr sql.NullString
 	err = DB.QueryRow(
 		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
-		 FROM models m 
-		 LEFT JOIN channels c ON m.channel_id = c.id 
+		 FROM models m
+		 LEFT JOIN channels c ON m.channel_id = c.id
 		 WHERE m.channel_id = ? AND m.type = ? AND m.enabled = 1 AND c.enabled = 1
 		 ORDER BY m.call_count ASC, m.id ASC LIMIT 1`,
 		channelID, modelType,
-	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &model.ExpiresAt, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
+	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &expiresAtStr, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
+	model.ExpiresAt = parseExpiresAt(expiresAtStr)
 
 	DB.Exec(`UPDATE models SET call_count = call_count + 1 WHERE id = ?`, model.ID)
 
@@ -220,20 +257,22 @@ func (r *ModelRepo) GetNextModelAny() (*model.Model, error) {
 	DB.Exec(`UPDATE channels SET call_count = call_count + 1 WHERE id = ?`, channelID)
 
 	model := &model.Model{}
+	var expiresAtStr sql.NullString
 	err = DB.QueryRow(
 		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
-		 FROM models m 
-		 LEFT JOIN channels c ON m.channel_id = c.id 
+		 FROM models m
+		 LEFT JOIN channels c ON m.channel_id = c.id
 		 WHERE m.channel_id = ? AND m.enabled = 1 AND c.enabled = 1
 		 ORDER BY m.call_count ASC, m.id ASC LIMIT 1`,
 		channelID,
-	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &model.ExpiresAt, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
+	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &expiresAtStr, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
+	model.ExpiresAt = parseExpiresAt(expiresAtStr)
 
 	DB.Exec(`UPDATE models SET call_count = call_count + 1 WHERE id = ?`, model.ID)
 
@@ -247,7 +286,7 @@ func (r *ModelRepo) SetEnabled(id int64, enabled int) error {
 
 func (r *ModelRepo) ListEnabled() ([]*model.Model, error) {
 	rows, err := DB.Query(
-		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
+		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format, c.expires_at as channel_expires_at, c.rate_limits as channel_rate_limits
 		 FROM models m LEFT JOIN channels c ON m.channel_id = c.id
 		 WHERE m.enabled = 1 AND c.enabled = 1`,
 	)
@@ -259,8 +298,18 @@ func (r *ModelRepo) ListEnabled() ([]*model.Model, error) {
 	var models []*model.Model
 	for rows.Next() {
 		m := &model.Model{}
-		if err := rows.Scan(&m.ID, &m.ChannelID, &m.Name, &m.Type, &m.Enabled, &m.CallCount, &m.RateLimits, &m.TotalTokenLimit, &m.ExpiresAt, &m.TotalCalls, &m.TotalTokens, &m.CostPerToken, &m.Currency, &m.CreatedAt, &m.ChannelName, &m.Format); err != nil {
+		var expiresAtStr sql.NullString
+		var channelExpiresAtStr sql.NullString
+		var channelRateLimitsStr sql.NullString
+		if err := rows.Scan(&m.ID, &m.ChannelID, &m.Name, &m.Type, &m.Enabled, &m.CallCount, &m.RateLimits, &m.TotalTokenLimit, &expiresAtStr, &m.TotalCalls, &m.TotalTokens, &m.CostPerToken, &m.Currency, &m.CreatedAt, &m.ChannelName, &m.Format, &channelExpiresAtStr, &channelRateLimitsStr); err != nil {
 			continue
+		}
+		m.ExpiresAt = parseExpiresAt(expiresAtStr)
+		if m.ExpiresAt == nil {
+			m.ExpiresAt = parseExpiresAt(channelExpiresAtStr)
+		}
+		if channelRateLimitsStr.Valid {
+			m.ChannelRateLimits = channelRateLimitsStr.String
 		}
 		models = append(models, m)
 	}
@@ -296,18 +345,20 @@ func (r *ModelRepo) GetByName(name string) (*model.Model, error) {
 
 func (r *ModelRepo) GetByChannelAndName(channelID int64, name string) (*model.Model, error) {
 	model := &model.Model{}
+	var expiresAtStr sql.NullString
 	err := DB.QueryRow(
 		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
-		 FROM models m LEFT JOIN channels c ON m.channel_id = c.id 
+		 FROM models m LEFT JOIN channels c ON m.channel_id = c.id
 		 WHERE m.channel_id = ? AND m.name = ?`,
 		channelID, name,
-	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &model.ExpiresAt, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
+	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &expiresAtStr, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
+	model.ExpiresAt = parseExpiresAt(expiresAtStr)
 	return model, nil
 }
 

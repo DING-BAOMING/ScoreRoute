@@ -64,6 +64,11 @@ const routes = [
         component: () => import('../views/ExtraRating.vue')
       },
       {
+        path: 'other-rating',
+        name: 'OtherRating',
+        component: () => import('../views/OtherRating.vue')
+      },
+      {
         path: 'docs',
         name: 'Docs',
         component: () => import('../views/Docs.vue')

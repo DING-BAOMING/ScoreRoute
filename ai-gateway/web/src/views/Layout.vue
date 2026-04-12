@@ -43,6 +43,10 @@
           <el-icon><DataAnalysis /></el-icon>
           <span>额外评分</span>
         </el-menu-item>
+        <el-menu-item index="/other-rating">
+          <el-icon><DataAnalysis /></el-icon>
+          <span>其他评分</span>
+        </el-menu-item>
         <el-menu-item index="/docs">
           <el-icon><Document /></el-icon>
           <span>开发文档</span>

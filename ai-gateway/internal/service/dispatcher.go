@@ -221,7 +221,7 @@ func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, i
 	}
 
 	if resp.StatusCode == 200 && tokenUsed > 0 {
-		modelKey := selectedChannel.Format + "_" + modelItem.Type + "_" + modelItem.Name
+		modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
 		go d.saveSampleAsync(modelKey, string(requestBody), string(body), tokenUsed)
 	}
 
@@ -356,7 +356,7 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 	}
 
 	if resp.StatusCode == 200 && tokenUsed > 0 {
-		modelKey := selectedChannel.Format + "_" + modelItem.Type + "_" + modelItem.Name
+		modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
 		go d.saveSampleAsync(modelKey, string(requestBody), string(body), tokenUsed)
 	}
 

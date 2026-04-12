@@ -109,6 +109,17 @@ func Setup() *gin.Engine {
 			systemConfig.GET("", systemConfigHandler.Get)
 			systemConfig.PUT("", systemConfigHandler.Update)
 		}
+
+		extraRating := api.Group("/extra-rating")
+		{
+			extraRatingHandler := handler.NewExtraRatingHandler()
+			extraRating.GET("/config", extraRatingHandler.GetConfig)
+			extraRating.PUT("/config", extraRatingHandler.SetConfig)
+			extraRating.GET("/records", extraRatingHandler.GetRecords)
+			extraRating.GET("/model-scores", extraRatingHandler.GetAllModelExtraScores)
+			extraRating.DELETE("/records", extraRatingHandler.ClearRecords)
+			extraRating.DELETE("/records/:id", extraRatingHandler.DeleteRecord)
+		}
 	}
 
 	v1 := r.Group("/v1")

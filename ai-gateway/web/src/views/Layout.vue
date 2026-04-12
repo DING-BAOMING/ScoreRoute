@@ -39,6 +39,10 @@
           <el-icon><Document /></el-icon>
           <span>样本分析</span>
         </el-menu-item>
+        <el-menu-item index="/extra-rating">
+          <el-icon><DataAnalysis /></el-icon>
+          <span>额外评分</span>
+        </el-menu-item>
         <el-menu-item index="/docs">
           <el-icon><Document /></el-icon>
           <span>开发文档</span>

@@ -59,6 +59,11 @@ const routes = [
         component: () => import('../views/SampleAnalysis.vue')
       },
       {
+        path: 'extra-rating',
+        name: 'ExtraRating',
+        component: () => import('../views/ExtraRating.vue')
+      },
+      {
         path: 'docs',
         name: 'Docs',
         component: () => import('../views/Docs.vue')

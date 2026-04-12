@@ -95,4 +95,11 @@ export const sampleAnalysisAPI = {
   updateRating: (data) => api.put('/sample-analysis/ratings', data)
 }
 
+export const systemConfigAPI = {
+  get: () => api.get('/system-config'),
+  getByKey: (key) => api.get(`/system-config/${key}`),
+  update: (key, value) => api.put(`/system-config/${key}`, { value }),
+  updateMultiple: (data) => api.put('/system-config', data)
+}
+
 export default api

@@ -142,6 +142,26 @@ func createTables() error {
 			UNIQUE(channel_id, rule_index)
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_channel_rate_limit_channel ON channel_rate_limit_usage(channel_id)`,
+		`CREATE TABLE IF NOT EXISTS extra_rating_config (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			config_key TEXT NOT NULL UNIQUE,
+			config_value TEXT NOT NULL,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS extra_rating_records (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			model_key TEXT NOT NULL,
+			record_type TEXT NOT NULL,
+			penalty_score INTEGER DEFAULT 0,
+			reward_score INTEGER DEFAULT 0,
+			current_score INTEGER DEFAULT 0,
+			decay_per_request INTEGER DEFAULT 1,
+			request_count INTEGER DEFAULT 0,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			expires_at DATETIME
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_extra_rating_model ON extra_rating_records(model_key)`,
+		`CREATE INDEX IF NOT EXISTS idx_extra_rating_type ON extra_rating_records(record_type)`,
 	}
 
 	for _, query := range queries {
@@ -301,6 +321,18 @@ func migrateTables() error {
 		log.Println("System config table created successfully")
 	} else {
 		log.Println("System config table already exists, skipping")
+	}
+
+	row = DB.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_extra_rating_model_type'")
+	if err := row.Scan(&tableCount); err != nil {
+		return fmt.Errorf("failed to check unique index: %w", err)
+	}
+	if tableCount > 0 {
+		log.Println("Dropping unique index on extra_rating_records (not needed)...")
+		DB.Exec(`DROP INDEX IF EXISTS idx_extra_rating_model_type`)
+		log.Println("Unique index dropped successfully")
+	} else {
+		log.Println("Unique index does not exist, skipping")
 	}
 
 	return nil

@@ -13,7 +13,7 @@
 
       <el-alert type="info" :closable="false" style="margin-bottom: 20px">
         <template #title>
-          <span>评分说明</span>
+          <span>评分说明（百分制）</span>
         </template>
         <template #default>
           <ul style="margin: 5px 0 0 0; padding-left: 20px">
@@ -22,6 +22,7 @@
             <li><b>稳定性</b> (21%): 基于样本量计算，样本越多评分越可靠</li>
             <li><b>用户评分</b> (15%): 用户对模型的评分（1-100标准化）</li>
             <li><b>样本分析</b> (15%): 基于样本分析评分，评估工具调用、完整性等</li>
+            <li><b>额外评分</b>: 惩罚/奖励分数实时调整</li>
           </ul>
         </template>
       </el-alert>
@@ -56,11 +57,20 @@
             {{ Math.round(row.avg_latency) }}ms
           </template>
         </el-table-column>
-        <el-table-column label="评分" width="100" sortable prop="score">
+        <el-table-column label="评分" width="120" sortable prop="score">
           <template #default="{ row }">
             <el-tag :type="getScoreType(row.score)" size="large">
               {{ row.score.toFixed(1) }}
             </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="额外评分" width="120">
+          <template #default="{ row }">
+            <span v-if="row.extra_penalty || row.extra_reward" class="extra-rating">
+              <span v-if="row.extra_penalty" class="penalty">-{{ row.extra_penalty }}</span>
+              <span v-if="row.extra_reward" class="reward">+{{ row.extra_reward }}</span>
+            </span>
+            <span v-else>-</span>
           </template>
         </el-table-column>
         <el-table-column label="详情" width="200">
@@ -82,12 +92,14 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { logAPI, userRatingAPI, sampleAnalysisAPI } from '../api'
+import { logAPI, userRatingAPI, sampleAnalysisAPI, extraRatingAPI } from '../api'
 
 const loading = ref(false)
 const modelStats = ref([])
 const userRatings = ref({})
 const sampleRatings = ref({})
+const extraPenaltyMap = ref({})
+const extraRewardMap = ref({})
 
 onMounted(() => {
   loadData()
@@ -96,10 +108,11 @@ onMounted(() => {
 async function loadData() {
   loading.value = true
   try {
-    const [statsRes, ratingsRes, sampleRatingsRes] = await Promise.all([
+    const [statsRes, ratingsRes, sampleRatingsRes, extraRatingRes] = await Promise.all([
       logAPI.modelStats(),
       userRatingAPI.listDeduplicated(),
-      sampleAnalysisAPI.getRatingsMap()
+      sampleAnalysisAPI.getRatingsMap(),
+      extraRatingAPI.getModelScores()
     ])
     
     if (statsRes.code === 0) {
@@ -118,13 +131,28 @@ async function loadData() {
         })
       }
       sampleRatings.value = sampleRatingsMap
+
+      const penaltyMap = {}
+      const rewardMap = {}
+      if (extraRatingRes.code === 0 && extraRatingRes.data) {
+        Object.entries(extraRatingRes.data).forEach(([key, value]) => {
+          const normalizedKey = key.toLowerCase()
+          penaltyMap[normalizedKey] = value.penalty || 0
+          rewardMap[normalizedKey] = value.reward || 0
+        })
+      }
+      extraPenaltyMap.value = penaltyMap
+      extraRewardMap.value = rewardMap
       
       const stats = statsRes.data || []
       const scored = stats.map(s => {
         const userRating = getUserRatingForModel(s.model_name)
         const sampleRating = getSampleRatingForModel(s.model_name)
-        const score = calculateScore(s, userRating, sampleRating)
-        return { ...s, score, user_rating: userRating, sample_rating: sampleRating }
+        const modelKey = normalizeModelKeyForExtra(s.channel_name, s.format, s.type, s.model_name)
+        const extraPenalty = extraPenaltyMap.value[modelKey] || 0
+        const extraReward = extraRewardMap.value[modelKey] || 0
+        const score = calculateScore(s, userRating, sampleRating, extraPenalty, extraReward)
+        return { ...s, score, user_rating: userRating, sample_rating: sampleRating, extra_penalty: extraPenalty, extra_reward: extraReward }
       })
       scored.sort((a, b) => b.score - a.score)
       scored.forEach((s, i) => s.rank = i + 1)
@@ -187,7 +215,11 @@ function normalizeMinimaxModel(name) {
   return lower
 }
 
-function calculateScore(stat, userRating, sampleRating) {
+function normalizeModelKeyForExtra(channelName, format, modelType, modelName) {
+  return `${channelName}_${format}_${modelType}_${modelName}`.toLowerCase()
+}
+
+function calculateScore(stat, userRating, sampleRating, extraPenalty = 0, extraReward = 0) {
   const successWeight = 0.28
   const latencyWeight = 0.21
   const reliabilityWeight = 0.21
@@ -213,7 +245,9 @@ function calculateScore(stat, userRating, sampleRating) {
   const normalizedUserRating = userRating / 100
   const normalizedSampleRating = sampleRating / 100
 
-  return successRate * successWeight + latencyScore * latencyWeight + reliabilityScore * reliabilityWeight + normalizedUserRating * userRatingWeight + normalizedSampleRating * sampleRatingWeight
+  const baseScore = successRate * successWeight + latencyScore * latencyWeight + reliabilityScore * reliabilityWeight + normalizedUserRating * userRatingWeight + normalizedSampleRating * sampleRatingWeight
+
+  return baseScore * 100 + extraPenalty + extraReward
 }
 
 const displayList = computed(() => {
@@ -286,5 +320,19 @@ function formatNumber(num) {
   color: #909399;
   display: flex;
   gap: 10px;
+}
+
+.extra-rating {
+  display: flex;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.extra-rating .penalty {
+  color: #f56c6c;
+}
+
+.extra-rating .reward {
+  color: #67c23a;
 }
 </style>

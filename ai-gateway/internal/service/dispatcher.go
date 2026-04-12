@@ -26,6 +26,7 @@ type Dispatcher struct {
 	modelRateLimitRepo *repository.ModelRateLimitRepo
 	modelRepo          *repository.ModelRepo
 	systemConfigRepo   *repository.SystemConfigRepo
+	extraRatingService *ExtraRatingService
 	client             *http.Client
 }
 
@@ -40,6 +41,7 @@ func NewDispatcher() *Dispatcher {
 		modelRateLimitRepo: repository.NewModelRateLimitRepo(),
 		modelRepo:         repository.NewModelRepo(),
 		systemConfigRepo:  repository.NewSystemConfigRepo(),
+		extraRatingService: NewExtraRatingService(),
 		client: &http.Client{
 			Timeout: 300 * time.Second,
 		},
@@ -209,6 +211,13 @@ func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, i
 	if resp.StatusCode == 200 {
 		go d.updateChannelUsage(selectedChannel.ID, tokenUsed, modelItem.CostPerToken, modelItem.Currency)
 		go d.updateModelUsage(modelItem.ID, tokenUsed)
+		go d.extraRatingService.ApplyPenaltyAndReward(
+			NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name),
+			selectedChannel.Name,
+			selectedChannel.Format,
+			modelItem.Type,
+			selectedChannel.RateLimits,
+		)
 	}
 
 	if resp.StatusCode == 200 && tokenUsed > 0 {
@@ -337,6 +346,13 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 	if resp.StatusCode == 200 {
 		go d.updateChannelUsage(selectedChannel.ID, tokenUsed, modelItem.CostPerToken, modelItem.Currency)
 		go d.updateModelUsage(modelItem.ID, tokenUsed)
+		go d.extraRatingService.ApplyPenaltyAndReward(
+			NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name),
+			selectedChannel.Name,
+			selectedChannel.Format,
+			modelItem.Type,
+			selectedChannel.RateLimits,
+		)
 	}
 
 	if resp.StatusCode == 200 && tokenUsed > 0 {

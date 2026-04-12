@@ -590,8 +590,10 @@ func (d *Dispatcher) checkModelRateLimit(modelItem *model.Model, tokenUsed int) 
 		return fmt.Errorf("model total token limit exceeded: %d/%d", modelItem.TotalTokens, modelItem.TotalTokenLimit)
 	}
 
-	if modelItem.RateLimits == "" || modelItem.RateLimits == "[]" {
-		return nil
+	hasModelRules := modelItem.RateLimits != "" && modelItem.RateLimits != "[]"
+
+	if !hasModelRules {
+		return d.checkInheritedChannelLimits(modelItem, now)
 	}
 
 	var rules []model.RateLimitRule
@@ -641,6 +643,63 @@ func (d *Dispatcher) checkModelRateLimit(modelItem *model.Model, tokenUsed int) 
 	return nil
 }
 
+func (d *Dispatcher) checkInheritedChannelLimits(modelItem *model.Model, now time.Time) error {
+	channel, err := d.channelService.GetByID(modelItem.ChannelID)
+	if err != nil || channel == nil {
+		return nil
+	}
+
+	if channel.RateLimits == "" || channel.RateLimits == "[]" {
+		return nil
+	}
+
+	var rules []model.RateLimitRule
+	if err := json.Unmarshal([]byte(channel.RateLimits), &rules); err != nil {
+		log.Printf("failed to parse inherited rate limits from channel %s for model %s: %v", channel.Name, modelItem.Name, err)
+		return nil
+	}
+
+	for idx, rule := range rules {
+		windowDuration := d.getWindowDuration(rule.Window)
+		if windowDuration == 0 {
+			continue
+		}
+
+		usage, err := d.rateLimitRepo.GetUsage(channel.ID, idx)
+		if err != nil {
+			log.Printf("failed to get inherited rate limit usage from channel %s rule %d for model %s: %v", channel.Name, idx, modelItem.Name, err)
+			continue
+		}
+
+		var currentCount int64
+		var windowStart time.Time
+
+		if usage == nil {
+			currentCount = 0
+			windowStart = now
+		} else {
+			currentCount = usage.CurrentCount
+			windowStart = usage.WindowStart
+
+			if now.Sub(windowStart) >= windowDuration {
+				currentCount = 0
+				windowStart = now
+				d.rateLimitRepo.UpsertUsage(channel.ID, idx, 0, windowStart, true)
+			}
+		}
+
+		if rule.Type == "calls" && currentCount >= rule.MaxCount {
+			return fmt.Errorf("inherited channel calls rate limit exceeded: %d/%d per %s", currentCount, rule.MaxCount, rule.Window)
+		}
+
+		if rule.Type == "tokens" && currentCount >= rule.MaxCount {
+			return fmt.Errorf("inherited channel tokens rate limit exceeded: %d/%d per %s", currentCount, rule.MaxCount, rule.Window)
+		}
+	}
+
+	return nil
+}
+
 func (d *Dispatcher) updateModelUsage(modelID int64, tokenUsed int) error {
 	if err := d.modelRepo.IncrementUsage(modelID, tokenUsed); err != nil {
 		log.Printf("failed to increment model usage: %v", err)
@@ -651,7 +710,10 @@ func (d *Dispatcher) updateModelUsage(modelID int64, tokenUsed int) error {
 		return err
 	}
 
-	if modelItem.RateLimits == "" || modelItem.RateLimits == "[]" {
+	hasModelRules := modelItem.RateLimits != "" && modelItem.RateLimits != "[]"
+
+	if !hasModelRules {
+		d.updateInheritedChannelUsage(modelItem, tokenUsed)
 		return nil
 	}
 
@@ -706,4 +768,65 @@ func (d *Dispatcher) updateModelUsage(modelID int64, tokenUsed int) error {
 	}
 
 	return nil
+}
+
+func (d *Dispatcher) updateInheritedChannelUsage(modelItem *model.Model, tokenUsed int) {
+	channel, err := d.channelService.GetByID(modelItem.ChannelID)
+	if err != nil || channel == nil {
+		return
+	}
+
+	if channel.RateLimits == "" || channel.RateLimits == "[]" {
+		return
+	}
+
+	var rules []model.RateLimitRule
+	if err := json.Unmarshal([]byte(channel.RateLimits), &rules); err != nil {
+		log.Printf("failed to parse inherited rate limits from channel %s for model %s: %v", channel.Name, modelItem.Name, err)
+		return
+	}
+
+	now := time.Now()
+	for idx, rule := range rules {
+		windowDuration := d.getWindowDuration(rule.Window)
+		if windowDuration == 0 {
+			continue
+		}
+
+		usage, err := d.rateLimitRepo.GetUsage(channel.ID, idx)
+		if err != nil {
+			log.Printf("failed to get inherited rate limit usage from channel %s rule %d for model %s: %v", channel.Name, idx, modelItem.Name, err)
+			continue
+		}
+
+		var windowStart time.Time
+		var increment int64 = 1
+
+		if rule.Type == "tokens" {
+			increment = int64(tokenUsed)
+		}
+
+		if usage == nil {
+			windowStart = now
+			if err := d.rateLimitRepo.UpsertUsage(channel.ID, idx, increment, windowStart, true); err != nil {
+				log.Printf("failed to upsert inherited rate limit usage for channel %s rule %d: %v", channel.Name, idx, err)
+			}
+		} else {
+			windowStart = usage.WindowStart
+			if now.Sub(windowStart) >= windowDuration {
+				windowStart = now
+				increment = int64(tokenUsed)
+				if rule.Type == "calls" {
+					increment = 1
+				}
+				if err := d.rateLimitRepo.UpsertUsage(channel.ID, idx, increment, windowStart, true); err != nil {
+					log.Printf("failed to upsert inherited rate limit usage for channel %s rule %d: %v", channel.Name, idx, err)
+				}
+			} else {
+				if err := d.rateLimitRepo.UpsertUsage(channel.ID, idx, increment, windowStart, false); err != nil {
+					log.Printf("failed to upsert inherited rate limit usage for channel %s rule %d: %v", channel.Name, idx, err)
+				}
+			}
+		}
+	}
 }

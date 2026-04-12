@@ -35,16 +35,29 @@ func (r *RateLimitRepo) GetUsage(channelID int64, ruleIndex int) (*RateLimitUsag
 	return usage, nil
 }
 
-func (r *RateLimitRepo) UpsertUsage(channelID int64, ruleIndex int, currentCount int64, windowStart time.Time) error {
-	_, err := DB.Exec(
-		`INSERT INTO channel_rate_limit_usage (channel_id, rule_index, current_count, window_start, updated_at) 
-		 VALUES (?, ?, ?, ?, ?) 
-		 ON CONFLICT(channel_id, rule_index) DO UPDATE SET 
-		 current_count = ?, window_start = ?, updated_at = ?`,
-		channelID, ruleIndex, currentCount, windowStart, currentCount, windowStart, time.Now(),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to upsert rate limit usage: %w", err)
+func (r *RateLimitRepo) UpsertUsage(channelID int64, ruleIndex int, currentCount int64, windowStart time.Time, resetWindow bool) error {
+	if resetWindow {
+		_, err := DB.Exec(
+			`INSERT INTO channel_rate_limit_usage (channel_id, rule_index, current_count, window_start, updated_at) 
+			 VALUES (?, ?, ?, ?, ?) 
+			 ON CONFLICT(channel_id, rule_index) DO UPDATE SET 
+			 current_count = ?, window_start = ?, updated_at = ?`,
+			channelID, ruleIndex, currentCount, windowStart, currentCount, windowStart, time.Now(),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to upsert rate limit usage: %w", err)
+		}
+	} else {
+		_, err := DB.Exec(
+			`INSERT INTO channel_rate_limit_usage (channel_id, rule_index, current_count, window_start, updated_at) 
+			 VALUES (?, ?, ?, ?, ?) 
+			 ON CONFLICT(channel_id, rule_index) DO UPDATE SET 
+			 current_count = current_count + ?, updated_at = ?`,
+			channelID, ruleIndex, currentCount, windowStart, currentCount, time.Now(),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to upsert rate limit usage: %w", err)
+		}
 	}
 	return nil
 }

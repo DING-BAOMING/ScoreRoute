@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"ai-gateway/internal/model"
 )
@@ -19,9 +20,13 @@ func (r *ModelRepo) Create(req *model.ModelRequest) (*model.Model, error) {
 	if modelType == "" {
 		modelType = "chat"
 	}
+	currency := req.Currency
+	if currency == "" {
+		currency = "CNY"
+	}
 	result, err := DB.Exec(
-		`INSERT INTO models (channel_id, name, type, enabled) VALUES (?, ?, ?, ?)`,
-		req.ChannelID, req.Name, modelType, 1,
+		`INSERT INTO models (channel_id, name, type, enabled, rate_limits, total_token_limit, expires_at, cost_per_token, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		req.ChannelID, req.Name, modelType, 1, req.RateLimits, req.TotalTokenLimit, req.ExpiresAt, req.CostPerToken, currency,
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint") {
@@ -39,9 +44,13 @@ func (r *ModelRepo) Update(id int64, req *model.ModelRequest) (*model.Model, err
 	if modelType == "" {
 		modelType = "chat"
 	}
+	currency := req.Currency
+	if currency == "" {
+		currency = "CNY"
+	}
 	_, err := DB.Exec(
-		`UPDATE models SET channel_id=?, name=?, type=?, enabled=? WHERE id=?`,
-		req.ChannelID, req.Name, modelType, req.Enabled, id,
+		`UPDATE models SET channel_id=?, name=?, type=?, enabled=?, rate_limits=?, total_token_limit=?, expires_at=?, cost_per_token=?, currency=? WHERE id=?`,
+		req.ChannelID, req.Name, modelType, req.Enabled, req.RateLimits, req.TotalTokenLimit, req.ExpiresAt, req.CostPerToken, currency, id,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update model: %w", err)
@@ -57,10 +66,10 @@ func (r *ModelRepo) Delete(id int64) error {
 func (r *ModelRepo) GetByID(id int64) (*model.Model, error) {
 	model := &model.Model{}
 	err := DB.QueryRow(
-		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.created_at, c.name as channel_name, c.format as channel_format
+		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
 		 FROM models m LEFT JOIN channels c ON m.channel_id = c.id WHERE m.id=?`,
 		id,
-	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.CreatedAt, &model.ChannelName, &model.Format)
+	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &model.ExpiresAt, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -79,7 +88,7 @@ func (r *ModelRepo) List(page, pageSize int) ([]*model.Model, int64, error) {
 	}
 
 	rows, err := DB.Query(
-		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.created_at, c.name as channel_name, c.format as channel_format
+		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
 		 FROM models m LEFT JOIN channels c ON m.channel_id = c.id
 		 ORDER BY m.id DESC LIMIT ? OFFSET ?`,
 		pageSize, offset,
@@ -92,7 +101,7 @@ func (r *ModelRepo) List(page, pageSize int) ([]*model.Model, int64, error) {
 	var models []*model.Model
 	for rows.Next() {
 		m := &model.Model{}
-		if err := rows.Scan(&m.ID, &m.ChannelID, &m.Name, &m.Type, &m.Enabled, &m.CallCount, &m.CreatedAt, &m.ChannelName, &m.Format); err != nil {
+		if err := rows.Scan(&m.ID, &m.ChannelID, &m.Name, &m.Type, &m.Enabled, &m.CallCount, &m.RateLimits, &m.TotalTokenLimit, &m.ExpiresAt, &m.TotalCalls, &m.TotalTokens, &m.CostPerToken, &m.Currency, &m.CreatedAt, &m.ChannelName, &m.Format); err != nil {
 			continue
 		}
 		models = append(models, m)
@@ -107,7 +116,7 @@ func (r *ModelRepo) List(page, pageSize int) ([]*model.Model, int64, error) {
 
 func (r *ModelRepo) ListByChannel(channelID int64) ([]*model.Model, error) {
 	rows, err := DB.Query(
-		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.created_at, c.name as channel_name
+		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name
 		 FROM models m LEFT JOIN channels c ON m.channel_id = c.id WHERE m.channel_id=? ORDER BY m.id`,
 		channelID,
 	)
@@ -119,7 +128,7 @@ func (r *ModelRepo) ListByChannel(channelID int64) ([]*model.Model, error) {
 	var models []*model.Model
 	for rows.Next() {
 		m := &model.Model{}
-		if err := rows.Scan(&m.ID, &m.ChannelID, &m.Name, &m.Type, &m.Enabled, &m.CallCount, &m.CreatedAt, &m.ChannelName); err != nil {
+		if err := rows.Scan(&m.ID, &m.ChannelID, &m.Name, &m.Type, &m.Enabled, &m.CallCount, &m.RateLimits, &m.TotalTokenLimit, &m.ExpiresAt, &m.TotalCalls, &m.TotalTokens, &m.CostPerToken, &m.Currency, &m.CreatedAt, &m.ChannelName); err != nil {
 			continue
 		}
 		models = append(models, m)
@@ -135,12 +144,12 @@ func (r *ModelRepo) ListByChannel(channelID int64) ([]*model.Model, error) {
 func (r *ModelRepo) GetNextModel(channelID int64) (*model.Model, error) {
 	model := &model.Model{}
 	err := DB.QueryRow(
-		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.created_at, c.name as channel_name
+		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
 		 FROM models m LEFT JOIN channels c ON m.channel_id = c.id 
 		 WHERE m.channel_id = ? AND m.enabled = 1
 		 ORDER BY m.call_count ASC, m.id ASC LIMIT 1`,
 		channelID,
-	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.CreatedAt, &model.ChannelName)
+	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &model.ExpiresAt, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -174,13 +183,13 @@ func (r *ModelRepo) GetNextModelGlobal(format, modelType string) (*model.Model, 
 
 	model := &model.Model{}
 	err = DB.QueryRow(
-		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.created_at, c.name as channel_name
+		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
 		 FROM models m 
 		 LEFT JOIN channels c ON m.channel_id = c.id 
 		 WHERE m.channel_id = ? AND m.type = ? AND m.enabled = 1 AND c.enabled = 1
 		 ORDER BY m.call_count ASC, m.id ASC LIMIT 1`,
 		channelID, modelType,
-	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.CreatedAt, &model.ChannelName)
+	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &model.ExpiresAt, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -212,13 +221,13 @@ func (r *ModelRepo) GetNextModelAny() (*model.Model, error) {
 
 	model := &model.Model{}
 	err = DB.QueryRow(
-		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.created_at, c.name as channel_name
+		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
 		 FROM models m 
 		 LEFT JOIN channels c ON m.channel_id = c.id 
 		 WHERE m.channel_id = ? AND m.enabled = 1 AND c.enabled = 1
 		 ORDER BY m.call_count ASC, m.id ASC LIMIT 1`,
 		channelID,
-	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.CreatedAt, &model.ChannelName)
+	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &model.ExpiresAt, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -238,7 +247,7 @@ func (r *ModelRepo) SetEnabled(id int64, enabled int) error {
 
 func (r *ModelRepo) ListEnabled() ([]*model.Model, error) {
 	rows, err := DB.Query(
-		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.created_at, c.name as channel_name
+		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
 		 FROM models m LEFT JOIN channels c ON m.channel_id = c.id
 		 WHERE m.enabled = 1 AND c.enabled = 1`,
 	)
@@ -250,7 +259,7 @@ func (r *ModelRepo) ListEnabled() ([]*model.Model, error) {
 	var models []*model.Model
 	for rows.Next() {
 		m := &model.Model{}
-		if err := rows.Scan(&m.ID, &m.ChannelID, &m.Name, &m.Type, &m.Enabled, &m.CallCount, &m.CreatedAt, &m.ChannelName); err != nil {
+		if err := rows.Scan(&m.ID, &m.ChannelID, &m.Name, &m.Type, &m.Enabled, &m.CallCount, &m.RateLimits, &m.TotalTokenLimit, &m.ExpiresAt, &m.TotalCalls, &m.TotalTokens, &m.CostPerToken, &m.Currency, &m.CreatedAt, &m.ChannelName, &m.Format); err != nil {
 			continue
 		}
 		models = append(models, m)
@@ -266,12 +275,12 @@ func (r *ModelRepo) ListEnabled() ([]*model.Model, error) {
 func (r *ModelRepo) GetByName(name string) (*model.Model, error) {
 	model := &model.Model{}
 	err := DB.QueryRow(
-		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.created_at, c.name as channel_name
+		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
 		 FROM models m LEFT JOIN channels c ON m.channel_id = c.id
 		 WHERE m.name = ? AND m.enabled = 1 AND c.enabled = 1
 		 ORDER BY m.call_count ASC LIMIT 1`,
 		name,
-	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.CreatedAt, &model.ChannelName)
+	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &model.ExpiresAt, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -288,11 +297,11 @@ func (r *ModelRepo) GetByName(name string) (*model.Model, error) {
 func (r *ModelRepo) GetByChannelAndName(channelID int64, name string) (*model.Model, error) {
 	model := &model.Model{}
 	err := DB.QueryRow(
-		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.created_at, c.name as channel_name
+		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
 		 FROM models m LEFT JOIN channels c ON m.channel_id = c.id 
 		 WHERE m.channel_id = ? AND m.name = ?`,
 		channelID, name,
-	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.CreatedAt, &model.ChannelName)
+	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &model.ExpiresAt, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -300,4 +309,12 @@ func (r *ModelRepo) GetByChannelAndName(channelID int64, name string) (*model.Mo
 		return nil, err
 	}
 	return model, nil
+}
+
+func (r *ModelRepo) IncrementUsage(id int64, tokenUsed int) error {
+	_, err := DB.Exec(
+		`UPDATE models SET total_calls = total_calls + 1, total_tokens = total_tokens + ?, updated_at = ? WHERE id = ?`,
+		tokenUsed, time.Now(), id,
+	)
+	return err
 }

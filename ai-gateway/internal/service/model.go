@@ -92,19 +92,30 @@ func (s *ModelService) GetByChannelAndName(channelID int64, name string) (*model
 	return s.repo.GetByChannelAndName(channelID, name)
 }
 
-func (s *ModelService) BatchCreate(channelID int64, modelNames []string, modelType string) error {
+func (s *ModelService) BatchCreate(channelID int64, modelNames []string, modelType string) ([]string, error) {
+	createdKeys := []string{}
+	channel, err := s.channelRepo.GetByID(channelID)
+	if err != nil || channel == nil {
+		return createdKeys, nil
+	}
+
 	for _, name := range modelNames {
 		existing, _ := s.repo.GetByChannelAndName(channelID, name)
 		if existing == nil {
-			s.repo.Create(&model.ModelRequest{
+			modelReq := &model.ModelRequest{
 				ChannelID: channelID,
 				Name:      name,
 				Type:      modelType,
 				Enabled:   1,
-			})
+			}
+			created, err := s.repo.Create(modelReq)
+			if err == nil && created != nil {
+				modelKey := NormalizeModelKey(channel.Name, created.Format, created.Type, created.Name)
+				createdKeys = append(createdKeys, modelKey)
+			}
 		}
 	}
-	return nil
+	return createdKeys, nil
 }
 
 func (s *ModelService) TestModel(modelID int64) (map[string]interface{}, error) {

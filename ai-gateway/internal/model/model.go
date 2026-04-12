@@ -208,3 +208,35 @@ type SampleRatingRequest struct {
 	ModelKey string `json:"model_key" binding:"required"`
 	Score    int    `json:"score" binding:"required,min=1,max=100"`
 }
+
+type ExtraRatingConfig struct {
+	ID           int64      `json:"id"`
+	ConfigKey    string     `json:"config_key"`
+	ConfigValue string     `json:"config_value"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+type ExtraRatingRecord struct {
+	ID             int64      `json:"id"`
+	ModelKey       string     `json:"model_key"`
+	RecordType    string     `json:"record_type"`    // "penalty" or "reward"
+	PenaltyScore  int        `json:"penalty_score"`  // original penalty score
+	RewardScore   int        `json:"reward_score"`   // original reward score
+	CurrentScore  int        `json:"current_score"` // current score after decay
+	DecayPerReq   int        `json:"decay_per_request"`
+	RequestCount  int        `json:"request_count"`
+	CreatedAt     time.Time  `json:"created_at"`
+	ExpiresAt     *time.Time `json:"expires_at"`
+}
+
+type ExtraRatingRequest struct {
+	ConfigKey    string `json:"config_key" binding:"required"`
+	ConfigValue  string `json:"config_value" binding:"required"`
+}
+
+type ExtraRatingResponse struct {
+	PenaltyRecords []ExtraRatingRecord `json:"penalty_records"`
+	RewardRecords   []ExtraRatingRecord `json:"reward_records"`
+	TotalPenalty   int                `json:"total_penalty"`
+	TotalReward    int                `json:"total_reward"`
+}

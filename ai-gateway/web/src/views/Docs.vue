@@ -297,6 +297,80 @@
             </ul>
           </div>
         </el-tab-pane>
+
+        <el-tab-pane label="额外评分" name="extra-rating">
+          <div class="doc-content">
+            <h2>额外评分系统（惩罚/奖励机制）</h2>
+            
+            <h3>功能概述</h3>
+            <p>额外评分系统用于实现模型轮转调用，通过惩罚被调用过的模型和奖励新加入的模型来动态调整模型评分。</p>
+
+            <h3>惩罚机制</h3>
+            <p><strong>原理:</strong> 当任意模型被调用时，所有模型都会被扣除一定分数（实现轮转调用）。</p>
+            
+            <h4>配置参数</h4>
+            <ul>
+              <li><strong>惩罚轮数:</strong> 惩罚持续次数（默认5轮）</li>
+              <li><strong>每次惩罚分数:</strong> 每次调用的惩罚分数（默认5分）</li>
+            </ul>
+
+            <h4>衰减规则</h4>
+            <ul>
+              <li>每当有新的API请求时，所有现有惩罚记录的分数都会减少1分</li>
+              <li>惩罚分数 = 原始惩罚分数 - (当前全局请求轮次 - 惩罚创建时的请求轮次) × 每次衰减分</li>
+            </ul>
+
+            <h4>示例</h4>
+            <p>假设有2个模型，惩罚分数=5，惩罚轮数=5</p>
+            <table border="1" cellpadding="5" style="border-collapse: collapse; width: 100%;">
+              <tr><th>请求</th><th>调用模型</th><th>所有模型惩罚记录</th><th>模型A评分</th><th>模型B评分</th></tr>
+              <tr><td>1</td><td>模型A</td><td>所有模型-5分</td><td>99-5=94</td><td>89-5=84</td></tr>
+              <tr><td>2</td><td>模型A</td><td>所有模型现有-4分，再-5分</td><td>99-4-5=90</td><td>89-4-5=80</td></tr>
+              <tr><td>3</td><td>模型B</td><td>所有模型现有-3分，再-5分</td><td>99-3-5=91</td><td>89-3-5=81</td></tr>
+            </table>
+
+            <h3>奖励机制</h3>
+            <p><strong>原理:</strong> 当新模型被添加到系统时，该模型会获得奖励分数（用于吸引注意新加入的模型）。</p>
+            
+            <h4>配置参数</h4>
+            <ul>
+              <li><strong>奖励小时数:</strong> 奖励持续时间（默认24小时）</li>
+              <li><strong>每次奖励分数:</strong> 新模型获得的奖励分数（默认5分）</li>
+            </ul>
+
+            <h4>触发条件</h4>
+            <ul>
+              <li>仅当新模型被创建时触发</li>
+              <li>已存在的模型不会被奖励</li>
+            </ul>
+
+            <h4>衰减规则</h4>
+            <ul>
+              <li>奖励是基于时间的线性衰减</li>
+              <li>奖励分数 = 原始奖励分数 × (1 - 已过分钟数 / 总分钟数)</li>
+              <li>例如：5分奖励持续24小时，每分钟衰减约0.0035分</li>
+            </ul>
+
+            <h3>API端点</h3>
+            <ul>
+              <li><strong>GET /api/extra-rating/config:</strong> 获取配置</li>
+              <li><strong>PUT /api/extra-rating/config:</strong> 更新配置</li>
+              <li><strong>GET /api/extra-rating/records:</strong> 获取惩罚/奖励记录列表</li>
+              <li><strong>GET /api/extra-rating/model-scores:</strong> 获取所有模型的实时惩罚/奖励分数</li>
+              <li><strong>DELETE /api/extra-rating/records:</strong> 清空所有记录</li>
+              <li><strong>DELETE /api/extra-rating/records/:id:</strong> 删除单条记录</li>
+            </ul>
+
+            <h3>页面说明</h3>
+            <p>在"额外评分"页面可以:</p>
+            <ul>
+              <li>配置惩罚轮数、惩罚分数、奖励小时数、奖励分数</li>
+              <li>查看惩罚记录和奖励记录</li>
+              <li>查看惩罚和奖励的实时递减/衰减情况</li>
+              <li>清空所有记录或删除单条记录</li>
+            </ul>
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </el-card>
   </div>

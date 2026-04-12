@@ -102,4 +102,13 @@ export const systemConfigAPI = {
   updateMultiple: (data) => api.put('/system-config', data)
 }
 
+export const extraRatingAPI = {
+  getConfig: () => api.get('/extra-rating/config'),
+  setConfig: (data) => api.put('/extra-rating/config', data),
+  getRecords: () => api.get('/extra-rating/records'),
+  getModelScores: () => api.get('/extra-rating/model-scores'),
+  clearRecords: () => api.delete('/extra-rating/records'),
+  deleteRecord: (id) => api.delete(`/extra-rating/records/${id}`)
+}
+
 export default api

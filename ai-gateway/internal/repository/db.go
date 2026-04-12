@@ -229,5 +229,66 @@ func migrateTables() error {
 		log.Println("Channels table already has rate limiting columns, skipping")
 	}
 
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('models') WHERE name='rate_limits'")
+	var modelRateLimitsCount int
+	if err := row.Scan(&modelRateLimitsCount); err != nil {
+		return fmt.Errorf("failed to check rate_limits column in models: %w", err)
+	}
+	if modelRateLimitsCount == 0 {
+		log.Println("Adding rate limiting columns to models table...")
+		DB.Exec(`ALTER TABLE models ADD COLUMN rate_limits TEXT DEFAULT '[]'`)
+		DB.Exec(`ALTER TABLE models ADD COLUMN total_token_limit INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE models ADD COLUMN expires_at DATETIME`)
+		DB.Exec(`ALTER TABLE models ADD COLUMN total_calls INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE models ADD COLUMN total_tokens INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE models ADD COLUMN cost_per_token REAL DEFAULT 0`)
+		DB.Exec(`ALTER TABLE models ADD COLUMN currency TEXT DEFAULT 'CNY'`)
+		log.Println("Model rate limiting columns added successfully")
+	} else {
+		log.Println("Models table already has rate limiting columns, skipping")
+	}
+
+	var tableCount int
+	row = DB.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE name='model_rate_limit_usage'")
+	if err := row.Scan(&tableCount); err != nil {
+		return fmt.Errorf("failed to check model_rate_limit_usage table: %w", err)
+	}
+	if tableCount == 0 {
+		log.Println("Creating model_rate_limit_usage table...")
+		DB.Exec(`CREATE TABLE model_rate_limit_usage (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			model_id INTEGER NOT NULL,
+			rule_index INTEGER NOT NULL,
+			current_count INTEGER DEFAULT 0,
+			window_start DATETIME NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (model_id) REFERENCES models(id),
+			UNIQUE(model_id, rule_index)
+		)`)
+		DB.Exec(`CREATE INDEX idx_model_rate_limit_model ON model_rate_limit_usage(model_id)`)
+		log.Println("Model rate limit usage table created successfully")
+	} else {
+		log.Println("Model rate limit usage table already exists, skipping")
+	}
+
+	row = DB.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE name='system_config'")
+	if err := row.Scan(&tableCount); err != nil {
+		return fmt.Errorf("failed to check system_config table: %w", err)
+	}
+	if tableCount == 0 {
+		log.Println("Creating system_config table...")
+		DB.Exec(`CREATE TABLE system_config (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			exchange_rate REAL DEFAULT 7.2,
+			currency TEXT DEFAULT 'CNY',
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`)
+		DB.Exec(`INSERT INTO system_config (exchange_rate, currency) VALUES (7.2, 'CNY')`)
+		log.Println("System config table created successfully")
+	} else {
+		log.Println("System config table already exists, skipping")
+	}
+
 	return nil
 }

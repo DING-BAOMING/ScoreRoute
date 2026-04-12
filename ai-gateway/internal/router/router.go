@@ -102,6 +102,13 @@ func Setup() *gin.Engine {
 			sampleAnalysis.GET("/ratings/map", sampleAnalysisHandler.GetRatingsMap)
 			sampleAnalysis.PUT("/ratings", sampleAnalysisHandler.UpdateRating)
 		}
+
+		systemConfig := api.Group("/system-config")
+		{
+			systemConfigHandler := handler.NewSystemConfigHandler()
+			systemConfig.GET("", systemConfigHandler.Get)
+			systemConfig.PUT("", systemConfigHandler.Update)
+		}
 	}
 
 	v1 := r.Group("/v1")

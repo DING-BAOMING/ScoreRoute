@@ -22,31 +22,54 @@
       
       <el-table :data="list" v-loading="loading" stripe>
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="channel_name" label="渠道" width="150">
+        <el-table-column prop="channel_name" label="渠道" width="120">
           <template #default="{ row }">
             <el-tag type="info">{{ row.channel_name || '-' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="name" label="模型名称" />
-        <el-table-column prop="type" label="类型" width="120">
+        <el-table-column prop="name" label="模型名称" min-width="150" />
+        <el-table-column label="限制" min-width="200">
           <template #default="{ row }">
-            <el-tag type="info">{{ row.type || 'chat' }}</el-tag>
+            <div v-if="row.rate_limits && row.rate_limits !== '[]'" class="rate-limits">
+              <span v-for="(rule, idx) in parseRateLimits(row.rate_limits)" :key="idx" class="rate-limit-tag">
+                {{ rule.max_count }}/{{ rule.window }}
+              </span>
+            </div>
+            <span v-else-if="row.total_token_limit > 0" class="token-limit">
+              Token限制: {{ formatNumber(row.total_token_limit) }}
+            </span>
+            <span v-else class="no-limit">无限制</span>
           </template>
         </el-table-column>
-        <el-table-column prop="call_count" label="调用次数" width="120" />
-        <el-table-column label="状态" width="100">
+        <el-table-column label="使用量" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.enabled ? 'success' : 'danger'">
+            <div class="usage">
+              <span>调用: {{ formatNumber(row.total_calls || row.call_count) }}</span>
+              <span v-if="row.total_tokens > 0">Token: {{ formatNumber(row.total_tokens) }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="费用" width="100">
+          <template #default="{ row }">
+            <span v-if="row.cost_per_token > 0">
+              {{ row.cost_per_token }}/{{ row.currency }}
+            </span>
+            <span v-else class="no-limit">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.enabled ? 'success' : 'danger'" size="small">
               {{ row.enabled ? '启用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280">
+        <el-table-column label="操作" width="240">
           <template #default="{ row }">
             <el-space :size="4">
               <el-button size="small" type="success" @click="testModel(row)">测试</el-button>
-              <el-button size="small" @click="showDialog('edit', row)">编辑</el-button>
-              <el-button size="small" type="danger" @click="toggleEnabled(row)">
+              <el-button size="small" type="primary" @click="showDialog('edit', row)">编辑</el-button>
+              <el-button size="small" type="warning" @click="toggleEnabled(row)">
                 {{ row.enabled ? '禁用' : '启用' }}
               </el-button>
               <el-button size="small" type="danger" plain @click="deleteModel(row)">删除</el-button>
@@ -66,7 +89,7 @@
       />
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="700px" @closed="onDialogClosed">
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
         <el-form-item label="渠道" prop="channel_id">
           <el-select v-model="form.channel_id" placeholder="请选择渠道" style="width: 100%">
@@ -82,6 +105,66 @@
             <el-option label="Embedding" value="embedding" />
             <el-option label="Image" value="image" />
             <el-option label="Video" value="video" />
+          </el-select>
+        </el-form-item>
+        
+        <el-divider content-position="left">限制设置</el-divider>
+        
+        <el-form-item label="总Token限制">
+          <el-input-number v-model="form.total_token_limit" :min="0" :step="1000000" placeholder="0表示无限制" style="width: 100%">
+            <template #suffix>
+              <span style="margin-right: 10px">Token</span>
+            </template>
+          </el-input-number>
+          <div class="form-help">0表示无限制</div>
+        </el-form-item>
+        
+        <el-form-item label="模型有效期">
+          <el-date-picker
+            v-model="form.expires_at"
+            type="datetime"
+            placeholder="不设置则永不过期"
+            style="width: 100%"
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DDTHH:mm:ssZ"
+          />
+        </el-form-item>
+        
+        <el-form-item label="调用频率限制">
+          <div class="rate-limit-rules">
+            <div v-for="(rule, idx) in rateLimitRules" :key="idx" class="rate-limit-rule">
+              <el-select v-model="rule.type" style="width: 100px">
+                <el-option label="调用次数" value="calls" />
+                <el-option label="Token数" value="tokens" />
+              </el-select>
+              <el-input-number v-model="rule.max_count" :min="1" style="width: 120px" />
+              <span style="width: 60px; text-align: center">次/</span>
+              <el-select v-model="rule.window" style="width: 100px">
+                <el-option label="分钟" value="minute" />
+                <el-option label="小时" value="hour" />
+                <el-option label="天" value="day" />
+                <el-option label="周" value="week" />
+                <el-option label="月" value="month" />
+                <el-option label="年" value="year" />
+              </el-select>
+              <el-button type="danger" size="small" @click="removeRateLimitRule(idx)" :disabled="rateLimitRules.length <= 1">删除</el-button>
+            </div>
+            <el-button type="primary" size="small" @click="addRateLimitRule">添加限制规则</el-button>
+            <div class="form-help">可添加多个限制规则，例如：每5小时最多1500次调用且每天最多3000次</div>
+          </div>
+        </el-form-item>
+        
+        <el-divider content-position="left">费用设置</el-divider>
+        
+        <el-form-item label="每Token费用">
+          <el-input-number v-model="form.cost_per_token" :min="0" :precision="8" :step="0.00000001" style="width: 100%" />
+          <div class="form-help">设置为0表示不计算费用</div>
+        </el-form-item>
+        
+        <el-form-item label="货币单位">
+          <el-select v-model="form.currency" style="width: 100%">
+            <el-option label="人民币 (CNY)" value="CNY" />
+            <el-option label="美元 (USD)" value="USD" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -160,8 +243,19 @@ const form = reactive({
   id: null,
   channel_id: null,
   name: '',
-  type: 'chat'
+  type: 'chat',
+  rate_limits: '[]',
+  total_token_limit: 0,
+  expires_at: null,
+  cost_per_token: 0,
+  currency: 'CNY'
 })
+
+const rateLimitRules = ref([{
+  type: 'calls',
+  max_count: 1000,
+  window: 'hour'
+}])
 
 const batchForm = reactive({
   channel_id: null,
@@ -218,11 +312,69 @@ async function loadData() {
 function showDialog(type, row = null) {
   dialogType.value = type
   if (type === 'edit' && row) {
-    Object.assign(form, { id: row.id, channel_id: row.channel_id, name: row.name, type: row.type || 'chat' })
+    Object.assign(form, {
+      id: row.id,
+      channel_id: row.channel_id,
+      name: row.name,
+      type: row.type || 'chat',
+      rate_limits: row.rate_limits || '[]',
+      total_token_limit: row.total_token_limit || 0,
+      expires_at: row.expires_at,
+      cost_per_token: row.cost_per_token || 0,
+      currency: row.currency || 'CNY'
+    })
+    rateLimitRules.value = parseRateLimits(row.rate_limits)
+    if (rateLimitRules.value.length === 0) {
+      rateLimitRules.value = [{ type: 'calls', max_count: 1000, window: 'hour' }]
+    }
   } else {
-    Object.assign(form, { id: null, channel_id: null, name: '', type: 'chat' })
+    Object.assign(form, {
+      id: null,
+      channel_id: null,
+      name: '',
+      type: 'chat',
+      rate_limits: '[]',
+      total_token_limit: 0,
+      expires_at: null,
+      cost_per_token: 0,
+      currency: 'CNY'
+    })
+    rateLimitRules.value = [{ type: 'calls', max_count: 1000, window: 'hour' }]
   }
   dialogVisible.value = true
+}
+
+function parseRateLimits(rateLimitsStr) {
+  try {
+    return JSON.parse(rateLimitsStr || '[]')
+  } catch {
+    return []
+  }
+}
+
+function formatNumber(num) {
+  if (num >= 100000000) {
+    return (num / 100000000).toFixed(1) + '亿'
+  } else if (num >= 10000) {
+    return (num / 10000).toFixed(1) + '万'
+  }
+  return num.toString()
+}
+
+function addRateLimitRule() {
+  rateLimitRules.value.push({
+    type: 'calls',
+    max_count: 1000,
+    window: 'hour'
+  })
+}
+
+function removeRateLimitRule(idx) {
+  rateLimitRules.value.splice(idx, 1)
+}
+
+function onDialogClosed() {
+  rateLimitRules.value = [{ type: 'calls', max_count: 1000, window: 'hour' }]
 }
 
 async function testModelDialog() {
@@ -300,6 +452,8 @@ async function submitForm() {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
 
+  form.rate_limits = JSON.stringify(rateLimitRules.value)
+  
   submitting.value = true
   try {
     if (dialogType.value === 'create') {
@@ -392,5 +546,44 @@ async function testModel(row) {
 .header-actions {
   display: flex;
   align-items: center;
+}
+.rate-limits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.rate-limit-tag {
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.token-limit {
+  font-size: 12px;
+  color: #909399;
+}
+.no-limit {
+  font-size: 12px;
+  color: #c0c4cc;
+}
+.usage {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  gap: 2px;
+}
+.rate-limit-rules {
+  width: 100%;
+}
+.rate-limit-rule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.form-help {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
 }
 </style>

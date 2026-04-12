@@ -111,4 +111,10 @@ export const extraRatingAPI = {
   deleteRecord: (id) => api.delete(`/extra-rating/records/${id}`)
 }
 
+export const modelRatingAPI = {
+  getWeights: () => api.get('/model-rating/weights'),
+  updateWeights: (data) => api.put('/model-rating/weights', data),
+  getCostTimeRatings: () => api.get('/model-rating/cost-time')
+}
+
 export default api

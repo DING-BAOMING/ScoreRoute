@@ -323,6 +323,30 @@ func migrateTables() error {
 		log.Println("System config table already exists, skipping")
 	}
 
+	row = DB.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE name='model_rating_config'")
+	if err := row.Scan(&tableCount); err != nil {
+		return fmt.Errorf("failed to check model_rating_config table: %w", err)
+	}
+	if tableCount == 0 {
+		log.Println("Creating model_rating_config table...")
+		DB.Exec(`CREATE TABLE model_rating_config (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			config_key TEXT NOT NULL UNIQUE,
+			config_value REAL DEFAULT 0,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`)
+		DB.Exec(`INSERT INTO model_rating_config (config_key, config_value) VALUES ('success_weight', 0.28)`)
+		DB.Exec(`INSERT INTO model_rating_config (config_key, config_value) VALUES ('latency_weight', 0.21)`)
+		DB.Exec(`INSERT INTO model_rating_config (config_key, config_value) VALUES ('reliability_weight', 0.21)`)
+		DB.Exec(`INSERT INTO model_rating_config (config_key, config_value) VALUES ('user_rating_weight', 0.15)`)
+		DB.Exec(`INSERT INTO model_rating_config (config_key, config_value) VALUES ('sample_rating_weight', 0.15)`)
+		DB.Exec(`INSERT INTO model_rating_config (config_key, config_value) VALUES ('cost_rating_weight', 0.0)`)
+		DB.Exec(`INSERT INTO model_rating_config (config_key, config_value) VALUES ('time_rating_weight', 0.0)`)
+		log.Println("Model rating config table created successfully")
+	} else {
+		log.Println("Model rating config table already exists, skipping")
+	}
+
 	row = DB.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_extra_rating_model_type'")
 	if err := row.Scan(&tableCount); err != nil {
 		return fmt.Errorf("failed to check unique index: %w", err)

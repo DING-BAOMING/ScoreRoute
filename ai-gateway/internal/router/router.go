@@ -120,6 +120,14 @@ func Setup() *gin.Engine {
 			extraRating.DELETE("/records", extraRatingHandler.ClearRecords)
 			extraRating.DELETE("/records/:id", extraRatingHandler.DeleteRecord)
 		}
+
+		modelRating := api.Group("/model-rating")
+		{
+			modelRatingHandler := handler.NewModelRatingHandler()
+			modelRating.GET("/weights", modelRatingHandler.GetWeights)
+			modelRating.PUT("/weights", modelRatingHandler.UpdateWeights)
+			modelRating.GET("/cost-time", modelRatingHandler.GetCostTimeRatings)
+		}
 	}
 
 	v1 := r.Group("/v1")

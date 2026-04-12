@@ -46,15 +46,28 @@ func (r *ChannelRepo) Delete(id int64) error {
 
 func (r *ChannelRepo) GetByID(id int64) (*model.Channel, error) {
 	channel := &model.Channel{}
+	var expiresAtStr sql.NullString
 	err := DB.QueryRow(
 		`SELECT id, name, format, base_url, api_key, enabled, call_count, rate_limits, total_token_limit, expires_at, total_calls, total_tokens, created_at, updated_at FROM channels WHERE id=?`,
 		id,
-	).Scan(&channel.ID, &channel.Name, &channel.Format, &channel.BaseURL, &channel.APIKey, &channel.Enabled, &channel.CallCount, &channel.RateLimits, &channel.TotalTokenLimit, &channel.ExpiresAt, &channel.TotalCalls, &channel.TotalTokens, &channel.CreatedAt, &channel.UpdatedAt)
+	).Scan(&channel.ID, &channel.Name, &channel.Format, &channel.BaseURL, &channel.APIKey, &channel.Enabled, &channel.CallCount, &channel.RateLimits, &channel.TotalTokenLimit, &expiresAtStr, &channel.TotalCalls, &channel.TotalTokens, &channel.CreatedAt, &channel.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
+	}
+	if expiresAtStr.Valid && expiresAtStr.String != "" {
+		t, err := time.Parse("2006-01-02 15:04:05", expiresAtStr.String)
+		if err != nil {
+			t, err = time.Parse("2006-01-02T15:04:05Z07:00", expiresAtStr.String)
+		}
+		if err != nil {
+			t, err = time.Parse("2006-01-02", expiresAtStr.String)
+		}
+		if err == nil {
+			channel.ExpiresAt = &t
+		}
 	}
 	return channel, nil
 }
@@ -79,8 +92,21 @@ func (r *ChannelRepo) List(page, pageSize int) ([]*model.Channel, int64, error) 
 	var channels []*model.Channel
 	for rows.Next() {
 		c := &model.Channel{}
-		if err := rows.Scan(&c.ID, &c.Name, &c.Format, &c.BaseURL, &c.APIKey, &c.Enabled, &c.CallCount, &c.RateLimits, &c.TotalTokenLimit, &c.ExpiresAt, &c.TotalCalls, &c.TotalTokens, &c.CreatedAt, &c.UpdatedAt); err != nil {
+		var expiresAtStr sql.NullString
+		if err := rows.Scan(&c.ID, &c.Name, &c.Format, &c.BaseURL, &c.APIKey, &c.Enabled, &c.CallCount, &c.RateLimits, &c.TotalTokenLimit, &expiresAtStr, &c.TotalCalls, &c.TotalTokens, &c.CreatedAt, &c.UpdatedAt); err != nil {
 			continue
+		}
+		if expiresAtStr.Valid && expiresAtStr.String != "" {
+			t, err := time.Parse("2006-01-02 15:04:05", expiresAtStr.String)
+			if err != nil {
+				t, err = time.Parse("2006-01-02T15:04:05Z07:00", expiresAtStr.String)
+			}
+			if err != nil {
+				t, err = time.Parse("2006-01-02", expiresAtStr.String)
+			}
+			if err == nil {
+				c.ExpiresAt = &t
+			}
 		}
 		channels = append(channels, c)
 	}
@@ -109,8 +135,21 @@ func (r *ChannelRepo) GetByFormatAndType(format, modelType string) ([]*model.Cha
 	var channels []*model.Channel
 	for rows.Next() {
 		c := &model.Channel{}
-		if err := rows.Scan(&c.ID, &c.Name, &c.Format, &c.BaseURL, &c.APIKey, &c.Enabled, &c.CallCount, &c.RateLimits, &c.TotalTokenLimit, &c.ExpiresAt, &c.TotalCalls, &c.TotalTokens, &c.CreatedAt, &c.UpdatedAt); err != nil {
+		var expiresAtStr sql.NullString
+		if err := rows.Scan(&c.ID, &c.Name, &c.Format, &c.BaseURL, &c.APIKey, &c.Enabled, &c.CallCount, &c.RateLimits, &c.TotalTokenLimit, &expiresAtStr, &c.TotalCalls, &c.TotalTokens, &c.CreatedAt, &c.UpdatedAt); err != nil {
 			continue
+		}
+		if expiresAtStr.Valid && expiresAtStr.String != "" {
+			t, err := time.Parse("2006-01-02 15:04:05", expiresAtStr.String)
+			if err != nil {
+				t, err = time.Parse("2006-01-02T15:04:05Z07:00", expiresAtStr.String)
+			}
+			if err != nil {
+				t, err = time.Parse("2006-01-02", expiresAtStr.String)
+			}
+			if err == nil {
+				c.ExpiresAt = &t
+			}
 		}
 		channels = append(channels, c)
 	}

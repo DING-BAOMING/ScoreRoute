@@ -151,7 +151,7 @@
                 <el-option label="月" value="month" />
                 <el-option label="年" value="year" />
               </el-select>
-              <el-button type="danger" size="small" @click="removeRateLimitRule(idx)" :disabled="rateLimitRules.length <= 1">删除</el-button>
+              <el-button type="danger" size="small" @click="removeRateLimitRule(idx)">删除</el-button>
             </div>
             <el-button type="primary" size="small" @click="addRateLimitRule">添加限制规则</el-button>
             <div class="form-help">可添加多个限制规则，例如：每5小时最多1500次调用且每天最多3000次</div>

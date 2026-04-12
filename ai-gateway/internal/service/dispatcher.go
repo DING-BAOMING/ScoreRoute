@@ -31,7 +31,7 @@ func NewDispatcher() *Dispatcher {
 		logRepo:        repository.NewLogRepo(),
 		sampleRepo:     repository.NewSampleRepo(),
 		client: &http.Client{
-			Timeout: 120 * time.Second,
+			Timeout: 300 * time.Second,
 		},
 	}
 }

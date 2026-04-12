@@ -42,7 +42,7 @@ func (r *RateLimitRepo) UpsertUsage(channelID int64, ruleIndex int, currentCount
 			 VALUES (?, ?, ?, ?, ?) 
 			 ON CONFLICT(channel_id, rule_index) DO UPDATE SET 
 			 current_count = ?, window_start = ?, updated_at = ?`,
-			channelID, ruleIndex, currentCount, windowStart, currentCount, windowStart, time.Now(),
+			channelID, ruleIndex, currentCount, windowStart, time.Now(), currentCount, windowStart, time.Now(),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to upsert rate limit usage: %w", err)
@@ -53,7 +53,7 @@ func (r *RateLimitRepo) UpsertUsage(channelID int64, ruleIndex int, currentCount
 			 VALUES (?, ?, ?, ?, ?) 
 			 ON CONFLICT(channel_id, rule_index) DO UPDATE SET 
 			 current_count = current_count + ?, updated_at = ?`,
-			channelID, ruleIndex, currentCount, windowStart, currentCount, time.Now(),
+			channelID, ruleIndex, currentCount, windowStart, time.Now(), currentCount, time.Now(),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to upsert rate limit usage: %w", err)

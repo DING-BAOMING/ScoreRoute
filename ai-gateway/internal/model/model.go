@@ -20,9 +20,10 @@ type Channel struct {
 }
 
 type RateLimitRule struct {
-	Type        string    `json:"type"`         // "calls" or "tokens"
-	Window      string    `json:"window"`       // "minute", "hour", "day", "week", "month", "year"
-	MaxCount    int64     `json:"max_count"`    // maximum allowed in window
+	Type        string    `json:"type"`         // "calls", "tokens", or "billing"
+	Window      string    `json:"window"`       // "minute", "hour", "day", "week", "month", "quarter", "year"
+	MaxCount    int64     `json:"max_count"`    // maximum allowed in window (for billing, this is the max cost)
+	Currency    string    `json:"currency"`     // "CNY" or "USD" (for billing type)
 	CurrentCount int64    `json:"current_count"` // current count in window
 	WindowStart time.Time `json:"window_start"`  // when the current window started
 }

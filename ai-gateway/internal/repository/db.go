@@ -248,6 +248,19 @@ func migrateTables() error {
 		log.Println("Models table already has rate limiting columns, skipping")
 	}
 
+	var modelUpdatedAtCount int
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('models') WHERE name='updated_at'")
+	if err := row.Scan(&modelUpdatedAtCount); err != nil {
+		return fmt.Errorf("failed to check updated_at column in models: %w", err)
+	}
+	if modelUpdatedAtCount == 0 {
+		log.Println("Adding updated_at column to models table...")
+		DB.Exec(`ALTER TABLE models ADD COLUMN updated_at DATETIME`)
+		log.Println("Model updated_at column added successfully")
+	} else {
+		log.Println("Models table already has updated_at column, skipping")
+	}
+
 	var tableCount int
 	row = DB.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE name='model_rate_limit_usage'")
 	if err := row.Scan(&tableCount); err != nil {

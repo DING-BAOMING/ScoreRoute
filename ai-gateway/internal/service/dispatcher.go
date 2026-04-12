@@ -17,27 +17,29 @@ import (
 )
 
 type Dispatcher struct {
-	channelService    *ChannelService
-	modelService      *ModelService
-	logRepo           *repository.LogRepo
-	sampleRepo        *repository.SampleRepo
-	channelRepo       *repository.ChannelRepo
-	rateLimitRepo     *repository.RateLimitRepo
+	channelService     *ChannelService
+	modelService       *ModelService
+	logRepo            *repository.LogRepo
+	sampleRepo         *repository.SampleRepo
+	channelRepo        *repository.ChannelRepo
+	rateLimitRepo      *repository.RateLimitRepo
 	modelRateLimitRepo *repository.ModelRateLimitRepo
-	modelRepo         *repository.ModelRepo
-	client            *http.Client
+	modelRepo          *repository.ModelRepo
+	systemConfigRepo   *repository.SystemConfigRepo
+	client             *http.Client
 }
 
 func NewDispatcher() *Dispatcher {
 	return &Dispatcher{
-		channelService:    NewChannelService(),
-		modelService:      NewModelService(),
-		logRepo:           repository.NewLogRepo(),
-		sampleRepo:        repository.NewSampleRepo(),
+		channelService:     NewChannelService(),
+		modelService:       NewModelService(),
+		logRepo:            repository.NewLogRepo(),
+		sampleRepo:         repository.NewSampleRepo(),
 		channelRepo:       repository.NewChannelRepo(),
 		rateLimitRepo:     repository.NewRateLimitRepo(),
 		modelRateLimitRepo: repository.NewModelRateLimitRepo(),
 		modelRepo:         repository.NewModelRepo(),
+		systemConfigRepo:  repository.NewSystemConfigRepo(),
 		client: &http.Client{
 			Timeout: 300 * time.Second,
 		},
@@ -205,7 +207,7 @@ func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, i
 	d.logCall(token, selectedChannel, modelItem, startTime, tokenUsed, resp.StatusCode, "")
 
 	if resp.StatusCode == 200 {
-		go d.updateChannelUsage(selectedChannel.ID, tokenUsed)
+		go d.updateChannelUsage(selectedChannel.ID, tokenUsed, modelItem.CostPerToken, modelItem.Currency)
 		go d.updateModelUsage(modelItem.ID, tokenUsed)
 	}
 
@@ -333,7 +335,7 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 	d.logCall(token, selectedChannel, modelItem, startTime, tokenUsed, resp.StatusCode, "")
 
 	if resp.StatusCode == 200 {
-		go d.updateChannelUsage(selectedChannel.ID, tokenUsed)
+		go d.updateChannelUsage(selectedChannel.ID, tokenUsed, modelItem.CostPerToken, modelItem.Currency)
 		go d.updateModelUsage(modelItem.ID, tokenUsed)
 	}
 
@@ -484,6 +486,10 @@ func (d *Dispatcher) checkRateLimit(channel *model.Channel, tokenUsed int) error
 		if rule.Type == "tokens" && currentCount >= rule.MaxCount {
 			return fmt.Errorf("tokens rate limit exceeded: %d/%d per %s", currentCount, rule.MaxCount, rule.Window)
 		}
+
+		if rule.Type == "billing" && currentCount >= rule.MaxCount {
+			return fmt.Errorf("billing limit exceeded: %d/%s per %s (quota exhausted)", currentCount/100, rule.Currency, rule.Window)
+		}
 	}
 
 	return nil
@@ -501,6 +507,8 @@ func (d *Dispatcher) getWindowDuration(window string) time.Duration {
 		return 7 * 24 * time.Hour
 	case "month":
 		return 30 * 24 * time.Hour
+	case "quarter":
+		return 90 * 24 * time.Hour
 	case "year":
 		return 365 * 24 * time.Hour
 	default:
@@ -508,7 +516,33 @@ func (d *Dispatcher) getWindowDuration(window string) time.Duration {
 	}
 }
 
-func (d *Dispatcher) updateChannelUsage(channelID int64, tokenUsed int) error {
+func (d *Dispatcher) getExchangeRate() float64 {
+	config, err := d.systemConfigRepo.Get()
+	if err != nil || config == nil {
+		return 7.25
+	}
+	return config.ExchangeRate
+}
+
+func (d *Dispatcher) calculateCostInTargetCurrency(tokenUsed int, costPerToken float64, costCurrency string, targetCurrency string) int64 {
+	if tokenUsed <= 0 || costPerToken <= 0 {
+		return 0
+	}
+	baseCost := float64(tokenUsed) * costPerToken
+	if costCurrency == targetCurrency {
+		return int64(baseCost * 100)
+	}
+	exchangeRate := d.getExchangeRate()
+	if costCurrency == "USD" && targetCurrency == "CNY" {
+		return int64(baseCost * exchangeRate * 100)
+	}
+	if costCurrency == "CNY" && targetCurrency == "USD" {
+		return int64(baseCost / exchangeRate * 100)
+	}
+	return int64(baseCost * 100)
+}
+
+func (d *Dispatcher) updateChannelUsage(channelID int64, tokenUsed int, costPerToken float64, costCurrency string) error {
 	if err := d.channelRepo.IncrementUsage(channelID, tokenUsed); err != nil {
 		log.Printf("failed to increment channel usage: %v", err)
 	}
@@ -546,6 +580,8 @@ func (d *Dispatcher) updateChannelUsage(channelID int64, tokenUsed int) error {
 
 		if rule.Type == "tokens" {
 			increment = int64(tokenUsed)
+		} else if rule.Type == "billing" {
+			increment = d.calculateCostInTargetCurrency(tokenUsed, costPerToken, costCurrency, rule.Currency)
 		}
 
 		if usage == nil {
@@ -560,6 +596,8 @@ func (d *Dispatcher) updateChannelUsage(channelID int64, tokenUsed int) error {
 				increment = int64(tokenUsed)
 				if rule.Type == "calls" {
 					increment = 1
+				} else if rule.Type == "billing" {
+					increment = d.calculateCostInTargetCurrency(tokenUsed, costPerToken, costCurrency, rule.Currency)
 				}
 				if err := d.rateLimitRepo.UpsertUsage(channelID, idx, increment, windowStart, true); err != nil {
 					log.Printf("failed to upsert rate limit usage for channel %s rule %d: %v", channel.Name, idx, err)

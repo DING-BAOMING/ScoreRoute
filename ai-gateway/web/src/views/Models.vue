@@ -8,6 +8,10 @@
             <el-select v-model="filterChannel" placeholder="筛选渠道" clearable style="width: 200px; margin-right: 10px" @change="loadData">
               <el-option v-for="ch in channels" :key="ch.id" :label="ch.name" :value="ch.id" />
             </el-select>
+            <el-button type="warning" @click="showExchangeDialog">
+              <el-icon><Coin /></el-icon>
+              汇率设置
+            </el-button>
             <el-button type="primary" @click="showDialog('create')">
               <el-icon><Plus /></el-icon>
               添加模型
@@ -216,13 +220,33 @@
         <el-button type="primary" @click="submitBatchForm" :loading="submitting">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="exchangeDialogVisible" title="汇率设置" width="500px">
+      <el-form :model="exchangeForm" label-width="120px">
+        <el-form-item label="USD兑换CNY汇率">
+          <el-input-number v-model="exchangeForm.exchange_rate" :min="0.01" :precision="4" :step="0.01" style="width: 100%" />
+          <div class="form-help">1美元可兑换的人民币数量</div>
+        </el-form-item>
+        <el-form-item label="默认货币">
+          <el-select v-model="exchangeForm.currency" style="width: 100%">
+            <el-option label="人民币 (CNY)" value="CNY" />
+            <el-option label="美元 (USD)" value="USD" />
+          </el-select>
+          <div class="form-help">成本计算的默认货币单位</div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="exchangeDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveExchangeConfig" :loading="exchangeSaving">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { modelAPI, channelAPI } from '../api'
+import { modelAPI, channelAPI, systemConfigAPI } from '../api'
 
 const loading = ref(false)
 const list = ref([])
@@ -234,10 +258,12 @@ const filterChannel = ref('')
 
 const dialogVisible = ref(false)
 const batchDialogVisible = ref(false)
+const exchangeDialogVisible = ref(false)
 const dialogType = ref('create')
 const formRef = ref()
 const testing = ref(false)
 const submitting = ref(false)
+const exchangeSaving = ref(false)
 
 const form = reactive({
   id: null,
@@ -266,6 +292,11 @@ const batchForm = reactive({
 const availableModels = ref([])
 const fetchingModels = ref(false)
 
+const exchangeForm = reactive({
+  exchange_rate: 7.25,
+  currency: 'CNY'
+})
+
 const rules = {
   channel_id: [{ required: true, message: '请选择渠道', trigger: 'change' }],
   name: [{ required: true, message: '请输入模型名称', trigger: 'blur' }],
@@ -277,7 +308,40 @@ const dialogTitle = computed(() => dialogType.value === 'create' ? '添加模型
 onMounted(() => {
   loadChannels()
   loadData()
+  loadExchangeConfig()
 })
+
+async function loadExchangeConfig() {
+  try {
+    const res = await systemConfigAPI.get()
+    if (res.code === 0 && res.data) {
+      exchangeForm.exchange_rate = res.data.exchange_rate || 7.25
+      exchangeForm.currency = res.data.currency || 'CNY'
+    }
+  } catch (e) {
+    console.error('Failed to load exchange config', e)
+  }
+}
+
+function showExchangeDialog() {
+  exchangeDialogVisible.value = true
+}
+
+async function saveExchangeConfig() {
+  exchangeSaving.value = true
+  try {
+    await systemConfigAPI.updateMultiple({
+      exchange_rate: exchangeForm.exchange_rate,
+      currency: exchangeForm.currency
+    })
+    ElMessage.success('汇率设置已保存')
+    exchangeDialogVisible.value = false
+  } catch (e) {
+    ElMessage.error('保存失败: ' + (e.message || '网络错误'))
+  } finally {
+    exchangeSaving.value = false
+  }
+}
 
 async function loadChannels() {
   try {

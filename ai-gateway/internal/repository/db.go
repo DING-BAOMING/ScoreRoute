@@ -130,6 +130,18 @@ func createTables() error {
 			expires_at DATETIME NOT NULL
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_sample_ratings_model ON sample_ratings(model_key)`,
+		`CREATE TABLE IF NOT EXISTS channel_rate_limit_usage (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			channel_id INTEGER NOT NULL,
+			rule_index INTEGER NOT NULL,
+			current_count INTEGER DEFAULT 0,
+			window_start DATETIME NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (channel_id) REFERENCES channels(id),
+			UNIQUE(channel_id, rule_index)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_channel_rate_limit_channel ON channel_rate_limit_usage(channel_id)`,
 	}
 
 	for _, query := range queries {
@@ -198,6 +210,23 @@ func migrateTables() error {
 		log.Println("Channel call_count column added successfully")
 	} else {
 		log.Println("Channels table already has 'call_count' column, skipping")
+	}
+
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('channels') WHERE name='rate_limits'")
+	var rateLimitsCount int
+	if err := row.Scan(&rateLimitsCount); err != nil {
+		return fmt.Errorf("failed to check rate_limits column: %w", err)
+	}
+	if rateLimitsCount == 0 {
+		log.Println("Adding rate limiting columns to channels table...")
+		DB.Exec(`ALTER TABLE channels ADD COLUMN rate_limits TEXT DEFAULT '[]'`)
+		DB.Exec(`ALTER TABLE channels ADD COLUMN total_token_limit INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE channels ADD COLUMN expires_at DATETIME`)
+		DB.Exec(`ALTER TABLE channels ADD COLUMN total_calls INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE channels ADD COLUMN total_tokens INTEGER DEFAULT 0`)
+		log.Println("Rate limiting columns added successfully")
+	} else {
+		log.Println("Channels table already has rate limiting columns, skipping")
 	}
 
 	return nil

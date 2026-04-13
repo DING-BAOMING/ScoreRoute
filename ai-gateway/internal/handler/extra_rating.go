@@ -103,18 +103,10 @@ func (h *ExtraRatingHandler) GetAllModelExtraScores(c *gin.Context) {
 		return
 	}
 
-	maxRequestCount := 0
-	for _, p := range penaltyRecords {
-		if p.RequestCount > maxRequestCount {
-			maxRequestCount = p.RequestCount
-		}
-	}
-
 	penaltyMap := make(map[string]int)
 	for _, p := range penaltyRecords {
-		decayedScore := p.PenaltyScore - (maxRequestCount-p.RequestCount)*p.DecayPerReq
-		if decayedScore > 0 {
-			penaltyMap[p.ModelKey] = penaltyMap[p.ModelKey] + decayedScore
+		if p.CurrentScore < 0 {
+			penaltyMap[p.ModelKey] = penaltyMap[p.ModelKey] + p.CurrentScore
 		}
 	}
 

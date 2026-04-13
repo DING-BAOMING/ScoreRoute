@@ -183,7 +183,9 @@ func (r *LogRepo) GetTopChannels(limit int) ([]map[string]interface{}, error) {
 		var channelName string
 		var callCount int64
 		var avgLatency float64
-		rows.Scan(&channelName, &callCount, &avgLatency)
+		if err := rows.Scan(&channelName, &callCount, &avgLatency); err != nil {
+			continue
+		}
 		results = append(results, map[string]interface{}{
 			"channel_name": channelName,
 			"call_count":   callCount,
@@ -223,7 +225,9 @@ func (r *LogRepo) GetTokenStats(limit int) ([]map[string]interface{}, error) {
 		var tokenName string
 		var totalCalls, todayCalls, weekCalls, monthCalls int64
 		var avgLatency float64
-		rows.Scan(&tokenName, &totalCalls, &todayCalls, &weekCalls, &monthCalls, &avgLatency)
+		if err := rows.Scan(&tokenName, &totalCalls, &todayCalls, &weekCalls, &monthCalls, &avgLatency); err != nil {
+			continue
+		}
 		results = append(results, map[string]interface{}{
 			"token_name":   tokenName,
 			"total_calls":  totalCalls,
@@ -306,7 +310,9 @@ func (r *LogRepo) GetModelStats() ([]map[string]interface{}, error) {
 		var channelName, modelName, format, modelType sql.NullString
 		var totalCalls, successCalls int64
 		var avgLatency, avgSuccessLatency, totalTokens float64
-		rows.Scan(&channelName, &modelName, &totalCalls, &successCalls, &avgLatency, &avgSuccessLatency, &totalTokens, &format, &modelType)
+		if err := rows.Scan(&channelName, &modelName, &totalCalls, &successCalls, &avgLatency, &avgSuccessLatency, &totalTokens, &format, &modelType); err != nil {
+			continue
+		}
 		
 		successRate := 0.0
 		if totalCalls > 0 {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"ai-gateway/internal/model"
@@ -247,5 +248,5 @@ func (h *ModelRatingHandler) calculateTimeRating(expiresAt *time.Time) int {
 
 func NormalizeModelKey(channelName, format, modelType, modelName string) string {
 	key := fmt.Sprintf("%s_%s_%s_%s", channelName, format, modelType, modelName)
-	return key
+	return strings.ToLower(key)
 }

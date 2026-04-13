@@ -69,6 +69,11 @@ func (r *ChannelRepo) GetByID(id int64) (*model.Channel, error) {
 			channel.ExpiresAt = &t
 		}
 	}
+	if len(channel.APIKey) >= 4 {
+		channel.MaskedAPIKey = "****" + channel.APIKey[len(channel.APIKey)-4:]
+	} else {
+		channel.MaskedAPIKey = "****"
+	}
 	return channel, nil
 }
 
@@ -107,6 +112,11 @@ func (r *ChannelRepo) List(page, pageSize int) ([]*model.Channel, int64, error) 
 			if err == nil {
 				c.ExpiresAt = &t
 			}
+		}
+		if len(c.APIKey) >= 4 {
+			c.MaskedAPIKey = "****" + c.APIKey[len(c.APIKey)-4:]
+		} else {
+			c.MaskedAPIKey = "****"
 		}
 		channels = append(channels, c)
 	}

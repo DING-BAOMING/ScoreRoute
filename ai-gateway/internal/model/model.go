@@ -7,7 +7,8 @@ type Channel struct {
 	Name            string     `json:"name"`
 	Format          string     `json:"format"`
 	BaseURL         string     `json:"base_url"`
-	APIKey          string     `json:"api_key"`
+	APIKey          string     `json:"-"`                  // Never expose in JSON
+	MaskedAPIKey    string     `json:"api_key"`           // Masked version for display
 	Enabled         int        `json:"enabled"`
 	CallCount       int        `json:"call_count"`
 	RateLimits      string     `json:"rate_limits"`       // JSON array of rate limit rules
@@ -61,7 +62,8 @@ type Model struct {
 
 type Token struct {
 	ID        int64     `json:"id"`
-	Key       string    `json:"key"`
+	Key       string    `json:"-"`           // Never expose in JSON
+	MaskedKey string    `json:"key"`       // Masked version for display
 	Name      string    `json:"name"`
 	Format    string    `json:"format"`
 	Type      string    `json:"type"`

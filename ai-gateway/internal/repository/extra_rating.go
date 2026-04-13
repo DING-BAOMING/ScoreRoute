@@ -154,6 +154,11 @@ func (r *ExtraRatingRepo) IncrementPenaltyRequestCount(id int64, newRequestCount
 	return err
 }
 
+func (r *ExtraRatingRepo) UpdatePenaltyScore(id int64, newScore int) error {
+	_, err := DB.Exec(`UPDATE extra_rating_records SET current_score = ? WHERE id = ?`, newScore, id)
+	return err
+}
+
 func (r *ExtraRatingRepo) UpsertRewardRecord(modelKey string, rewardScore int, expiresAt *time.Time) error {
 	_, err := DB.Exec(`DELETE FROM extra_rating_records WHERE model_key = ? AND record_type = 'reward'`, modelKey)
 	if err != nil {

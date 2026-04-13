@@ -261,9 +261,9 @@ async function loadData() {
       
       const stats = statsRes.data || []
       const scored = stats.map(s => {
+        const modelKey = normalizeModelKeyForExtra(s.channel_name, s.format, s.type, s.model_name)
         const userRating = getUserRatingForModel(s.model_name)
         const sampleRating = getSampleRatingForModel(modelKey)
-        const modelKey = normalizeModelKeyForExtra(s.channel_name, s.format, s.type, s.model_name)
         const extraPenalty = extraPenaltyMap.value[modelKey] || 0
         const extraReward = extraRewardMap.value[modelKey] || 0
         const costRating = getCostRatingForModel(modelKey)

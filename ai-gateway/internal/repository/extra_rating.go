@@ -57,11 +57,7 @@ func (r *ExtraRatingRepo) GetAllConfig() (map[string]string, error) {
 }
 
 func (r *ExtraRatingRepo) AddPenaltyRecord(modelKey string, penaltyScore, decayPerRequest, requestCount int, expiresAt *time.Time) error {
-	_, err := DB.Exec(`DELETE FROM extra_rating_records WHERE model_key = ? AND record_type = 'penalty'`, modelKey)
-	if err != nil {
-		return fmt.Errorf("failed to delete existing penalty record: %w", err)
-	}
-	_, err = DB.Exec(`
+	_, err := DB.Exec(`
 		INSERT INTO extra_rating_records (model_key, record_type, penalty_score, current_score, decay_per_request, request_count, created_at, expires_at)
 		VALUES (?, 'penalty', ?, ?, ?, ?, ?, ?)`,
 		modelKey, penaltyScore, penaltyScore, decayPerRequest, requestCount, time.Now(), expiresAt)

@@ -115,7 +115,7 @@ func (s *ExtraRatingService) GetRewardRecords() ([]*model.ExtraRatingRecord, err
 	return s.repo.GetRewardRecords()
 }
 
-func (s *ExtraRatingService) ApplyPenaltyAndReward(modelKey, channelName, format, modelType string, channelRateLimits string) error {
+func (s *ExtraRatingService) ApplyPenaltyAndReward(modelKey string) error {
 	config, err := s.GetConfig()
 	if err != nil {
 		return err

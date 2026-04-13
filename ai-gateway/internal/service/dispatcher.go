@@ -187,7 +187,8 @@ func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, i
 	}
 
 	bodyStr := strings.TrimSpace(string(body))
-	if strings.HasPrefix(bodyStr, "<!DOCTYPE") || strings.HasPrefix(bodyStr, "<html") {
+	bodyStrLower := strings.ToLower(bodyStr)
+	if strings.HasPrefix(bodyStrLower, "<!doctype") || strings.HasPrefix(bodyStrLower, "<html") {
 		return nil, resp.StatusCode, fmt.Errorf("upstream API returned HTML error page (invalid API key or endpoint)")
 	}
 
@@ -217,10 +218,6 @@ func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, i
 		go d.updateModelUsage(modelItem.ID, tokenUsed)
 		go d.extraRatingService.ApplyPenaltyAndReward(
 			NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name),
-			selectedChannel.Name,
-			selectedChannel.Format,
-			modelItem.Type,
-			selectedChannel.RateLimits,
 		)
 	}
 
@@ -342,7 +339,8 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 	}
 
 	bodyStr := strings.TrimSpace(string(body))
-	if strings.HasPrefix(bodyStr, "<!DOCTYPE") || strings.HasPrefix(bodyStr, "<html") {
+	bodyStrLower := strings.ToLower(bodyStr)
+	if strings.HasPrefix(bodyStrLower, "<!doctype") || strings.HasPrefix(bodyStrLower, "<html") {
 		return nil, resp.StatusCode, fmt.Errorf("upstream API returned HTML error page (invalid API key or endpoint)")
 	}
 
@@ -357,10 +355,6 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 		go d.updateModelUsage(modelItem.ID, tokenUsed)
 		go d.extraRatingService.ApplyPenaltyAndReward(
 			NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name),
-			selectedChannel.Name,
-			selectedChannel.Format,
-			modelItem.Type,
-			selectedChannel.RateLimits,
 		)
 	}
 

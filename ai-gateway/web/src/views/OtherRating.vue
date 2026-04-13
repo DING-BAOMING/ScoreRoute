@@ -58,7 +58,7 @@
               <el-tag type="danger">0分</el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="永不过期">
-              <el-tag type="info">100分</el-tag>
+              <el-tag type="info">70分</el-tag>
             </el-descriptions-item>
           </el-descriptions>
         </el-card>

@@ -211,7 +211,7 @@ func isPeriodicBilling(rateLimits string) bool {
 
 func (h *ModelRatingHandler) calculateTimeRating(expiresAt *time.Time) int {
 	if expiresAt == nil {
-		return 100
+		return 70
 	}
 
 	daysLeft := time.Until(*expiresAt).Hours() / 24

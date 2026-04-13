@@ -47,7 +47,9 @@ func (r *UserRatingRepo) List() ([]*model.UserRating, error) {
 	var ratings []*model.UserRating
 	for rows.Next() {
 		var ur model.UserRating
-		rows.Scan(&ur.ID, &ur.ModelName, &ur.UserRating, &ur.CreatedAt, &ur.UpdatedAt)
+		if err := rows.Scan(&ur.ID, &ur.ModelName, &ur.UserRating, &ur.CreatedAt, &ur.UpdatedAt); err != nil {
+			continue
+		}
 		ratings = append(ratings, &ur)
 	}
 	return ratings, nil
@@ -69,7 +71,9 @@ func (r *UserRatingRepo) GetAllAsMap() (map[string]int, error) {
 	for rows.Next() {
 		var modelName string
 		var rating int
-		rows.Scan(&modelName, &rating)
+		if err := rows.Scan(&modelName, &rating); err != nil {
+			continue
+		}
 		result[modelName] = rating
 	}
 	return result, nil
@@ -89,7 +93,9 @@ func (r *UserRatingRepo) GetDeduplicatedModelNames() ([]string, error) {
 	var names []string
 	for rows.Next() {
 		var name string
-		rows.Scan(&name)
+		if err := rows.Scan(&name); err != nil {
+			continue
+		}
 		names = append(names, name)
 	}
 	return names, nil
@@ -131,7 +137,9 @@ func (r *UserRatingRepo) GetAllUserRatings() ([]map[string]interface{}, error) {
 	for rows.Next() {
 		var modelName string
 		var userRating int
-		rows.Scan(&modelName, &userRating)
+		if err := rows.Scan(&modelName, &userRating); err != nil {
+			continue
+		}
 		results = append(results, map[string]interface{}{
 			"model_name":   modelName,
 			"user_rating": userRating,
@@ -188,7 +196,9 @@ func (r *UserRatingRepo) GetDeduplicatedUserRatings() ([]map[string]interface{},
 	var allNames []string
 	for rows.Next() {
 		var name string
-		rows.Scan(&name)
+		if err := rows.Scan(&name); err != nil {
+			continue
+		}
 		allNames = append(allNames, name)
 	}
 

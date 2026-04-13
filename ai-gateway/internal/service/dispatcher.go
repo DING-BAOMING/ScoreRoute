@@ -337,6 +337,11 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 		return nil, resp.StatusCode, fmt.Errorf("failed to read response: %w", err)
 	}
 
+	bodyStr := strings.TrimSpace(string(body))
+	if strings.HasPrefix(bodyStr, "<!DOCTYPE") || strings.HasPrefix(bodyStr, "<html") {
+		return nil, resp.StatusCode, fmt.Errorf("upstream API returned HTML error page (invalid API key or endpoint)")
+	}
+
 	tokenUsed := parseStreamUsageFromBytes(body)
 	if tokenUsed == 0 {
 		log.Printf("warning: streaming response returned 0 tokens for model=%s, channel=%s. NVIDIA streaming API does not provide usage info in streaming chunks.", modelItem.Name, selectedChannel.Name)

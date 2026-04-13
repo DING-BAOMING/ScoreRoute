@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -31,19 +32,33 @@ type Dispatcher struct {
 }
 
 func NewDispatcher() *Dispatcher {
+	dialer := &net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
+
+	transport := &http.Transport{
+		DialContext:         dialer.DialContext,
+		MaxIdleConns:        100,
+		IdleConnTimeout:     90 * time.Second,
+		TLSHandshakeTimeout: 30 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+
 	return &Dispatcher{
-		channelService:     NewChannelService(),
-		modelService:       NewModelService(),
-		logRepo:            repository.NewLogRepo(),
-		sampleRepo:         repository.NewSampleRepo(),
-		channelRepo:       repository.NewChannelRepo(),
-		rateLimitRepo:     repository.NewRateLimitRepo(),
-		modelRateLimitRepo: repository.NewModelRateLimitRepo(),
-		modelRepo:         repository.NewModelRepo(),
-		systemConfigRepo:  repository.NewSystemConfigRepo(),
-		extraRatingService: NewExtraRatingService(),
+		channelService:      NewChannelService(),
+		modelService:        NewModelService(),
+		logRepo:             repository.NewLogRepo(),
+		sampleRepo:          repository.NewSampleRepo(),
+		channelRepo:         repository.NewChannelRepo(),
+		rateLimitRepo:       repository.NewRateLimitRepo(),
+		modelRateLimitRepo:  repository.NewModelRateLimitRepo(),
+		modelRepo:           repository.NewModelRepo(),
+		systemConfigRepo:    repository.NewSystemConfigRepo(),
+		extraRatingService:  NewExtraRatingService(),
 		client: &http.Client{
-			Timeout: 300 * time.Second,
+			Timeout:   300 * time.Second,
+			Transport: transport,
 		},
 	}
 }

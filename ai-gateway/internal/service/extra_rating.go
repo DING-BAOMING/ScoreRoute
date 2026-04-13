@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -122,27 +121,28 @@ func (s *ExtraRatingService) ApplyPenaltyAndReward(modelKey, channelName, format
 		return err
 	}
 
-	penaltyRecords, _ := s.repo.GetPenaltyRecords()
-	maxRequestCount := 0
-	for _, p := range penaltyRecords {
-		if p.RequestCount > maxRequestCount {
-			maxRequestCount = p.RequestCount
-		}
-	}
-
-	newRequestCount := maxRequestCount + 1
-	expiresAt := time.Now().Add(time.Duration(config.PunishmentRounds) * time.Minute)
-
-	allModels, err := s.modelRepo.ListEnabled()
+	penaltyRecords, err := s.repo.GetPenaltyRecords()
 	if err != nil {
 		return err
 	}
 
-	for _, m := range allModels {
-		modelKeyToPenalize := NormalizeModelKey(m.ChannelName, m.Format, m.Type, m.Name)
-		if err := s.repo.AddPenaltyRecord(modelKeyToPenalize, config.PunishmentScore, 1, newRequestCount, &expiresAt); err != nil {
-			log.Printf("failed to add penalty record for model %s: %v", modelKeyToPenalize, err)
+	for _, p := range penaltyRecords {
+		newScore := p.CurrentScore + 1
+		if newScore >= 0 {
+			s.repo.DeleteRecord(p.ID)
+		} else {
+			s.repo.UpdatePenaltyScore(p.ID, newScore)
 		}
+	}
+
+	penaltyScore := -5
+	if config.PunishmentScore > 0 {
+		penaltyScore = -config.PunishmentScore
+	}
+
+	expiresAt := time.Now().Add(time.Duration(config.PunishmentRounds) * time.Minute)
+	if err := s.repo.AddPenaltyRecord(modelKey, penaltyScore, 1, 0, &expiresAt); err != nil {
+		return fmt.Errorf("failed to add penalty record: %w", err)
 	}
 
 	return nil

@@ -165,14 +165,15 @@ type SampleRequest struct {
 }
 
 type SampleAnalysisConfig struct {
-	ID        int64     `json:"id"`
-	Format    string    `json:"format"`
-	BaseURL   string    `json:"base_url"`
-	APIKey    string    `json:"api_key"`
-	ModelName string    `json:"model_name"`
-	Enabled   int       `json:"enabled"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID            int64     `json:"id"`
+	Format        string    `json:"format"`
+	BaseURL       string    `json:"base_url"`
+	APIKey        string    `json:"-"`           // Never expose in JSON
+	MaskedAPIKey  string    `json:"api_key"`    // Masked version for display
+	ModelName     string    `json:"model_name"`
+	Enabled       int       `json:"enabled"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 type SampleAnalysisLog struct {

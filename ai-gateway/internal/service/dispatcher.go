@@ -186,8 +186,12 @@ func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, i
 		return nil, resp.StatusCode, fmt.Errorf("failed to read response: %w", err)
 	}
 
+	bodyStr := strings.TrimSpace(string(body))
+	if strings.HasPrefix(bodyStr, "<!DOCTYPE") || strings.HasPrefix(bodyStr, "<html") {
+		return nil, resp.StatusCode, fmt.Errorf("upstream API returned HTML error page (invalid API key or endpoint)")
+	}
+
 	var tokenUsed int
-	bodyStr := string(body)
 	isStream, _ := req["stream"].(bool)
 	if strings.HasPrefix(bodyStr, "data: ") {
 		isStream = true

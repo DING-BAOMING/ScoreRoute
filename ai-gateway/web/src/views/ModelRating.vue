@@ -207,10 +207,10 @@ async function loadData() {
       weightsForm.value = {...weights.value}
     }
 
-    if (costTimeRes.code === 0 && costTimeRes.data) {
+    if (costTimeRes.code === 0 && Array.isArray(costTimeRes.data)) {
       const ctMap = {}
-      Object.entries(costTimeRes.data).forEach(([key, value]) => {
-        ctMap[key.toLowerCase()] = value
+      costTimeRes.data.forEach(item => {
+        ctMap[item.model_key.toLowerCase()] = item
       })
       costTimeRatings.value = ctMap
     }

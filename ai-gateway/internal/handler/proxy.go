@@ -75,7 +75,7 @@ func (h *ProxyHandler) Handle(c *gin.Context) {
 		return
 	}
 
-	c.Data(http.StatusOK, "application/json", respBody)
+	c.Data(statusCode, "application/json", respBody)
 }
 
 func (h *ProxyHandler) HandleStream(c *gin.Context) {
@@ -120,8 +120,7 @@ func (h *ProxyHandler) HandleStreamWithBody(c *gin.Context, token *model.Token, 
 	}
 
 	c.Header("Content-Type", "text/event-stream")
-	c.Status(statusCode)
-	c.Data(http.StatusOK, "text/event-stream", respBody)
+	c.Data(statusCode, "text/event-stream", respBody)
 }
 
 func (h *ProxyHandler) HandleModels(c *gin.Context) {

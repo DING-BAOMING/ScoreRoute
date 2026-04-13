@@ -23,6 +23,11 @@ func (r *SampleAnalysisConfigRepo) Get() (*model.SampleAnalysisConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(cfg.APIKey) >= 4 {
+		cfg.MaskedAPIKey = "****" + cfg.APIKey[len(cfg.APIKey)-4:]
+	} else {
+		cfg.MaskedAPIKey = "****"
+	}
 	return cfg, nil
 }
 
@@ -58,6 +63,11 @@ func (r *SampleAnalysisConfigRepo) GetEnabled() (*model.SampleAnalysisConfig, er
 	}
 	if err != nil {
 		return nil, err
+	}
+	if len(cfg.APIKey) >= 4 {
+		cfg.MaskedAPIKey = "****" + cfg.APIKey[len(cfg.APIKey)-4:]
+	} else {
+		cfg.MaskedAPIKey = "****"
 	}
 	return cfg, nil
 }

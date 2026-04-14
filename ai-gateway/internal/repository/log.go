@@ -271,6 +271,37 @@ func (r *LogRepo) GetTotalStats() (*model.PageResult, error) {
 	}, nil
 }
 
+func (r *LogRepo) GetModelStatsByChannelAndModel(channelName, modelName string) (*ModelStatsResult, error) {
+	result := &ModelStatsResult{}
+	var totalCalls, successCalls int64
+	var avgLatency float64
+
+	err := DB.QueryRow(`
+		SELECT 
+			COUNT(*) as total_calls,
+			SUM(CASE WHEN status < 400 THEN 1 ELSE 0 END) as success_calls,
+			COALESCE(AVG(latency_ms), 0) as avg_latency
+		FROM call_logs
+		WHERE channel_name = ? AND model_name = ?
+	`, channelName, modelName).Scan(&totalCalls, &successCalls, &avgLatency)
+	
+	if err != nil {
+		return nil, err
+	}
+
+	result.TotalCalls = totalCalls
+	result.SuccessCalls = successCalls
+	result.AvgLatency = avgLatency
+
+	return result, nil
+}
+
+type ModelStatsResult struct {
+	TotalCalls   int64
+	SuccessCalls int64
+	AvgLatency   float64
+}
+
 func (r *LogRepo) GetModelStats() ([]map[string]interface{}, error) {
 	rows, err := DB.Query(`
 		SELECT 

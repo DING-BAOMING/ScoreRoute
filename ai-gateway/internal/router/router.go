@@ -108,6 +108,7 @@ func Setup() *gin.Engine {
 			systemConfigHandler := handler.NewSystemConfigHandler()
 			systemConfig.GET("", systemConfigHandler.Get)
 			systemConfig.PUT("", systemConfigHandler.Update)
+			systemConfig.PUT("/dispatch-mode", systemConfigHandler.UpdateDispatchMode)
 		}
 
 		extraRating := api.Group("/extra-rating")

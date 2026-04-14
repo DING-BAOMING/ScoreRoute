@@ -99,7 +99,8 @@ export const systemConfigAPI = {
   get: () => api.get('/system-config'),
   getByKey: (key) => api.get(`/system-config/${key}`),
   update: (key, value) => api.put(`/system-config/${key}`, { value }),
-  updateMultiple: (data) => api.put('/system-config', data)
+  updateMultiple: (data) => api.put('/system-config', data),
+  updateDispatchMode: (mode) => api.put('/system-config/dispatch-mode', { dispatch_mode: mode })
 }
 
 export const extraRatingAPI = {

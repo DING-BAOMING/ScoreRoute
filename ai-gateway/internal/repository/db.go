@@ -359,5 +359,20 @@ func migrateTables() error {
 		log.Println("Unique index does not exist, skipping")
 	}
 
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('system_config') WHERE name='dispatch_mode'")
+	var dispatchModeCount int
+	if err := row.Scan(&dispatchModeCount); err != nil {
+		return fmt.Errorf("failed to check dispatch_mode column: %w", err)
+	}
+	if dispatchModeCount == 0 {
+		log.Println("Adding dispatch_mode column to system_config table...")
+		if _, err := DB.Exec(`ALTER TABLE system_config ADD COLUMN dispatch_mode TEXT DEFAULT 'polling'`); err != nil {
+			return fmt.Errorf("failed to add dispatch_mode column to system_config: %w", err)
+		}
+		log.Println("dispatch_mode column added successfully")
+	} else {
+		log.Println("system_config table already has dispatch_mode column, skipping")
+	}
+
 	return nil
 }

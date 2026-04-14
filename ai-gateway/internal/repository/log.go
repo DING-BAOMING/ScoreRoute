@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"ai-gateway/internal/model"
@@ -375,4 +376,40 @@ func (r *LogRepo) GetModelStats() ([]map[string]interface{}, error) {
 	}
 
 	return results, nil
+}
+
+func (r *LogRepo) GetModelStatsMap() map[string]*ModelStatsResult {
+	result := make(map[string]*ModelStatsResult)
+	
+	rows, err := DB.Query(`
+		SELECT 
+			channel_name,
+			model_name,
+			COUNT(*) as total_calls,
+			SUM(CASE WHEN status < 400 THEN 1 ELSE 0 END) as success_calls,
+			COALESCE(AVG(latency_ms), 0) as avg_latency
+		FROM call_logs
+		GROUP BY channel_name, model_name
+	`)
+	if err != nil {
+		return result
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var channelName, modelName string
+		var totalCalls, successCalls int64
+		var avgLatency float64
+		if err := rows.Scan(&channelName, &modelName, &totalCalls, &successCalls, &avgLatency); err != nil {
+			continue
+		}
+		key := strings.ToLower(channelName + "::" + modelName)
+		result[key] = &ModelStatsResult{
+			TotalCalls:   totalCalls,
+			SuccessCalls: successCalls,
+			AvgLatency:   avgLatency,
+		}
+	}
+
+	return result
 }

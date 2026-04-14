@@ -385,3 +385,22 @@ func (r *ModelRepo) IncrementChannelCallCount(id int64) error {
 	)
 	return err
 }
+
+func (r *ModelRepo) GetByChannelNameAndModel(channelName, modelName string) (*model.Model, error) {
+	model := &model.Model{}
+	var expiresAtStr sql.NullString
+	err := DB.QueryRow(
+		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
+		 FROM models m LEFT JOIN channels c ON m.channel_id = c.id
+		 WHERE c.name = ? AND m.name = ?`,
+		channelName, modelName,
+	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &expiresAtStr, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	model.ExpiresAt = parseExpiresAt(expiresAtStr)
+	return model, nil
+}

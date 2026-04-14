@@ -128,6 +128,7 @@ func Setup() *gin.Engine {
 			modelRating.GET("/weights", modelRatingHandler.GetWeights)
 			modelRating.PUT("/weights", modelRatingHandler.UpdateWeights)
 			modelRating.GET("/cost-time", modelRatingHandler.GetCostTimeRatings)
+			modelRating.GET("/scores", modelRatingHandler.GetAllScores)
 		}
 	}
 

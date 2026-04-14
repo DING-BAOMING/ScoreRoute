@@ -9,6 +9,7 @@ import (
 
 	"ai-gateway/internal/model"
 	"ai-gateway/internal/repository"
+	"ai-gateway/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,6 +19,7 @@ type ModelRatingHandler struct {
 	configRepo *repository.ModelRatingConfigRepo
 	modelRepo  *repository.ModelRepo
 	configSvc  *repository.SystemConfigRepo
+	modelRatingSvc *service.ModelRatingService
 }
 
 func NewModelRatingHandler() *ModelRatingHandler {
@@ -25,6 +27,7 @@ func NewModelRatingHandler() *ModelRatingHandler {
 		configRepo: repository.NewModelRatingConfigRepo(),
 		modelRepo:  repository.NewModelRepo(),
 		configSvc:  repository.NewSystemConfigRepo(),
+		modelRatingSvc: service.NewModelRatingService(),
 	}
 }
 
@@ -74,6 +77,15 @@ func (h *ModelRatingHandler) UpdateWeights(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, model.APIResponse{Code: 0, Message: "更新成功"})
+}
+
+func (h *ModelRatingHandler) GetAllScores(c *gin.Context) {
+	scores, err := h.modelRatingSvc.CalculateAllScores()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, model.APIResponse{Code: 0, Message: "success", Data: scores})
 }
 
 type ModelCostTimeRating struct {

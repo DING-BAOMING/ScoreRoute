@@ -119,11 +119,11 @@ func (r *SampleRepo) GetStats() (map[string]interface{}, error) {
 	}
 	stats["total_samples"] = totalSamples
 
-	var avgTokens int64
+	var avgTokens float64
 	if err := DB.QueryRow(`SELECT COALESCE(AVG(token_count), 0) FROM samples`).Scan(&avgTokens); err != nil {
 		avgTokens = 0
 	}
-	stats["avg_tokens"] = avgTokens
+	stats["avg_tokens"] = int64(avgTokens)
 
 	var modelsCount int64
 	if err := DB.QueryRow(`SELECT COUNT(DISTINCT model_key) FROM samples`).Scan(&modelsCount); err != nil {

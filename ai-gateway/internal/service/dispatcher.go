@@ -108,6 +108,8 @@ func (d *Dispatcher) GetNextModelSmart(format, modelType string) (*model.Model, 
 		return d.modelService.GetNextModelGlobal(format, modelType)
 	}
 
+	loadRatings()
+
 	models, err := d.modelService.ListEnabled()
 	if err != nil || len(models) == 0 {
 		return d.modelService.GetNextModelGlobal(format, modelType)
@@ -228,7 +230,8 @@ func (d *Dispatcher) calculateCompositeScore(m *model.Model, weights *modelRatin
 	}
 
 	userRating := 50
-	if ur, ok := userRatings[m.Name]; ok {
+	normalizedKey := normalizeUserRatingKey(m.Name)
+	if ur, ok := userRatings[normalizedKey]; ok {
 		userRating = ur
 	}
 	userScore := float64(userRating) / 100.0
@@ -272,6 +275,36 @@ func (d *Dispatcher) calculateCompositeScore(m *model.Model, weights *modelRatin
 
 var userRatings = make(map[string]int)
 var sampleRatings = make(map[string]int)
+
+func normalizeUserRatingKey(modelName string) string {
+	modelName = strings.ToLower(strings.TrimSpace(modelName))
+	
+	vendorPrefixes := []string{"google/", "qwen/", "z-ai/", "anthropic/", "openai/", "meta/", "mistral/", "cohere/", "azure/", "aws/", "alibaba/", "baidu/", "tencent/", "minimaxai/"}
+	for _, prefix := range vendorPrefixes {
+		if strings.HasPrefix(modelName, prefix) {
+			modelName = strings.TrimPrefix(modelName, prefix)
+			break
+		}
+	}
+	
+	return modelName
+}
+
+func loadRatings() {
+	userRepo := repository.NewUserRatingRepo()
+	if userRatingsMap, err := userRepo.GetAllAsMap(); err == nil {
+		for k, v := range userRatingsMap {
+			userRatings[k] = v
+		}
+	}
+
+	sampleRepo := repository.NewSampleRatingRepo()
+	if sampleRatingsMap, err := sampleRepo.GetAllAsMap(); err == nil {
+		for k, v := range sampleRatingsMap {
+			sampleRatings[k] = v.Score
+		}
+	}
+}
 
 func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, int, error) {
 	startTime := time.Now()

@@ -233,6 +233,10 @@ func (d *Dispatcher) calculateCompositeScore(m *model.Model, weights *modelRatin
 	normalizedKey := normalizeUserRatingKey(m.Name)
 	if ur, ok := userRatings[normalizedKey]; ok {
 		userRating = ur
+	} else if ur, ok := userRatings[m.Name]; ok {
+		userRating = ur
+	} else if ur, ok := userRatings[strings.ToLower(m.Name)]; ok {
+		userRating = ur
 	}
 	userScore := float64(userRating) / 100.0
 
@@ -328,7 +332,7 @@ func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, i
 			return nil, 0, fmt.Errorf("no available models")
 		}
 	} else if modelName == "auto" || modelName == "Auto" {
-		modelItem, err = d.modelService.GetNextModelGlobal(token.Format, token.Type)
+		modelItem, err = d.GetNextModelSmart(token.Format, token.Type)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to get next model: %w", err)
 		}
@@ -462,7 +466,7 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 			return nil, 0, fmt.Errorf("no available models")
 		}
 	} else if modelName == "auto" || modelName == "Auto" {
-		modelItem, err = d.modelService.GetNextModelGlobal(token.Format, token.Type)
+		modelItem, err = d.GetNextModelSmart(token.Format, token.Type)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to get next model: %w", err)
 		}

@@ -105,6 +105,39 @@
             </template>
           </el-alert>
 
+          <el-alert type="success" :closable="false" style="margin-bottom: 20px">
+            <template #title>
+              <span>智能重试策略 (完整提交 > 分块提交 > 摘要提交)</span>
+            </template>
+            <template #default>
+              <div style="font-size: 12px; line-height: 1.6">
+                <b>设计原则</b>: 能完整提交就完整提交 > 尽量分块提交 > 最后摘要提交<br/><br/>
+                <b>重试流程</b>:<br/>
+                <pre style="margin: 5px 0; padding: 8px; background: #f5f5f5; border-radius: 4px; font-size: 11px">
+第一次: 完整提交 (保留开头内容 400/600/1000 字符)
+    ↓ 失败?
+    ├── 上下文过大问题
+    │   ├── 第二次: 分块分析 (3部分评分取平均)
+    │   │   ↓ 失败
+    │   ├── 第三次: 尾部截断策略 (保留结尾)
+    │   │   ↓ 失败
+    │   └── 删除样本 (无法分析)
+    │
+    └── 非上下文问题
+        ├── 第二次: 完整提交
+        │   ↓ 失败
+        ├── 第三次: 完整提交
+        │   ↓ 失败
+        └── 保留样本 (下次分析继续尝试)</pre>
+                <b>错误分类</b>:<br/>
+                <ul style="margin: 5px 0 0 0; padding-left: 20px">
+                  <li><b>上下文错误</b>: "context length", "maximum context", "input tokens"</li>
+                  <li><b>其他错误</b>: 网络超时、API错误、解析失败等</li>
+                </ul>
+              </div>
+            </template>
+          </el-alert>
+
           <el-table :data="ratings" v-loading="ratingsLoading" stripe>
             <el-table-column prop="model_key" label="模型名称" width="200" />
             <el-table-column prop="score" label="总分" width="100" sortable>

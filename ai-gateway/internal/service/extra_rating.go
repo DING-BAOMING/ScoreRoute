@@ -173,36 +173,26 @@ func (s *ExtraRatingService) GetModelExtraScore(modelKey string) (int, int, erro
 		return 0, 0, err
 	}
 
-	maxRequestCount := 0
-	for _, p := range penaltyRecords {
-		if p.RequestCount > maxRequestCount {
-			maxRequestCount = p.RequestCount
-		}
-	}
-
+	now := time.Now()
 	totalPenalty := 0
 	for _, p := range penaltyRecords {
 		if p.ModelKey == modelKey {
-			decayedScore := p.PenaltyScore - (maxRequestCount - p.RequestCount) * p.DecayPerReq
-			if decayedScore > 0 {
-				totalPenalty += decayedScore
+			expiresAt := p.ExpiresAt
+			if expiresAt != nil && now.After(*expiresAt) {
+				continue
 			}
+			totalPenalty += p.CurrentScore
 		}
 	}
 
 	totalReward := 0
-	now := time.Now()
 	for _, r := range rewardRecords {
 		if r.ModelKey == modelKey && r.RewardScore > 0 {
-			if r.ExpiresAt != nil && r.CreatedAt.Unix() > 0 {
-				totalDuration := r.ExpiresAt.Sub(r.CreatedAt).Minutes()
-				elapsed := now.Sub(r.CreatedAt).Minutes()
-				if elapsed < totalDuration {
-					remainingRatio := 1 - elapsed/totalDuration
-					rewardValue := float64(r.RewardScore) * remainingRatio
-					totalReward += int(rewardValue)
-				}
+			expiresAt := r.ExpiresAt
+			if expiresAt != nil && now.After(*expiresAt) {
+				continue
 			}
+			totalReward += r.CurrentScore
 		}
 	}
 

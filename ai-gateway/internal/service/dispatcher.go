@@ -237,6 +237,17 @@ func (d *Dispatcher) calculateCompositeScore(m *model.Model, weights *modelRatin
 		userRating = ur
 	} else if ur, ok := userRatings[strings.ToLower(m.Name)]; ok {
 		userRating = ur
+	} else {
+		fallbackKey := normalizedKey
+		fallbackKey = strings.Replace(fallbackKey, "glm", "glm-", 1)
+		if ur, ok := userRatings[fallbackKey]; ok {
+			userRating = ur
+		} else {
+			fallbackKey2 := strings.Replace(normalizedKey, "-", "", -1)
+			if ur, ok := userRatings[fallbackKey2]; ok {
+				userRating = ur
+			}
+		}
 	}
 	userScore := float64(userRating) / 100.0
 
@@ -272,8 +283,12 @@ func (d *Dispatcher) calculateCompositeScore(m *model.Model, weights *modelRatin
 		reliabilityScore*weights.ReliabilityWeight +
 		userScore*weights.UserRatingWeight +
 		sampleScore*weights.SampleRatingWeight +
-		(costScore+extraScore)*weights.CostRatingWeight +
-		timeScore*weights.TimeRatingWeight
+		costScore*weights.CostRatingWeight +
+		timeScore*weights.TimeRatingWeight +
+		extraScore
+
+	log.Printf("[calculateCompositeScore] model=%s/%s: score=%.4f (success=%.4f, latency=%.4f, reliability=%.4f, user=%d, sample=%d, extra=%.4f)",
+		m.ChannelName, m.Name, compositeScore, successScore, latencyScore, reliabilityScore, userRating, sampleRating, extraScore)
 
 	return compositeScore
 }

@@ -8,7 +8,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"sort"
 	"strings"
 	"time"
 
@@ -108,57 +107,35 @@ func (d *Dispatcher) GetNextModelSmart(format, modelType string) (*model.Model, 
 		return d.modelService.GetNextModelGlobal(format, modelType)
 	}
 
-	loadRatings()
-
-	models, err := d.modelService.ListEnabled()
-	if err != nil || len(models) == 0 {
-		return d.modelService.GetNextModelGlobal(format, modelType)
-	}
-
-	weights, err := d.getModelRatingWeights()
+	modelRatingSvc := NewModelRatingService()
+	allScores, err := modelRatingSvc.CalculateAllScores()
 	if err != nil {
-		weights = &modelRatingWeights{
-			SuccessWeight:      0.15,
-			LatencyWeight:      0.10,
-			ReliabilityWeight:  0.10,
-			UserRatingWeight:   0.15,
-			SampleRatingWeight: 0.25,
-			CostRatingWeight:   0.15,
-			TimeRatingWeight:   0.10,
-		}
-	}
-
-	type scoredModel struct {
-		model      *model.Model
-		compositeScore float64
-	}
-
-	scoredModels := make([]scoredModel, 0, len(models))
-	for _, m := range models {
-		if format != "" && m.Format != format {
-			continue
-		}
-		if modelType != "" && m.Type != modelType {
-			continue
-		}
-
-		score := d.calculateCompositeScore(m, weights)
-		scoredModels = append(scoredModels, scoredModel{model: m, compositeScore: score})
-	}
-
-	if len(scoredModels) == 0 {
+		log.Printf("[GetNextModelSmart] failed to calculate scores: %v", err)
 		return d.modelService.GetNextModelGlobal(format, modelType)
 	}
 
-	sort.Slice(scoredModels, func(i, j int) bool {
-		return scoredModels[i].compositeScore > scoredModels[j].compositeScore
-	})
+	for _, score := range allScores {
+		if format != "" && score.Format != format {
+			continue
+		}
+		if modelType != "" && score.ModelType != modelType {
+			continue
+		}
 
-	selected := scoredModels[0].model
-	d.modelRepo.IncrementCallCount(selected.ID)
-	d.channelRepo.IncrementCallCount(selected.ChannelID)
+		selectedModel, err := d.modelRepo.GetByChannelNameAndModel(score.ChannelName, score.ModelName)
+		if err != nil || selectedModel == nil {
+			continue
+		}
 
-	return selected, nil
+		d.modelRepo.IncrementCallCount(selectedModel.ID)
+		d.channelRepo.IncrementCallCount(selectedModel.ChannelID)
+		
+		log.Printf("[GetNextModelSmart] selected %s/%s score=%.2f rank=%d", 
+			score.ChannelName, score.ModelName, score.Score, score.Rank)
+		return selectedModel, nil
+	}
+
+	return d.modelService.GetNextModelGlobal(format, modelType)
 }
 
 type modelRatingWeights struct {
@@ -237,17 +214,6 @@ func (d *Dispatcher) calculateCompositeScore(m *model.Model, weights *modelRatin
 		userRating = ur
 	} else if ur, ok := userRatings[strings.ToLower(m.Name)]; ok {
 		userRating = ur
-	} else {
-		fallbackKey := normalizedKey
-		fallbackKey = strings.Replace(fallbackKey, "glm", "glm-", 1)
-		if ur, ok := userRatings[fallbackKey]; ok {
-			userRating = ur
-		} else {
-			fallbackKey2 := strings.Replace(normalizedKey, "-", "", -1)
-			if ur, ok := userRatings[fallbackKey2]; ok {
-				userRating = ur
-			}
-		}
 	}
 	userScore := float64(userRating) / 100.0
 
@@ -312,11 +278,14 @@ func normalizeUserRatingKey(modelName string) string {
 
 func loadRatings() {
 	userRepo := repository.NewUserRatingRepo()
-	if userRatingsMap, err := userRepo.GetAllAsMap(); err == nil {
-		for k, v := range userRatingsMap {
-			userRatings[k] = v
+	
+	if ratings, err := userRepo.GetDeduplicatedUserRatings(); err == nil {
+		for _, r := range ratings {
+			modelName, _ := r["model_name"].(string)
+			rating, _ := r["user_rating"].(int)
+			userRatings[strings.ToLower(modelName)] = rating
 		}
-		log.Printf("[loadRatings] Loaded %d user ratings", len(userRatingsMap))
+		log.Printf("[loadRatings] Loaded %d user ratings from deduplicated", len(ratings))
 	} else {
 		log.Printf("[loadRatings] Failed to load user ratings: %v", err)
 	}

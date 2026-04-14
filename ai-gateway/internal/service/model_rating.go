@@ -166,14 +166,14 @@ func (s *ModelRatingService) CalculateAllScores() ([]*ModelScore, error) {
 			timeRating = ct.time
 		}
 
-		score := (successRate * weights.SuccessWeight / 100) +
-			(latencyScore * weights.LatencyWeight / 100) +
-			(reliabilityScore * weights.ReliabilityWeight / 100) +
-			(float64(userRating) * weights.UserRatingWeight / 100) +
-			(float64(sampleRating) * weights.SampleRatingWeight / 100) +
-			(float64(costRating) * weights.CostRatingWeight / 100) +
-			(float64(timeRating) * weights.TimeRatingWeight / 100) +
-			float64(penalty+reward)/100
+		score := (successRate * weights.SuccessWeight) +
+			(latencyScore * weights.LatencyWeight) +
+			(reliabilityScore * weights.ReliabilityWeight) +
+			(float64(userRating) * weights.UserRatingWeight) +
+			(float64(sampleRating) * weights.SampleRatingWeight) +
+			(float64(costRating) * weights.CostRatingWeight) +
+			(float64(timeRating) * weights.TimeRatingWeight) +
+			float64(penalty+reward)
 
 		scores = append(scores, &ModelScore{
 			ChannelName:   m.ChannelName,
@@ -181,7 +181,7 @@ func (s *ModelRatingService) CalculateAllScores() ([]*ModelScore, error) {
 			ModelType:     m.Type,
 			ModelName:     m.Name,
 			ModelKey:      modelKey,
-			Score:         score * 100,
+			Score:         score,
 			SuccessRate:   successRate,
 			Latency:       latencyScore,
 			Reliability:   reliabilityScore,
@@ -320,7 +320,7 @@ func (s *ModelRatingService) getCostTimeRatingsMap(models []*model.Model) map[st
 			}
 		}
 
-		timeRating := 50
+		timeRating := 70
 		if m.ExpiresAt != nil {
 			daysLeft := time.Until(*m.ExpiresAt).Hours() / 24
 			if daysLeft < 0 {

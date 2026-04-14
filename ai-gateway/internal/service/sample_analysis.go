@@ -137,6 +137,17 @@ func (s *SampleAnalysisService) buildAnalysisPrompt(sample *model.Sample) string
 	requestContent, _ := json.Marshal(sample.RequestContent)
 	responseContent, _ := json.Marshal(sample.ResponseContent)
 	
+	const maxRequestLen = 3000
+	const maxResponseLen = 1500
+	truncatedRequest := string(requestContent)
+	truncatedResponse := string(responseContent)
+	if len(truncatedRequest) > maxRequestLen {
+		truncatedRequest = truncatedRequest[:maxRequestLen] + "...[truncated]"
+	}
+	if len(truncatedResponse) > maxResponseLen {
+		truncatedResponse = truncatedResponse[:maxResponseLen] + "...[truncated]"
+	}
+	
 	prompt := fmt.Sprintf(`You are an AI agent evaluation expert. Analyze the following sample and rate the model's performance for agentic tasks.
 
 ## Evaluation Criteria (1-100 scale each):
@@ -161,7 +172,7 @@ func (s *SampleAnalysisService) buildAnalysisPrompt(sample *model.Sample) string
 Return ONLY a valid JSON object with this exact structure, no markdown or additional text:
 {"score":85,"tool_calling_score":90,"completeness_score":85,"context_understanding_score":80,"error_handling_score":75,"response_quality_score":90,"reasoning":"Brief explanation"}
 
-Analyze and return ONLY the JSON.`, sample.ModelKey, string(requestContent), string(responseContent))
+Analyze and return ONLY the JSON.`, sample.ModelKey, truncatedRequest, truncatedResponse)
 
 	return prompt
 }

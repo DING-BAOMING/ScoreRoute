@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -92,6 +93,186 @@ func (d *Dispatcher) ListEnabledModels() ([]*model.Model, error) {
 	return d.modelService.ListEnabled()
 }
 
+func (d *Dispatcher) GetNextModelSmart(format, modelType string) (*model.Model, error) {
+	config, err := d.systemConfigRepo.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	dispatchMode := "polling"
+	if config != nil && config.DispatchMode != "" {
+		dispatchMode = config.DispatchMode
+	}
+
+	if dispatchMode != "smart" {
+		return d.modelService.GetNextModelGlobal(format, modelType)
+	}
+
+	models, err := d.modelService.ListEnabled()
+	if err != nil || len(models) == 0 {
+		return d.modelService.GetNextModelGlobal(format, modelType)
+	}
+
+	weights, err := d.getModelRatingWeights()
+	if err != nil {
+		weights = &modelRatingWeights{
+			SuccessWeight:      0.15,
+			LatencyWeight:      0.10,
+			ReliabilityWeight:  0.10,
+			UserRatingWeight:   0.15,
+			SampleRatingWeight: 0.25,
+			CostRatingWeight:   0.15,
+			TimeRatingWeight:   0.10,
+		}
+	}
+
+	type scoredModel struct {
+		model      *model.Model
+		compositeScore float64
+	}
+
+	scoredModels := make([]scoredModel, 0, len(models))
+	for _, m := range models {
+		if format != "" && m.Format != format {
+			continue
+		}
+		if modelType != "" && m.Type != modelType {
+			continue
+		}
+
+		score := d.calculateCompositeScore(m, weights)
+		scoredModels = append(scoredModels, scoredModel{model: m, compositeScore: score})
+	}
+
+	if len(scoredModels) == 0 {
+		return d.modelService.GetNextModelGlobal(format, modelType)
+	}
+
+	sort.Slice(scoredModels, func(i, j int) bool {
+		return scoredModels[i].compositeScore > scoredModels[j].compositeScore
+	})
+
+	selected := scoredModels[0].model
+	d.modelRepo.IncrementCallCount(selected.ID)
+	d.channelRepo.IncrementCallCount(selected.ChannelID)
+
+	return selected, nil
+}
+
+type modelRatingWeights struct {
+	SuccessWeight      float64
+	LatencyWeight      float64
+	ReliabilityWeight  float64
+	UserRatingWeight   float64
+	SampleRatingWeight float64
+	CostRatingWeight   float64
+	TimeRatingWeight   float64
+}
+
+func (d *Dispatcher) getModelRatingWeights() (*modelRatingWeights, error) {
+	repo := repository.NewModelRatingConfigRepo()
+	repoWeights, err := repo.GetAll()
+	if err != nil {
+		return nil, err
+	}
+
+	w := &modelRatingWeights{
+		SuccessWeight:      repoWeights.SuccessWeight,
+		LatencyWeight:     repoWeights.LatencyWeight,
+		ReliabilityWeight: repoWeights.ReliabilityWeight,
+		UserRatingWeight:   repoWeights.UserRatingWeight,
+		SampleRatingWeight: repoWeights.SampleRatingWeight,
+		CostRatingWeight:   repoWeights.CostRatingWeight,
+		TimeRatingWeight:   repoWeights.TimeRatingWeight,
+	}
+
+	return w, nil
+}
+
+func (d *Dispatcher) calculateCompositeScore(m *model.Model, weights *modelRatingWeights) float64 {
+	modelStats, err := d.logRepo.GetModelStatsByChannelAndModel(m.ChannelName, m.Name)
+	if err != nil {
+		modelStats = nil
+	}
+
+	var totalCalls, successCalls int64
+	var avgLatency float64
+	if modelStats != nil {
+		totalCalls = modelStats.TotalCalls
+		successCalls = modelStats.SuccessCalls
+		avgLatency = modelStats.AvgLatency
+	}
+
+	successScore := 0.0
+	if totalCalls > 0 {
+		successScore = float64(successCalls) / float64(totalCalls)
+	}
+
+	latencyScore := 0.0
+	if avgLatency > 0 {
+		latencyScore = 1.0 - (avgLatency / 30000.0)
+		if latencyScore < 0 {
+			latencyScore = 0
+		}
+	}
+
+	reliabilityScore := 0.0
+	if totalCalls >= 30 {
+		reliabilityScore = 1.0
+	} else if totalCalls >= 10 {
+		reliabilityScore = 0.8 + 0.2*float64(totalCalls-10)/20.0
+	} else if totalCalls >= 5 {
+		reliabilityScore = 0.5 + 0.3*float64(totalCalls-5)/5.0
+	} else if totalCalls > 0 {
+		reliabilityScore = 0.5
+	}
+
+	userRating := 50
+	if ur, ok := userRatings[m.Name]; ok {
+		userRating = ur
+	}
+	userScore := float64(userRating) / 100.0
+
+	sampleRating := 50
+	if sr, ok := sampleRatings[NormalizeModelKey(m.ChannelName, m.Format, m.Type, m.Name)]; ok {
+		sampleRating = sr
+	}
+	sampleScore := float64(sampleRating) / 100.0
+
+	penalty, reward, _ := d.extraRatingService.GetModelExtraScore(NormalizeModelKey(m.ChannelName, m.Format, m.Type, m.Name))
+	extraScore := float64(reward+penalty) / 100.0
+
+	costRating := 90
+	if m.CostPerToken > 0 {
+		costRating = 70
+	}
+	costScore := float64(costRating) / 100.0
+
+	timeRating := 70
+	if m.ExpiresAt != nil {
+		daysLeft := time.Until(*m.ExpiresAt).Hours() / 24
+		if daysLeft < 7 {
+			timeRating = 100
+		} else if daysLeft < 30 {
+			timeRating = 100 - int((daysLeft-7)/23.0*10)
+		}
+	}
+	timeScore := float64(timeRating) / 100.0
+
+	compositeScore := successScore*weights.SuccessWeight +
+		latencyScore*weights.LatencyWeight +
+		reliabilityScore*weights.ReliabilityWeight +
+		userScore*weights.UserRatingWeight +
+		sampleScore*weights.SampleRatingWeight +
+		(costScore+extraScore)*weights.CostRatingWeight +
+		timeScore*weights.TimeRatingWeight
+
+	return compositeScore
+}
+
+var userRatings = make(map[string]int)
+var sampleRatings = make(map[string]int)
+
 func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, int, error) {
 	startTime := time.Now()
 
@@ -132,30 +313,12 @@ func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, i
 	}
 
 	if modelItem == nil {
-		if token.ModelName == "__POLL_ALL__" {
-			modelItem, err = d.modelService.GetNextModelAny()
-			if err != nil {
-				return nil, 0, fmt.Errorf("failed to get next model: %w", err)
-			}
-			if modelItem == nil {
-				return nil, 0, fmt.Errorf("no available models")
-			}
-		} else if token.ModelName == "__AUTO__" {
-			modelItem, err = d.modelService.GetNextModelGlobal(token.Format, token.Type)
-			if err != nil {
-				return nil, 0, fmt.Errorf("failed to get next model: %w", err)
-			}
-			if modelItem == nil {
-				return nil, 0, fmt.Errorf("no available models for format=%s type=%s", token.Format, token.Type)
-			}
-		} else {
-			modelItem, err = d.modelService.GetNextModelGlobal(token.Format, token.Type)
-			if err != nil {
-				return nil, 0, fmt.Errorf("failed to get next model: %w", err)
-			}
-			if modelItem == nil {
-				return nil, 0, fmt.Errorf("no available models for format=%s type=%s", token.Format, token.Type)
-			}
+		modelItem, err = d.GetNextModelSmart(token.Format, token.Type)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to get next model: %w", err)
+		}
+		if modelItem == nil {
+			return nil, 0, fmt.Errorf("no available models for format=%s type=%s", token.Format, token.Type)
 		}
 	}
 
@@ -284,30 +447,12 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 	}
 
 	if modelItem == nil {
-		if token.ModelName == "__POLL_ALL__" {
-			modelItem, err = d.modelService.GetNextModelAny()
-			if err != nil {
-				return nil, 0, fmt.Errorf("failed to get next model: %w", err)
-			}
-			if modelItem == nil {
-				return nil, 0, fmt.Errorf("no available models")
-			}
-		} else if token.ModelName == "__AUTO__" {
-			modelItem, err = d.modelService.GetNextModelGlobal(token.Format, token.Type)
-			if err != nil {
-				return nil, 0, fmt.Errorf("failed to get next model: %w", err)
-			}
-			if modelItem == nil {
-				return nil, 0, fmt.Errorf("no available models for format=%s type=%s", token.Format, token.Type)
-			}
-		} else {
-			modelItem, err = d.modelService.GetNextModelGlobal(token.Format, token.Type)
-			if err != nil {
-				return nil, 0, fmt.Errorf("failed to get next model: %w", err)
-			}
-			if modelItem == nil {
-				return nil, 0, fmt.Errorf("no available models for format=%s type=%s", token.Format, token.Type)
-			}
+		modelItem, err = d.GetNextModelSmart(token.Format, token.Type)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to get next model: %w", err)
+		}
+		if modelItem == nil {
+			return nil, 0, fmt.Errorf("no available models for format=%s type=%s", token.Format, token.Type)
 		}
 	}
 

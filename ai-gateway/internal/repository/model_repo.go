@@ -369,3 +369,19 @@ func (r *ModelRepo) IncrementUsage(id int64, tokenUsed int) error {
 	)
 	return err
 }
+
+func (r *ModelRepo) IncrementCallCount(id int64) error {
+	_, err := DB.Exec(
+		`UPDATE models SET call_count = call_count + 1 WHERE id = ?`,
+		id,
+	)
+	return err
+}
+
+func (r *ModelRepo) IncrementChannelCallCount(id int64) error {
+	_, err := DB.Exec(
+		`UPDATE channels SET call_count = call_count + 1 WHERE id = ?`,
+		id,
+	)
+	return err
+}

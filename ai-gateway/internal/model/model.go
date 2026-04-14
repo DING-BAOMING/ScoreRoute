@@ -76,6 +76,7 @@ type SystemConfig struct {
 	ID           int64     `json:"id"`
 	ExchangeRate float64   `json:"exchange_rate"` // CNY to USD rate
 	Currency     string    `json:"currency"`      // base currency for cost calculation
+	DispatchMode string    `json:"dispatch_mode"` // "polling" or "smart"
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 

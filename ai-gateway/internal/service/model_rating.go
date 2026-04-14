@@ -28,19 +28,21 @@ func NewModelRatingService() *ModelRatingService {
 
 type ModelScore struct {
 	ChannelName   string  `json:"channel_name"`
-	Format       string  `json:"format"`
-	ModelType    string  `json:"model_type"`
-	ModelName    string  `json:"model_name"`
-	ModelKey     string  `json:"model_key"`
-	Score        float64 `json:"score"`
-	SuccessRate  float64 `json:"success_rate"`
-	Latency      float64 `json:"latency"`
-	Reliability  float64 `json:"reliability"`
-	UserRating   int     `json:"user_rating"`
-	SampleRating int     `json:"sample_rating"`
-	Penalty      int     `json:"penalty"`
-	Reward       int     `json:"reward"`
-	Rank         int     `json:"rank"`
+	Format        string  `json:"format"`
+	ModelType     string  `json:"model_type"`
+	ModelName     string  `json:"model_name"`
+	ModelKey      string  `json:"model_key"`
+	Score         float64 `json:"score"`
+	SuccessRate   float64 `json:"success_rate"`
+	Latency       float64 `json:"latency"`
+	Reliability   float64 `json:"reliability"`
+	UserRating    int     `json:"user_rating"`
+	SampleRating  int     `json:"sample_rating"`
+	Penalty       int     `json:"penalty"`
+	Reward        int     `json:"reward"`
+	Rank          int     `json:"rank"`
+	CallCount     int     `json:"call_count"`
+	ModelID       int64   `json:"model_id"`
 }
 
 type RatingWeights struct {
@@ -175,11 +177,16 @@ func (s *ModelRatingService) CalculateAllScores() ([]*ModelScore, error) {
 			SampleRating:  sampleRating,
 			Penalty:       penalty,
 			Reward:        reward,
-		})
+		CallCount:    int(m.CallCount),
+		ModelID:       m.ID,
+	})
 	}
 
 	sort.Slice(scores, func(i, j int) bool {
-		return scores[i].Score > scores[j].Score
+		if scores[i].Score != scores[j].Score {
+			return scores[i].Score > scores[j].Score
+		}
+		return scores[i].CallCount < scores[j].CallCount
 	})
 
 	for i, sc := range scores {

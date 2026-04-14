@@ -1,11 +1,14 @@
 package service
 
 import (
+	"encoding/json"
 	"sort"
 	"strings"
 	"time"
 
 	"ai-gateway/internal/repository"
+
+	"ai-gateway/internal/model"
 )
 
 type ModelRatingService struct {
@@ -14,6 +17,7 @@ type ModelRatingService struct {
 	userRatingRepo   *repository.UserRatingRepo
 	sampleRatingRepo *repository.SampleRatingRepo
 	extraRatingSvc   *ExtraRatingService
+	systemConfigRepo *repository.SystemConfigRepo
 }
 
 func NewModelRatingService() *ModelRatingService {
@@ -23,6 +27,7 @@ func NewModelRatingService() *ModelRatingService {
 		userRatingRepo:   repository.NewUserRatingRepo(),
 		sampleRatingRepo: repository.NewSampleRatingRepo(),
 		extraRatingSvc:   NewExtraRatingService(),
+		systemConfigRepo: repository.NewSystemConfigRepo(),
 	}
 }
 
@@ -82,6 +87,7 @@ func (s *ModelRatingService) CalculateAllScores() ([]*ModelScore, error) {
 	userRatings := s.getUserRatingsMap()
 	sampleRatings, _ := s.sampleRatingRepo.GetAllAsMap()
 	extraScores := s.getExtraScoresMap()
+	costTimeRatings := s.getCostTimeRatingsMap(models)
 
 	weights, err := s.GetWeights()
 	if err != nil {
@@ -153,13 +159,20 @@ func (s *ModelRatingService) CalculateAllScores() ([]*ModelScore, error) {
 			reward = extra.reward
 		}
 
+		costRating := 50
+		timeRating := 50
+		if ct, ok := costTimeRatings[modelKey]; ok {
+			costRating = ct.cost
+			timeRating = ct.time
+		}
+
 		score := (successRate * weights.SuccessWeight / 100) +
 			(latencyScore * weights.LatencyWeight / 100) +
 			(reliabilityScore * weights.ReliabilityWeight / 100) +
 			(float64(userRating) * weights.UserRatingWeight / 100) +
 			(float64(sampleRating) * weights.SampleRatingWeight / 100) +
-			(50 * weights.CostRatingWeight / 100) +
-			(50 * weights.TimeRatingWeight / 100) +
+			(float64(costRating) * weights.CostRatingWeight / 100) +
+			(float64(timeRating) * weights.TimeRatingWeight / 100) +
 			float64(penalty+reward)/100
 
 		scores = append(scores, &ModelScore{
@@ -238,6 +251,120 @@ func (s *ModelRatingService) getExtraScoresMap() map[string]struct{ penalty, rew
 	}
 
 	return result
+}
+
+func (s *ModelRatingService) getCostTimeRatingsMap(models []*model.Model) map[string]struct{ cost, time int } {
+	result := make(map[string]struct{ cost, time int })
+	if len(models) == 0 {
+		return result
+	}
+
+	config, _ := s.systemConfigRepo.Get()
+	exchangeRate := 7.2
+	if config != nil {
+		exchangeRate = config.ExchangeRate
+	}
+
+	var paidCosts []float64
+	for _, m := range models {
+		mRateLimits := m.RateLimits
+		if mRateLimits == "" || mRateLimits == "[]" {
+			mRateLimits = m.ChannelRateLimits
+		}
+		if m.CostPerToken > 0 && !isPeriodicBilling(mRateLimits) {
+			c := m.CostPerToken
+			if m.Currency == "USD" {
+				c = m.CostPerToken * exchangeRate
+			}
+			paidCosts = append(paidCosts, c)
+		}
+	}
+
+	for _, m := range models {
+		modelKey := normalizeModelKey(m.ChannelName, m.Format, m.Type, m.Name)
+		
+		mRateLimits := m.RateLimits
+		if mRateLimits == "" || mRateLimits == "[]" {
+			mRateLimits = m.ChannelRateLimits
+		}
+		
+		costRating := 50
+		if isPeriodicBilling(mRateLimits) {
+			costRating = 100
+		} else if m.CostPerToken <= 0 {
+			costRating = 90
+		} else if len(paidCosts) > 1 {
+			convertedCost := m.CostPerToken
+			if m.Currency == "USD" {
+				convertedCost = m.CostPerToken * exchangeRate
+			}
+			minCost := paidCosts[0]
+			maxCost := paidCosts[0]
+			for _, c := range paidCosts {
+				if c < minCost {
+					minCost = c
+				}
+				if c > maxCost {
+					maxCost = c
+				}
+			}
+			if maxCost > minCost {
+				ratio := (convertedCost - minCost) / (maxCost - minCost)
+				costRating = 70 - int(ratio*69)
+				if costRating < 1 {
+					costRating = 1
+				}
+				if costRating > 70 {
+					costRating = 70
+				}
+			}
+		}
+
+		timeRating := 50
+		if m.ExpiresAt != nil {
+			daysLeft := time.Until(*m.ExpiresAt).Hours() / 24
+			if daysLeft < 0 {
+				daysLeft = 0
+			}
+			if daysLeft < 7 {
+				timeRating = 100
+			} else if daysLeft < 30 {
+				timeRating = 100 - int((daysLeft-7)/23.0*10)
+			} else if daysLeft < 60 {
+				timeRating = 90 - int((daysLeft-30)/30.0*10)
+			} else if daysLeft < 120 {
+				timeRating = 80 - int((daysLeft-60)/60.0*10)
+			} else if daysLeft < 180 {
+				timeRating = 70 - int((daysLeft-120)/60.0*10)
+			} else if daysLeft < 365 {
+				timeRating = 60 - int((daysLeft-180)/185.0*59)
+			} else {
+				timeRating = 0
+			}
+		}
+
+		result[modelKey] = struct{ cost, time int }{cost: costRating, time: timeRating}
+	}
+
+	return result
+}
+
+func isPeriodicBilling(rateLimits string) bool {
+	if rateLimits == "" || rateLimits == "[]" {
+		return false
+	}
+	var rules []struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal([]byte(rateLimits), &rules); err != nil {
+		return false
+	}
+	for _, rule := range rules {
+		if rule.Type == "billing" {
+			return true
+		}
+	}
+	return false
 }
 
 func normalizeModelKey(channelName, format, modelType, modelName string) string {

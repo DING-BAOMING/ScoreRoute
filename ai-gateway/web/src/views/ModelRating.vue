@@ -183,13 +183,13 @@ const extraPenaltyMap = ref({})
 const extraRewardMap = ref({})
 const costTimeRatings = ref({})
 const weights = ref({
-  success_weight: 0.28,
-  latency_weight: 0.21,
-  reliability_weight: 0.21,
+  success_weight: 0.15,
+  latency_weight: 0.1,
+  reliability_weight: 0.1,
   user_rating_weight: 0.15,
-  sample_rating_weight: 0.15,
-  cost_rating_weight: 0,
-  time_rating_weight: 0
+  sample_rating_weight: 0.25,
+  cost_rating_weight: 0.15,
+  time_rating_weight: 0.1
 })
 const weightsForm = ref({...weights.value})
 
@@ -211,13 +211,13 @@ async function loadData() {
     
     if (weightsRes.code === 0 && weightsRes.data) {
       weights.value = {
-        success_weight: weightsRes.data.success_weight || 0.28,
-        latency_weight: weightsRes.data.latency_weight || 0.21,
-        reliability_weight: weightsRes.data.reliability_weight || 0.21,
+        success_weight: weightsRes.data.success_weight || 0.15,
+        latency_weight: weightsRes.data.latency_weight || 0.1,
+        reliability_weight: weightsRes.data.reliability_weight || 0.1,
         user_rating_weight: weightsRes.data.user_rating_weight || 0.15,
-        sample_rating_weight: weightsRes.data.sample_rating_weight || 0.15,
-        cost_rating_weight: weightsRes.data.cost_rating_weight || 0,
-        time_rating_weight: weightsRes.data.time_rating_weight || 0
+        sample_rating_weight: weightsRes.data.sample_rating_weight || 0.25,
+        cost_rating_weight: weightsRes.data.cost_rating_weight || 0.15,
+        time_rating_weight: weightsRes.data.time_rating_weight || 0.1
       }
       weightsForm.value = {...weights.value}
     }

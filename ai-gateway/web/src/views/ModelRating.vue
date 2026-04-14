@@ -169,7 +169,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { logAPI, userRatingAPI, sampleAnalysisAPI, extraRatingAPI, modelRatingAPI } from '../api'
 
@@ -193,8 +193,19 @@ const weights = ref({
 })
 const weightsForm = ref({...weights.value})
 
+let refreshInterval = null
+
 onMounted(() => {
   loadData()
+  refreshInterval = setInterval(() => {
+    loadData()
+  }, 30000)
+})
+
+onUnmounted(() => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval)
+  }
 })
 
 async function loadData() {

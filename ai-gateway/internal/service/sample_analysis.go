@@ -614,7 +614,7 @@ func (s *SampleAnalysisService) RunScheduledAnalysis(maxSamples int) (int, error
 
 	analyzed := 0
 	for _, sample := range samples {
-		result, err := s.AnalyzeSampleWithRetry(sample, 3)
+		result, contextFailed, err := s.AnalyzeSampleSmartRetry(sample)
 		analysisLog := &model.SampleAnalysisLog{
 			ModelKey:     sample.ModelKey,
 			AnalysisTime: time.Now(),
@@ -622,9 +622,19 @@ func (s *SampleAnalysisService) RunScheduledAnalysis(maxSamples int) (int, error
 		}
 
 		if err != nil {
-			analysisLog.ErrorMessage = fmt.Sprintf("failed after 3 retries: %v", err)
+			analysisLog.ErrorMessage = fmt.Sprintf("%v", err)
 			analysisLog.Score = 0
-			log.Printf("Sample %s analysis failed after 3 retries: %v", sample.ModelKey, err)
+			
+			if contextFailed {
+				log.Printf("Sample %s analysis failed due to context limits after all attempts, deleting sample: %v", sample.ModelKey, err)
+				if err := s.sampleRepo.Delete(sample.ID); err != nil {
+					log.Printf("Failed to delete sample %d: %v", sample.ID, err)
+				} else {
+					analysisLog.DeleteTime = time.Now()
+				}
+			} else {
+				log.Printf("Sample %s analysis failed (non-context error), keeping sample: %v", sample.ModelKey, err)
+			}
 		} else {
 			analysisLog.Success = 1
 			analysisLog.Score = result.Score
@@ -660,38 +670,292 @@ func (s *SampleAnalysisService) RunScheduledAnalysis(maxSamples int) (int, error
 	return analyzed, nil
 }
 
-func (s *SampleAnalysisService) AnalyzeSampleWithRetry(sample *model.Sample, maxRetries int) (*AnalysisResult, error) {
-	var lastErr error
+func isContextLimitError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return strings.Contains(errStr, "context length") ||
+		strings.Contains(errStr, "maximum context") ||
+		strings.Contains(errStr, "input tokens") ||
+		strings.Contains(errStr, "maximum context length")
+}
 
-	strategies := []ExtractionStrategy{StrategyHeadFirst, StrategyTailFirst, StrategyMinimal}
-	
-	for retry := 0; retry < maxRetries; retry++ {
-		if retry > 0 {
-			backoffDuration := time.Duration(retry*2) * time.Second
-			log.Printf("Retrying sample %s (attempt %d/%d, strategy=%v) after %v", sample.ModelKey, retry+1, maxRetries, strategies[retry], backoffDuration)
-			time.Sleep(backoffDuration)
-		}
+func (s *SampleAnalysisService) AnalyzeSampleSmartRetry(sample *model.Sample) (*AnalysisResult, bool, error) {
+	log.Printf("Starting smart analysis for sample %s", sample.ModelKey)
+
+	result, err := s.AnalyzeSampleWithStrategy(sample, StrategyHeadFirst)
+	if err == nil {
+		log.Printf("Sample %s: First attempt success", sample.ModelKey)
+		return result, false, nil
+	}
+
+	firstIsContext := isContextLimitError(err)
+	log.Printf("Sample %s: First attempt failed, context error=%v: %v", sample.ModelKey, firstIsContext, err)
+
+	if firstIsContext {
+		log.Printf("Sample %s: Context error detected, trying chunked analysis", sample.ModelKey)
 		
-		result, err := s.AnalyzeSampleWithStrategy(sample, strategies[retry])
+		result, err := s.AnalyzeSampleChunked(sample)
 		if err == nil {
-			return result, nil
+			log.Printf("Sample %s: Chunked analysis success", sample.ModelKey)
+			return result, true, nil
 		}
-		lastErr = err
+		log.Printf("Sample %s: Chunked analysis failed: %v", sample.ModelKey, err)
+
+		log.Printf("Sample %s: Trying extraction fallback", sample.ModelKey)
+		time.Sleep(2 * time.Second)
+		result, err = s.AnalyzeSampleWithStrategy(sample, StrategyTailFirst)
+		if err == nil {
+			log.Printf("Sample %s: Extraction (tail) success", sample.ModelKey)
+			return result, true, nil
+		}
+		log.Printf("Sample %s: Extraction (tail) failed: %v", sample.ModelKey, err)
+
+		time.Sleep(4 * time.Second)
+		result, err = s.AnalyzeSampleWithStrategy(sample, StrategyMinimal)
+		if err == nil {
+			log.Printf("Sample %s: Extraction (minimal) success", sample.ModelKey)
+			return result, true, nil
+		}
+		log.Printf("Sample %s: Extraction (minimal) failed: %v", sample.ModelKey, err)
+
+		return nil, true, fmt.Errorf("all context error approaches exhausted: %v", err)
+	}
+
+	log.Printf("Sample %s: Non-context error, retrying with full content", sample.ModelKey)
+	time.Sleep(2 * time.Second)
+	result, err = s.AnalyzeSampleWithStrategy(sample, StrategyHeadFirst)
+	if err == nil {
+		log.Printf("Sample %s: Second attempt (full) success", sample.ModelKey)
+		return result, false, nil
+	}
+	log.Printf("Sample %s: Second attempt failed: %v", sample.ModelKey, err)
+
+	time.Sleep(4 * time.Second)
+	result, err = s.AnalyzeSampleWithStrategy(sample, StrategyHeadFirst)
+	if err == nil {
+		log.Printf("Sample %s: Third attempt (full) success", sample.ModelKey)
+		return result, false, nil
+	}
+	log.Printf("Sample %s: Third attempt failed: %v", sample.ModelKey, err)
+
+	return nil, false, fmt.Errorf("non-context errors persist after 3 retries: last error: %v", err)
+}
+
+func (s *SampleAnalysisService) AnalyzeSampleChunked(sample *model.Sample) (*AnalysisResult, error) {
+	info := extractSampleInfoFull(sample.RequestContent, sample.ResponseContent)
+	
+	totalParts := 3
+	scores := make([]AnalysisResult, 0, totalParts)
+	
+	for i := 0; i < totalParts; i++ {
+		time.Sleep(1 * time.Second)
 		
-		isContextLimitError := strings.Contains(err.Error(), "context length") || 
-			strings.Contains(err.Error(), "maximum context") ||
-			strings.Contains(err.Error(), "input tokens")
+		prompt := s.buildChunkedPrompt(info, i, totalParts)
 		
-		if retry < maxRetries-1 {
-			if isContextLimitError {
-				log.Printf("Sample %s analysis attempt %d/%d failed due to context limit, will try next strategy: %v", sample.ModelKey, retry+1, maxRetries, err)
-			} else {
-				log.Printf("Sample %s analysis attempt %d/%d failed: %v", sample.ModelKey, retry+1, maxRetries, err)
+		config, err := s.configRepo.GetEnabled()
+		if err != nil || config == nil {
+			return nil, fmt.Errorf("sample analysis not configured")
+		}
+
+		requestBody := map[string]interface{}{
+			"model": config.ModelName,
+			"messages": []map[string]string{
+				{"role": "user", "content": prompt},
+			},
+			"max_tokens": 200,
+		}
+
+		bodyBytes, err := json.Marshal(requestBody)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal request: %w", err)
+		}
+
+		httpReq, err := http.NewRequest("POST", config.BaseURL+"/chat/completions", bytes.NewReader(bodyBytes))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+
+		httpReq.Header.Set("Content-Type", "application/json")
+		httpReq.Header.Set("Authorization", "Bearer "+config.APIKey)
+
+		resp, err := s.client.Do(httpReq)
+		if err != nil {
+			return nil, fmt.Errorf("chunked request failed: %w", err)
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response: %w", err)
+		}
+
+		if resp.StatusCode >= 400 {
+			return nil, fmt.Errorf("chunked API returned status %d: %s", resp.StatusCode, string(body))
+		}
+
+		result, err := s.parseAnalysisResponse(body)
+		if err != nil {
+			log.Printf("Chunk %d/%d parse failed: %v", i+1, totalParts, err)
+			continue
+		}
+		
+		scores = append(scores, *result)
+	}
+
+	if len(scores) == 0 {
+		return nil, fmt.Errorf("all chunks failed to produce results")
+	}
+
+	avgScore := (scores[0].Score + scores[1].Score + scores[2].Score) / 3
+	avgTool := (scores[0].ToolCallingScore + scores[1].ToolCallingScore + scores[2].ToolCallingScore) / 3
+	avgComplete := (scores[0].CompletenessScore + scores[1].CompletenessScore + scores[2].CompletenessScore) / 3
+	avgContext := (scores[0].ContextUnderstandingScore + scores[1].ContextUnderstandingScore + scores[2].ContextUnderstandingScore) / 3
+	avgError := (scores[0].ErrorHandlingScore + scores[1].ErrorHandlingScore + scores[2].ErrorHandlingScore) / 3
+	avgQuality := (scores[0].ResponseQualityScore + scores[1].ResponseQualityScore + scores[2].ResponseQualityScore) / 3
+
+	log.Printf("Sample %s: Chunked analysis averaged %d chunks, score=%d", sample.ModelKey, len(scores), avgScore)
+
+	return &AnalysisResult{
+		Score:                    avgScore,
+		ToolCallingScore:         avgTool,
+		CompletenessScore:        avgComplete,
+		ContextUnderstandingScore: avgContext,
+		ErrorHandlingScore:       avgError,
+		ResponseQualityScore:     avgQuality,
+		Reasoning:                fmt.Sprintf("Averaged from %d chunks", len(scores)),
+	}, nil
+}
+
+func extractSampleInfoFull(requestJSON, responseJSON string) *ExtractedSampleInfo {
+	info := &ExtractedSampleInfo{
+		Completion: "unknown",
+		HasError:   false,
+	}
+
+	var req, resp map[string]interface{}
+	if err := json.Unmarshal([]byte(requestJSON), &req); err != nil {
+		info.UserTask = requestJSON
+		return info
+	}
+
+	if messages, ok := req["messages"].([]interface{}); ok {
+		for _, msg := range messages {
+			if m, ok := msg.(map[string]interface{}); ok {
+				role, _ := m["role"].(string)
+				content, _ := m["content"].(string)
+				if role == "system" {
+					info.SystemPrompt = content
+				} else if role == "user" && info.UserTask == "" {
+					info.UserTask = content
+				}
 			}
 		}
 	}
+
+	if toolCalls, ok := req["tools"].([]interface{}); ok {
+		for _, tc := range toolCalls {
+			if t, ok := tc.(map[string]interface{}); ok {
+				if name, ok := t["name"].(string); ok {
+					info.ToolCalls = append(info.ToolCalls, name)
+				}
+			}
+		}
+	}
+
+	if err := json.Unmarshal([]byte(responseJSON), &resp); err == nil {
+		if choices, ok := resp["choices"].([]interface{}); ok && len(choices) > 0 {
+			if choice, ok := choices[0].(map[string]interface{}); ok {
+				if msg, ok := choice["message"].(map[string]interface{}); ok {
+					if content, ok := msg["content"].(string); ok {
+						info.Completion = content
+					}
+					if tc, ok := msg["tool_calls"].([]interface{}); ok {
+						for _, call := range tc {
+							if c, ok := call.(map[string]interface{}); ok {
+								if fn, ok := c["function"].(map[string]interface{}); ok {
+									if name, ok := fn["name"].(string); ok {
+										info.ToolCalls = append(info.ToolCalls, "response_tool:"+name)
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	} else {
+		info.Completion = responseJSON
+	}
+
+	return info
+}
+
+func (s *SampleAnalysisService) buildChunkedPrompt(info *ExtractedSampleInfo, partIndex, totalParts int) string {
+	partLabel := fmt.Sprintf("Part %d/%d", partIndex+1, totalParts)
 	
-	return nil, fmt.Errorf("all retries exhausted: %w", lastErr)
+	var userTaskChunk string
+	var completionChunk string
+	
+	if len(info.UserTask) > 0 {
+		chunkLen := len(info.UserTask) / totalParts
+		start := partIndex * chunkLen
+		end := start + chunkLen
+		if partIndex == totalParts-1 {
+			end = len(info.UserTask)
+		}
+		userTaskChunk = info.UserTask[start:end]
+	}
+	
+	if len(info.Completion) > 0 {
+		chunkLen := len(info.Completion) / totalParts
+		start := partIndex * chunkLen
+		end := start + chunkLen
+		if partIndex == totalParts-1 {
+			end = len(info.Completion)
+		}
+		completionChunk = info.Completion[start:end]
+	}
+
+	return fmt.Sprintf(`You are evaluating an AI agent's performance. Evaluate ONLY the %s of this sample.
+
+**Evaluation Criteria (1-100 score each)**:
+- Tool Calling (30%%): Did it correctly call tools?
+- Completeness (25%%): Did it fully address the request?
+- Context Understanding (20%%): Did it understand the context?
+- Error Handling (15%%): How did it handle issues?
+- Response Quality (10%%): General quality.
+
+**%s Info**:
+System: %s
+Task (this part): %s
+Tools: %s
+Response (this part): %s
+
+**%s - Return ONLY JSON**:
+{"score":X,"tool_calling_score":X,"completeness_score":X,"context_understanding_score":X,"error_handling_score":X,"response_quality_score":X,"reasoning":"Brief"}`,
+		partLabel,
+		partLabel,
+		truncateString(info.SystemPrompt, 200, "head"),
+		userTaskChunk,
+		formatTools(info.ToolCalls),
+		truncateString(completionChunk, 300, "head"),
+		partLabel)
+}
+
+func formatTools(tools []string) string {
+	if len(tools) == 0 {
+		return "No tools"
+	}
+	result := ""
+	for _, t := range tools {
+		if len(result) > 100 {
+			return result + fmt.Sprintf(" (+%d more)", len(tools)-10)
+		}
+		result += t + ", "
+	}
+	return result[:len(result)-2]
 }
 
 func (s *SampleAnalysisService) GetLogs(limit int) ([]*model.SampleAnalysisLog, error) {

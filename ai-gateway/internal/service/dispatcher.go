@@ -18,17 +18,17 @@ import (
 )
 
 type Dispatcher struct {
-	channelService     *ChannelService
-	modelService       *ModelService
-	logRepo            *repository.LogRepo
-	sampleRepo         *repository.SampleRepo
-	channelRepo        *repository.ChannelRepo
-	rateLimitRepo      *repository.RateLimitRepo
-	modelRateLimitRepo *repository.ModelRateLimitRepo
-	modelRepo          *repository.ModelRepo
-	systemConfigRepo   *repository.SystemConfigRepo
-	extraRatingService *ExtraRatingService
-	client             *http.Client
+	channelService      *ChannelService
+	modelService        *ModelService
+	logRepo             *repository.LogRepo
+	sampleRepo          *repository.SampleRepo
+	channelRepo         *repository.ChannelRepo
+	rateLimitRepo       *repository.RateLimitRepo
+	modelRateLimitRepo  *repository.ModelRateLimitRepo
+	modelRepo           *repository.ModelRepo
+	systemConfigRepo    *repository.SystemConfigRepo
+	extraRatingService  *ExtraRatingService
+	client              *http.Client
 }
 
 func NewDispatcher() *Dispatcher {
@@ -129,9 +129,9 @@ func (d *Dispatcher) GetNextModelSmart(format, modelType string) (*model.Model, 
 
 		d.modelRepo.IncrementCallCount(selectedModel.ID)
 		d.channelRepo.IncrementCallCount(selectedModel.ChannelID)
-		
-		log.Printf("[GetNextModelSmart] selected %s/%s score=%.2f rank=%d", 
-			score.ChannelName, score.ModelName, score.Score, score.Rank)
+
+		log.Printf("[GetNextModelSmart] selected %s/%s score=%.2f rank=1", 
+			score.ChannelName, score.ModelName, score.Score)
 		return selectedModel, nil
 	}
 

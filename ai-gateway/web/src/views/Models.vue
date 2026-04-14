@@ -12,6 +12,10 @@
               <el-icon><Coin /></el-icon>
               汇率设置
             </el-button>
+            <el-button type="info" @click="showDispatchDialog">
+              <el-icon><Setting /></el-icon>
+              调度模式
+            </el-button>
             <el-button type="primary" @click="showDialog('create')">
               <el-icon><Plus /></el-icon>
               添加模型
@@ -240,6 +244,30 @@
         <el-button type="primary" @click="saveExchangeConfig" :loading="exchangeSaving">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="dispatchDialogVisible" title="调度模式设置" width="500px">
+      <el-form label-width="120px">
+        <el-form-item label="当前调度模式">
+          <el-tag :type="dispatchForm.dispatch_mode === 'smart' ? 'success' : 'warning'" size="large">
+            {{ dispatchForm.dispatch_mode === 'smart' ? '智能调度 (Smart)' : '轮询调度 (Polling)' }}
+          </el-tag>
+        </el-form-item>
+        <el-form-item label="选择调度模式">
+          <el-radio-group v-model="dispatchForm.dispatch_mode">
+            <el-radio value="polling">轮询调度 (Polling)</el-radio>
+            <el-radio value="smart">智能调度 (Smart)</el-radio>
+          </el-radio-group>
+          <div class="form-help">
+            <p><strong>轮询调度:</strong> 按顺序轮询可用模型，均匀分配负载</p>
+            <p><strong>智能调度:</strong> 根据模型评分（成功率、延迟、稳定性、用户评分等）自动选择最优模型</p>
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dispatchDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveDispatchConfig" :loading="dispatchSaving">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -259,11 +287,17 @@ const filterChannel = ref('')
 const dialogVisible = ref(false)
 const batchDialogVisible = ref(false)
 const exchangeDialogVisible = ref(false)
+const dispatchDialogVisible = ref(false)
 const dialogType = ref('create')
 const formRef = ref()
 const testing = ref(false)
 const submitting = ref(false)
 const exchangeSaving = ref(false)
+const dispatchSaving = ref(false)
+
+const dispatchForm = reactive({
+  dispatch_mode: 'polling'
+})
 
 const form = reactive({
   id: null,
@@ -309,6 +343,7 @@ onMounted(() => {
   loadChannels()
   loadData()
   loadExchangeConfig()
+  loadDispatchConfig()
 })
 
 async function loadExchangeConfig() {
@@ -340,6 +375,34 @@ async function saveExchangeConfig() {
     ElMessage.error('保存失败: ' + (e.message || '网络错误'))
   } finally {
     exchangeSaving.value = false
+  }
+}
+
+async function loadDispatchConfig() {
+  try {
+    const res = await systemConfigAPI.get()
+    if (res.code === 0 && res.data) {
+      dispatchForm.dispatch_mode = res.data.dispatch_mode || 'polling'
+    }
+  } catch (e) {
+    console.error('Failed to load dispatch config', e)
+  }
+}
+
+function showDispatchDialog() {
+  dispatchDialogVisible.value = true
+}
+
+async function saveDispatchConfig() {
+  dispatchSaving.value = true
+  try {
+    await systemConfigAPI.updateDispatchMode(dispatchForm.dispatch_mode)
+    ElMessage.success('调度模式已保存')
+    dispatchDialogVisible.value = false
+  } catch (e) {
+    ElMessage.error('保存失败: ' + (e.message || '网络错误'))
+  } finally {
+    dispatchSaving.value = false
   }
 }
 

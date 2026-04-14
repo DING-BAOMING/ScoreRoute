@@ -371,6 +371,52 @@
             </ul>
           </div>
         </el-tab-pane>
+
+        <el-tab-pane label="智能调度" name="smart-dispatch">
+          <div class="doc-content">
+            <h2>智能调度模式</h2>
+            
+            <h3>调度模式说明</h3>
+            <p>系统支持两种调度模式：</p>
+            <ul>
+              <li><strong>轮询调度 (Polling)</strong> - 按调用次数升序轮询，均匀分配负载</li>
+              <li><strong>智能调度 (Smart)</strong> - 根据综合评分选择最优模型，优先选择表现最好的</li>
+            </ul>
+
+            <h3>评分体系</h3>
+            <p>智能调度根据以下维度对模型进行评分：</p>
+            <table class="rating-table">
+              <tr><th>维度</th><th>权重</th><th>说明</th></tr>
+              <tr><td>成功率</td><td>15%</td><td>成功请求占总请求的比例</td></tr>
+              <tr><td>延迟分数</td><td>10%</td><td>基于平均延迟计算，延迟越低分数越高</td></tr>
+              <tr><td>稳定性</td><td>10%</td><td>基于样本量，样本越多越可靠</td></tr>
+              <tr><td>用户评分</td><td>15%</td><td>用户对模型的1-100评分</td></tr>
+              <tr><td>样本评分</td><td>25%</td><td>样本分析得出的评分</td></tr>
+              <tr><td>成本评分</td><td>15%</td><td>基于模型成本（免费90分，付费70分）</td></tr>
+              <tr><td>时间评分</td><td>10%</td><td>基于模型过期时间</td></tr>
+            </table>
+
+            <h3>额外评分机制</h3>
+            <h4>惩罚机制</h4>
+            <p>当某个模型被连续调用时，会对该模型及其同类模型施加惩罚分数，防止过度使用单一模型。</p>
+            <ul>
+              <li><strong>触发条件</strong>：模型被调用后，同类模型（同名不同渠道）在接下来的N轮内每次调用都会受到惩罚</li>
+              <li><strong>惩罚分数</strong>：每次调用 -5分</li>
+              <li><strong>惩罚轮数</strong>：可配置，默认5轮</li>
+            </ul>
+
+            <h4>奖励机制</h4>
+            <p>新模型被添加到系统时，会获得奖励分数，用于吸引注意新加入的模型。</p>
+            <ul>
+              <li><strong>奖励分数</strong>：默认5分</li>
+              <li><strong>持续时间</strong>：默认24小时</li>
+              <li><strong>衰减规则</strong>：基于时间的线性衰减</li>
+            </ul>
+
+            <h3>如何切换调度模式</h3>
+            <p>在"模型管理"页面，点击"调度模式"按钮即可切换轮询/智能调度。</p>
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </el-card>
   </div>
@@ -439,5 +485,27 @@ const baseUrl = window.location.origin
   background: transparent;
   padding: 0;
   color: #409eff;
+}
+
+.doc-content .rating-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 15px 0;
+}
+
+.doc-content .rating-table th,
+.doc-content .rating-table td {
+  border: 1px solid #dcdfe6;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.doc-content .rating-table th {
+  background: #f5f7fa;
+  font-weight: 600;
+}
+
+.doc-content .rating-table tr:nth-child(even) {
+  background: #fafafa;
 }
 </style>

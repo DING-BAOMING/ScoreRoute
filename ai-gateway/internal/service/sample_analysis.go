@@ -84,6 +84,10 @@ func (s *SampleAnalysisService) TestConnection(req *model.SampleAnalysisConfigRe
 }
 
 func (s *SampleAnalysisService) AnalyzeSample(sample *model.Sample) (*AnalysisResult, error) {
+	return s.AnalyzeSampleWithStrategy(sample, StrategyFull)
+}
+
+func (s *SampleAnalysisService) AnalyzeSampleWithStrategy(sample *model.Sample, strategy ExtractionStrategy) (*AnalysisResult, error) {
 	config, err := s.configRepo.GetEnabled()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get config: %w", err)
@@ -92,14 +96,21 @@ func (s *SampleAnalysisService) AnalyzeSample(sample *model.Sample) (*AnalysisRe
 		return nil, fmt.Errorf("sample analysis not configured")
 	}
 
-	prompt := s.buildAnalysisPrompt(sample)
+	prompt := s.buildAnalysisPromptWithStrategy(sample, strategy)
+
+	maxTokens := 500
+	if strategy == StrategyMinimal {
+		maxTokens = 200
+	} else if strategy == StrategyReduced {
+		maxTokens = 300
+	}
 
 	requestBody := map[string]interface{}{
 		"model": config.ModelName,
 		"messages": []map[string]string{
 			{"role": "user", "content": prompt},
 		},
-		"max_tokens": 500,
+		"max_tokens": maxTokens,
 	}
 
 	bodyBytes, err := json.Marshal(requestBody)
@@ -235,14 +246,36 @@ func extractSampleInfo(requestJSON, responseJSON string) *ExtractedSampleInfo {
 	return info
 }
 
-func (s *SampleAnalysisService) buildAnalysisPrompt(sample *model.Sample) string {
-	info := extractSampleInfo(sample.RequestContent, sample.ResponseContent)
+type ExtractionStrategy int
+
+const (
+	StrategyFull ExtractionStrategy = iota
+	StrategyReduced
+	StrategyMinimal
+)
+
+const (
+	maxSystemPromptLen1 = 300
+	maxUserTaskLen1     = 500
+	maxCompletionLen1   = 800
+
+	maxSystemPromptLen2 = 150
+	maxUserTaskLen2     = 250
+	maxCompletionLen2   = 400
+
+	maxSystemPromptLen3 = 100
+	maxUserTaskLen3     = 150
+	maxCompletionLen3   = 200
+)
+
+func (s *SampleAnalysisService) buildAnalysisPromptWithStrategy(sample *model.Sample, strategy ExtractionStrategy) string {
+	info := extractSampleInfoWithStrategy(sample.RequestContent, sample.ResponseContent, strategy)
 
 	var toolCallsStr string
 	if len(info.ToolCalls) > 0 {
-		toolCallsStr = "Tools called: " + strings.Join(info.ToolCalls[:min(10, len(info.ToolCalls))], ", ")
-		if len(info.ToolCalls) > 10 {
-			toolCallsStr += fmt.Sprintf(" (+%d more)", len(info.ToolCalls)-10)
+		toolCallsStr = "Tools called: " + strings.Join(info.ToolCalls[:min(5, len(info.ToolCalls))], ", ")
+		if len(info.ToolCalls) > 5 {
+			toolCallsStr += fmt.Sprintf(" (+%d more)", len(info.ToolCalls)-5)
 		}
 	} else {
 		toolCallsStr = "No tools called"
@@ -251,12 +284,23 @@ func (s *SampleAnalysisService) buildAnalysisPrompt(sample *model.Sample) string
 	errorStr := ""
 	if info.HasError {
 		errorStr = fmt.Sprintf("ERROR: %s", info.ErrorMsg)
-		if len(errorStr) > 200 {
-			errorStr = errorStr[:200] + "...[truncated]"
+		if len(errorStr) > 100 {
+			errorStr = errorStr[:100] + "...[truncated]"
 		}
 	}
 
-	prompt := fmt.Sprintf(`You are an AI agent evaluation expert. Analyze the following sample and rate the model's performance for agentic tasks.
+	switch strategy {
+	case StrategyMinimal:
+		return s.buildMinimalPrompt(info, toolCallsStr, errorStr)
+	case StrategyReduced:
+		return s.buildReducedPrompt(info, toolCallsStr, errorStr)
+	default:
+		return s.buildFullPrompt(info, toolCallsStr, errorStr)
+	}
+}
+
+func (s *SampleAnalysisService) buildFullPrompt(info *ExtractedSampleInfo, toolCallsStr, errorStr string) string {
+	return fmt.Sprintf(`You are an AI agent evaluation expert. Analyze the following sample and rate the model's performance for agentic tasks.
 
 ## Evaluation Criteria (1-100 scale each):
 
@@ -298,8 +342,150 @@ Analyze and return ONLY the JSON.`,
 		toolCallsStr,
 		info.Completion,
 		errorStr)
+}
 
-	return prompt
+func (s *SampleAnalysisService) buildReducedPrompt(info *ExtractedSampleInfo, toolCallsStr, errorStr string) string {
+	return fmt.Sprintf(`Evaluate this AI agent sample (1-100 score each):
+
+1. Tool Calling (30%%): Right tools/correct params?
+2. Completeness (25%%): Fully addresses request?
+3. Context (20%%): Understands context/coherence?
+4. Error Handling (15%%): Handles errors well?
+5. Response Quality (10%%): Clear and well-formatted?
+
+**Sample Info:**
+Model: %s
+System: %s
+Task: %s
+Tools: %s
+Response: %s
+%s
+
+Return ONLY JSON: {"score":85,"tool_calling_score":90,"completeness_score":85,"context_understanding_score":80,"error_handling_score":75,"response_quality_score":90,"reasoning":"Brief"}`,
+		info.Model,
+		info.SystemPrompt,
+		info.UserTask,
+		toolCallsStr,
+		info.Completion,
+		errorStr)
+}
+
+func (s *SampleAnalysisService) buildMinimalPrompt(info *ExtractedSampleInfo, toolCallsStr, errorStr string) string {
+	return fmt.Sprintf(`Rate this AI agent (1-100): Model=%s Task="%s" Tools=%s Response="%s" Error=%s
+
+Return ONLY: {"score":X,"tool_calling_score":X,"completeness_score":X,"context_understanding_score":X,"error_handling_score":X,"response_quality_score":X,"reasoning":"X"}`,
+		info.Model,
+		info.UserTask,
+		toolCallsStr,
+		info.Completion,
+		errorStr)
+}
+
+func extractSampleInfoWithStrategy(requestJSON, responseJSON string, strategy ExtractionStrategy) *ExtractedSampleInfo {
+	info := &ExtractedSampleInfo{
+		Completion: "unknown",
+		HasError:   false,
+	}
+
+	var maxSystemPrompt, maxUserTask, maxCompletion int
+	switch strategy {
+	case StrategyMinimal:
+		maxSystemPrompt = maxSystemPromptLen3
+		maxUserTask = maxUserTaskLen3
+		maxCompletion = maxCompletionLen3
+	case StrategyReduced:
+		maxSystemPrompt = maxSystemPromptLen2
+		maxUserTask = maxUserTaskLen2
+		maxCompletion = maxCompletionLen2
+	default:
+		maxSystemPrompt = maxSystemPromptLen1
+		maxUserTask = maxUserTaskLen1
+		maxCompletion = maxCompletionLen1
+	}
+
+	var req, resp map[string]interface{}
+	if err := json.Unmarshal([]byte(requestJSON), &req); err != nil {
+		info.UserTask = requestJSON
+		if len(info.UserTask) > maxUserTask {
+			info.UserTask = info.UserTask[:maxUserTask] + "...[parsed failed]"
+		}
+		return info
+	}
+
+	if messages, ok := req["messages"].([]interface{}); ok {
+		for _, msg := range messages {
+			if m, ok := msg.(map[string]interface{}); ok {
+				role, _ := m["role"].(string)
+				content, _ := m["content"].(string)
+				if role == "system" {
+					if len(content) > maxSystemPrompt {
+						info.SystemPrompt = content[:maxSystemPrompt] + "...[truncated]"
+					} else {
+						info.SystemPrompt = content
+					}
+				} else if role == "user" && info.UserTask == "" {
+					if len(content) > maxUserTask {
+						info.UserTask = content[:maxUserTask] + "...[truncated]"
+					} else {
+						info.UserTask = content
+					}
+				}
+			}
+		}
+	}
+
+	if toolCalls, ok := req["tools"].([]interface{}); ok {
+		for _, tc := range toolCalls {
+			if t, ok := tc.(map[string]interface{}); ok {
+				if name, ok := t["name"].(string); ok {
+					info.ToolCalls = append(info.ToolCalls, name)
+				}
+			}
+		}
+	}
+
+	if err := json.Unmarshal([]byte(responseJSON), &resp); err == nil {
+		info.ResponseLen = len(responseJSON)
+
+		if choices, ok := resp["choices"].([]interface{}); ok && len(choices) > 0 {
+			if choice, ok := choices[0].(map[string]interface{}); ok {
+				if msg, ok := choice["message"].(map[string]interface{}); ok {
+					if content, ok := msg["content"].(string); ok {
+						if len(content) > maxCompletion {
+							info.Completion = content[:maxCompletion] + "...[truncated]"
+						} else {
+							info.Completion = content
+						}
+					}
+					if tc, ok := msg["tool_calls"].([]interface{}); ok {
+						for _, call := range tc {
+							if c, ok := call.(map[string]interface{}); ok {
+								if fn, ok := c["function"].(map[string]interface{}); ok {
+									if name, ok := fn["name"].(string); ok {
+										info.ToolCalls = append(info.ToolCalls, "response_tool:"+name)
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if errObj, ok := resp["error"].(map[string]interface{}); ok {
+			info.HasError = true
+			if msg, ok := errObj["message"].(string); ok {
+				info.ErrorMsg = msg
+			}
+		}
+	} else {
+		info.Completion = responseJSON
+		if len(info.Completion) > maxCompletion {
+			info.Completion = info.Completion[:maxCompletion] + "...[truncated]"
+		}
+	}
+
+	return info
 }
 
 func min(a, b int) int {
@@ -457,22 +643,32 @@ func (s *SampleAnalysisService) RunScheduledAnalysis(maxSamples int) (int, error
 
 func (s *SampleAnalysisService) AnalyzeSampleWithRetry(sample *model.Sample, maxRetries int) (*AnalysisResult, error) {
 	var lastErr error
+
+	strategies := []ExtractionStrategy{StrategyFull, StrategyReduced, StrategyMinimal}
 	
 	for retry := 0; retry < maxRetries; retry++ {
 		if retry > 0 {
 			backoffDuration := time.Duration(retry*2) * time.Second
-			log.Printf("Retrying sample %s (attempt %d/%d) after %v", sample.ModelKey, retry+1, maxRetries, backoffDuration)
+			log.Printf("Retrying sample %s (attempt %d/%d, strategy=%v) after %v", sample.ModelKey, retry+1, maxRetries, strategies[retry], backoffDuration)
 			time.Sleep(backoffDuration)
 		}
 		
-		result, err := s.AnalyzeSample(sample)
+		result, err := s.AnalyzeSampleWithStrategy(sample, strategies[retry])
 		if err == nil {
 			return result, nil
 		}
 		lastErr = err
 		
+		isContextLimitError := strings.Contains(err.Error(), "context length") || 
+			strings.Contains(err.Error(), "maximum context") ||
+			strings.Contains(err.Error(), "input tokens")
+		
 		if retry < maxRetries-1 {
-			log.Printf("Sample %s analysis attempt %d/%d failed: %v", sample.ModelKey, retry+1, maxRetries, err)
+			if isContextLimitError {
+				log.Printf("Sample %s analysis attempt %d/%d failed due to context limit, will try reduced strategy: %v", sample.ModelKey, retry+1, maxRetries, err)
+			} else {
+				log.Printf("Sample %s analysis attempt %d/%d failed: %v", sample.ModelKey, retry+1, maxRetries, err)
+			}
 		}
 	}
 	

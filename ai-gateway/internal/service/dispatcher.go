@@ -241,12 +241,13 @@ func (d *Dispatcher) calculateCompositeScore(m *model.Model, weights *modelRatin
 	userScore := float64(userRating) / 100.0
 
 	sampleRating := 50
-	if sr, ok := sampleRatings[NormalizeModelKey(m.ChannelName, m.Format, m.Type, m.Name)]; ok {
+	sampleKey := NormalizeModelKey(m.ChannelName, m.Format, m.Type, m.Name)
+	if sr, ok := sampleRatings[sampleKey]; ok {
 		sampleRating = sr
 	}
 	sampleScore := float64(sampleRating) / 100.0
 
-	penalty, reward, _ := d.extraRatingService.GetModelExtraScore(NormalizeModelKey(m.ChannelName, m.Format, m.Type, m.Name))
+	penalty, reward, _ := d.extraRatingService.GetModelExtraScore(sampleKey)
 	extraScore := float64(reward+penalty) / 100.0
 
 	costRating := 90
@@ -300,6 +301,9 @@ func loadRatings() {
 		for k, v := range userRatingsMap {
 			userRatings[k] = v
 		}
+		log.Printf("[loadRatings] Loaded %d user ratings", len(userRatingsMap))
+	} else {
+		log.Printf("[loadRatings] Failed to load user ratings: %v", err)
 	}
 
 	sampleRepo := repository.NewSampleRatingRepo()

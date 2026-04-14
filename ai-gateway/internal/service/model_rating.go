@@ -42,7 +42,6 @@ type ModelScore struct {
 	Reward        int     `json:"reward"`
 	Rank          int     `json:"rank"`
 	CallCount     int     `json:"call_count"`
-	ModelID       int64   `json:"model_id"`
 }
 
 type RatingWeights struct {
@@ -178,7 +177,6 @@ func (s *ModelRatingService) CalculateAllScores() ([]*ModelScore, error) {
 			Penalty:       penalty,
 			Reward:        reward,
 		CallCount:    int(m.CallCount),
-		ModelID:       m.ID,
 	})
 	}
 

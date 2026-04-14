@@ -133,48 +133,180 @@ func (s *SampleAnalysisService) AnalyzeSample(sample *model.Sample) (*AnalysisRe
 	return s.parseAnalysisResponse(body)
 }
 
+type ExtractedSampleInfo struct {
+	Model        string   `json:"model"`
+	UserTask    string   `json:"user_task"`
+	SystemPrompt string  `json:"system_prompt,omitempty"`
+	ToolCalls    []string `json:"tool_calls,omitempty"`
+	Completion  string   `json:"completion"`
+	HasError    bool     `json:"has_error"`
+	ErrorMsg    string   `json:"error_msg,omitempty"`
+	ResponseLen int      `json:"response_length"`
+}
+
+func extractSampleInfo(requestJSON, responseJSON string) *ExtractedSampleInfo {
+	info := &ExtractedSampleInfo{
+		Completion: "unknown",
+		HasError:   false,
+	}
+
+	var req, resp map[string]interface{}
+	if err := json.Unmarshal([]byte(requestJSON), &req); err != nil {
+		info.UserTask = requestJSON
+		if len(info.UserTask) > 500 {
+			info.UserTask = info.UserTask[:500] + "...[parsed failed]"
+		}
+		return info
+	}
+
+	if messages, ok := req["messages"].([]interface{}); ok {
+		for _, msg := range messages {
+			if m, ok := msg.(map[string]interface{}); ok {
+				role, _ := m["role"].(string)
+				content, _ := m["content"].(string)
+				if role == "system" {
+					if len(content) > 300 {
+						info.SystemPrompt = content[:300] + "...[truncated]"
+					} else {
+						info.SystemPrompt = content
+					}
+				} else if role == "user" && info.UserTask == "" {
+					if len(content) > 500 {
+						info.UserTask = content[:500] + "...[truncated]"
+					} else {
+						info.UserTask = content
+					}
+				}
+			}
+		}
+	}
+
+	if toolCalls, ok := req["tools"].([]interface{}); ok {
+		for _, tc := range toolCalls {
+			if t, ok := tc.(map[string]interface{}); ok {
+				if name, ok := t["name"].(string); ok {
+					info.ToolCalls = append(info.ToolCalls, name)
+				}
+			}
+		}
+	}
+
+	if err := json.Unmarshal([]byte(responseJSON), &resp); err == nil {
+		info.ResponseLen = len(responseJSON)
+
+		if choices, ok := resp["choices"].([]interface{}); ok && len(choices) > 0 {
+			if choice, ok := choices[0].(map[string]interface{}); ok {
+				if msg, ok := choice["message"].(map[string]interface{}); ok {
+					if content, ok := msg["content"].(string); ok {
+						if len(content) > 800 {
+							info.Completion = content[:800] + "...[truncated]"
+						} else {
+							info.Completion = content
+						}
+					}
+					if tc, ok := msg["tool_calls"].([]interface{}); ok {
+						for _, call := range tc {
+							if c, ok := call.(map[string]interface{}); ok {
+								if fn, ok := c["function"].(map[string]interface{}); ok {
+									if name, ok := fn["name"].(string); ok {
+										info.ToolCalls = append(info.ToolCalls, "response_tool:"+name)
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if errObj, ok := resp["error"].(map[string]interface{}); ok {
+			info.HasError = true
+			if msg, ok := errObj["message"].(string); ok {
+				info.ErrorMsg = msg
+			}
+		}
+	} else {
+		info.Completion = responseJSON
+		if len(info.Completion) > 800 {
+			info.Completion = info.Completion[:800] + "...[truncated]"
+		}
+	}
+
+	return info
+}
+
 func (s *SampleAnalysisService) buildAnalysisPrompt(sample *model.Sample) string {
-	requestContent, _ := json.Marshal(sample.RequestContent)
-	responseContent, _ := json.Marshal(sample.ResponseContent)
-	
-	const maxRequestLen = 3000
-	const maxResponseLen = 1500
-	truncatedRequest := string(requestContent)
-	truncatedResponse := string(responseContent)
-	if len(truncatedRequest) > maxRequestLen {
-		truncatedRequest = truncatedRequest[:maxRequestLen] + "...[truncated]"
+	info := extractSampleInfo(sample.RequestContent, sample.ResponseContent)
+
+	var toolCallsStr string
+	if len(info.ToolCalls) > 0 {
+		toolCallsStr = "Tools called: " + strings.Join(info.ToolCalls[:min(10, len(info.ToolCalls))], ", ")
+		if len(info.ToolCalls) > 10 {
+			toolCallsStr += fmt.Sprintf(" (+%d more)", len(info.ToolCalls)-10)
+		}
+	} else {
+		toolCallsStr = "No tools called"
 	}
-	if len(truncatedResponse) > maxResponseLen {
-		truncatedResponse = truncatedResponse[:maxResponseLen] + "...[truncated]"
+
+	errorStr := ""
+	if info.HasError {
+		errorStr = fmt.Sprintf("ERROR: %s", info.ErrorMsg)
+		if len(errorStr) > 200 {
+			errorStr = errorStr[:200] + "...[truncated]"
+		}
 	}
-	
+
 	prompt := fmt.Sprintf(`You are an AI agent evaluation expert. Analyze the following sample and rate the model's performance for agentic tasks.
 
 ## Evaluation Criteria (1-100 scale each):
 
-1. **Tool Calling Score (30%% weight)**: Does the model correctly identify when to call tools? Does it call the right tools with correct parameters? Look for patterns like function_call objects, explicit tool mentions, etc.
+1. **Tool Calling Score (30%% weight)**: Does the model correctly identify when to call tools? Does it call the right tools with correct parameters?
 
-2. **Completeness Score (25%% weight)**: Does the response fully address the user's request? Are all parts addressed? Is it complete?
+2. **Completeness Score (25%% weight)**: Does the response fully address the user's request? Are all parts addressed?
 
 3. **Context Understanding (20%% weight)**: Does the model understand the context? Does it maintain conversation coherence?
 
-4. **Error Handling (15%% weight)**: How does it handle ambiguous or missing information? Does it ask for clarification when needed?
+4. **Error Handling (15%% weight)**: How does it handle errors or ambiguous requests?
 
 5. **Response Quality (10%% weight)**: General response quality - clarity and formatting.
 
-## Sample to Analyze:
+## Extracted Sample Information:
 
 **Model**: %s
-**Request**: %s
-**Response**: %s
+
+**System Prompt** (if any):
+%s
+
+**User Task**:
+%s
+
+**%s**
+
+**Model Response**:
+%s
+
+**%s**
 
 ## Output Format:
-Return ONLY a valid JSON object with this exact structure, no markdown or additional text:
+Return ONLY a valid JSON object with this exact structure, no markdown:
 {"score":85,"tool_calling_score":90,"completeness_score":85,"context_understanding_score":80,"error_handling_score":75,"response_quality_score":90,"reasoning":"Brief explanation"}
 
-Analyze and return ONLY the JSON.`, sample.ModelKey, truncatedRequest, truncatedResponse)
+Analyze and return ONLY the JSON.`,
+		info.Model,
+		info.SystemPrompt,
+		info.UserTask,
+		toolCallsStr,
+		info.Completion,
+		errorStr)
 
 	return prompt
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func (s *SampleAnalysisService) parseAnalysisResponse(body []byte) (*AnalysisResult, error) {

@@ -75,7 +75,10 @@ func (s *SampleAnalysisService) TestConnection(req *model.SampleAnalysisConfigRe
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, fmt.Sprintf("failed to read response: %v", err), nil
+	}
 	if resp.StatusCode >= 400 {
 		return false, fmt.Sprintf("API returned status %d: %s", resp.StatusCode, string(body)), nil
 	}

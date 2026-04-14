@@ -84,7 +84,7 @@ func (s *SampleAnalysisService) TestConnection(req *model.SampleAnalysisConfigRe
 }
 
 func (s *SampleAnalysisService) AnalyzeSample(sample *model.Sample) (*AnalysisResult, error) {
-	return s.AnalyzeSampleWithStrategy(sample, StrategyFull)
+	return s.AnalyzeSampleWithStrategy(sample, StrategyHeadFirst)
 }
 
 func (s *SampleAnalysisService) AnalyzeSampleWithStrategy(sample *model.Sample, strategy ExtractionStrategy) (*AnalysisResult, error) {
@@ -101,7 +101,7 @@ func (s *SampleAnalysisService) AnalyzeSampleWithStrategy(sample *model.Sample, 
 	maxTokens := 500
 	if strategy == StrategyMinimal {
 		maxTokens = 200
-	} else if strategy == StrategyReduced {
+	} else if strategy == StrategyTailFirst {
 		maxTokens = 300
 	}
 
@@ -249,23 +249,23 @@ func extractSampleInfo(requestJSON, responseJSON string) *ExtractedSampleInfo {
 type ExtractionStrategy int
 
 const (
-	StrategyFull ExtractionStrategy = iota
-	StrategyReduced
-	StrategyMinimal
+	StrategyHeadFirst ExtractionStrategy = iota // First try: head truncation (most content)
+	StrategyTailFirst                           // Second try: tail truncation (end content)
+	StrategyMinimal                             // Third try: minimal extraction
 )
 
 const (
-	maxSystemPromptLen1 = 300
-	maxUserTaskLen1     = 500
-	maxCompletionLen1   = 800
+	maxSystemPromptLenHead = 400
+	maxUserTaskLenHead     = 600
+	maxCompletionLenHead   = 1000
 
-	maxSystemPromptLen2 = 150
-	maxUserTaskLen2     = 250
-	maxCompletionLen2   = 400
+	maxSystemPromptLenTail = 200
+	maxUserTaskLenTail     = 300
+	maxCompletionLenTail   = 500
 
-	maxSystemPromptLen3 = 100
-	maxUserTaskLen3     = 150
-	maxCompletionLen3   = 200
+	maxSystemPromptLenMin = 100
+	maxUserTaskLenMin     = 150
+	maxCompletionLenMin   = 200
 )
 
 func (s *SampleAnalysisService) buildAnalysisPromptWithStrategy(sample *model.Sample, strategy ExtractionStrategy) string {
@@ -292,7 +292,7 @@ func (s *SampleAnalysisService) buildAnalysisPromptWithStrategy(sample *model.Sa
 	switch strategy {
 	case StrategyMinimal:
 		return s.buildMinimalPrompt(info, toolCallsStr, errorStr)
-	case StrategyReduced:
+	case StrategyTailFirst:
 		return s.buildReducedPrompt(info, toolCallsStr, errorStr)
 	default:
 		return s.buildFullPrompt(info, toolCallsStr, errorStr)
@@ -388,26 +388,30 @@ func extractSampleInfoWithStrategy(requestJSON, responseJSON string, strategy Ex
 	}
 
 	var maxSystemPrompt, maxUserTask, maxCompletion int
+	var truncationType string
 	switch strategy {
+	case StrategyTailFirst:
+		maxSystemPrompt = maxSystemPromptLenTail
+		maxUserTask = maxUserTaskLenTail
+		maxCompletion = maxCompletionLenTail
+		truncationType = "tail"
 	case StrategyMinimal:
-		maxSystemPrompt = maxSystemPromptLen3
-		maxUserTask = maxUserTaskLen3
-		maxCompletion = maxCompletionLen3
-	case StrategyReduced:
-		maxSystemPrompt = maxSystemPromptLen2
-		maxUserTask = maxUserTaskLen2
-		maxCompletion = maxCompletionLen2
+		maxSystemPrompt = maxSystemPromptLenMin
+		maxUserTask = maxUserTaskLenMin
+		maxCompletion = maxCompletionLenMin
+		truncationType = "minimal"
 	default:
-		maxSystemPrompt = maxSystemPromptLen1
-		maxUserTask = maxUserTaskLen1
-		maxCompletion = maxCompletionLen1
+		maxSystemPrompt = maxSystemPromptLenHead
+		maxUserTask = maxUserTaskLenHead
+		maxCompletion = maxCompletionLenHead
+		truncationType = "head"
 	}
 
 	var req, resp map[string]interface{}
 	if err := json.Unmarshal([]byte(requestJSON), &req); err != nil {
 		info.UserTask = requestJSON
 		if len(info.UserTask) > maxUserTask {
-			info.UserTask = info.UserTask[:maxUserTask] + "...[parsed failed]"
+			info.UserTask = truncateString(info.UserTask, maxUserTask, truncationType)
 		}
 		return info
 	}
@@ -419,13 +423,13 @@ func extractSampleInfoWithStrategy(requestJSON, responseJSON string, strategy Ex
 				content, _ := m["content"].(string)
 				if role == "system" {
 					if len(content) > maxSystemPrompt {
-						info.SystemPrompt = content[:maxSystemPrompt] + "...[truncated]"
+						info.SystemPrompt = truncateString(content, maxSystemPrompt, truncationType)
 					} else {
 						info.SystemPrompt = content
 					}
 				} else if role == "user" && info.UserTask == "" {
 					if len(content) > maxUserTask {
-						info.UserTask = content[:maxUserTask] + "...[truncated]"
+						info.UserTask = truncateString(content, maxUserTask, truncationType)
 					} else {
 						info.UserTask = content
 					}
@@ -452,7 +456,7 @@ func extractSampleInfoWithStrategy(requestJSON, responseJSON string, strategy Ex
 				if msg, ok := choice["message"].(map[string]interface{}); ok {
 					if content, ok := msg["content"].(string); ok {
 						if len(content) > maxCompletion {
-							info.Completion = content[:maxCompletion] + "...[truncated]"
+							info.Completion = truncateString(content, maxCompletion, truncationType)
 						} else {
 							info.Completion = content
 						}
@@ -481,11 +485,26 @@ func extractSampleInfoWithStrategy(requestJSON, responseJSON string, strategy Ex
 	} else {
 		info.Completion = responseJSON
 		if len(info.Completion) > maxCompletion {
-			info.Completion = info.Completion[:maxCompletion] + "...[truncated]"
+			info.Completion = truncateString(info.Completion, maxCompletion, truncationType)
 		}
 	}
 
 	return info
+}
+
+func truncateString(s string, maxLen int, truncationType string) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	
+	switch truncationType {
+	case "tail":
+		return "...[开头]" + s[len(s)-maxLen:]
+	case "minimal":
+		return s[:maxLen/2] + "...[截断]..." + s[len(s)-maxLen/2:]
+	default: // head
+		return s[:maxLen] + "...[截断]"
+	}
 }
 
 func min(a, b int) int {
@@ -644,7 +663,7 @@ func (s *SampleAnalysisService) RunScheduledAnalysis(maxSamples int) (int, error
 func (s *SampleAnalysisService) AnalyzeSampleWithRetry(sample *model.Sample, maxRetries int) (*AnalysisResult, error) {
 	var lastErr error
 
-	strategies := []ExtractionStrategy{StrategyFull, StrategyReduced, StrategyMinimal}
+	strategies := []ExtractionStrategy{StrategyHeadFirst, StrategyTailFirst, StrategyMinimal}
 	
 	for retry := 0; retry < maxRetries; retry++ {
 		if retry > 0 {
@@ -665,7 +684,7 @@ func (s *SampleAnalysisService) AnalyzeSampleWithRetry(sample *model.Sample, max
 		
 		if retry < maxRetries-1 {
 			if isContextLimitError {
-				log.Printf("Sample %s analysis attempt %d/%d failed due to context limit, will try reduced strategy: %v", sample.ModelKey, retry+1, maxRetries, err)
+				log.Printf("Sample %s analysis attempt %d/%d failed due to context limit, will try next strategy: %v", sample.ModelKey, retry+1, maxRetries, err)
 			} else {
 				log.Printf("Sample %s analysis attempt %d/%d failed: %v", sample.ModelKey, retry+1, maxRetries, err)
 			}

@@ -15,8 +15,6 @@ import (
 
 	"ai-gateway/internal/model"
 	"ai-gateway/internal/repository"
-
-	"github.com/pkoukk/tiktoken-go"
 )
 
 type Dispatcher struct {
@@ -316,20 +314,6 @@ func loadRatings() {
 	}
 }
 
-func normalizeUserRatingKey(modelName string) string {
-	modelName = strings.ToLower(strings.TrimSpace(modelName))
-	
-	vendorPrefixes := []string{"google/", "qwen/", "z-ai/", "anthropic/", "openai/", "meta/", "mistral/", "cohere/", "azure/", "aws/", "alibaba/", "baidu/", "tencent/", "minimaxai/"}
-	for _, prefix := range vendorPrefixes {
-		if strings.HasPrefix(modelName, prefix) {
-			modelName = strings.TrimPrefix(modelName, prefix)
-			break
-		}
-	}
-	
-	return modelName
-}
-
 // TODO [代码质量-已知问题]: Dispatch 和 DispatchStream 有约95%重复代码
 // 问题: 两个函数几乎完全相同，修改一个可能忘记修改另一个
 // 风险: 如果需要修改模型选择/rate limit等逻辑，必须同时修改两处
@@ -604,63 +588,6 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 	}
 
 	return body, resp.StatusCode, nil
-}
-
-func parseStreamUsageFromBytes(body []byte) int {
-	var totalTokens int
-	var responseText strings.Builder
-	lines := strings.Split(string(body), "\n")
-	for _, line := range lines {
-		line = strings.TrimRight(line, " \t\r")
-		if strings.HasPrefix(line, "data:") {
-			data := strings.TrimPrefix(line, "data:")
-			data = strings.TrimLeft(data, " ")
-			if data == "[DONE]" {
-				break
-			}
-			if !strings.HasPrefix(data, "{") {
-				continue
-			}
-			var chunk struct {
-				Usage struct {
-					TotalTokens int `json:"total_tokens"`
-				} `json:"usage"`
-				Choices []struct {
-					Delta struct {
-						Content string `json:"content"`
-					} `json:"delta"`
-				} `json:"choices"`
-			}
-			if err := json.Unmarshal([]byte(data), &chunk); err != nil {
-				dataLen := len(data)
-				if dataLen > 100 {
-					dataLen = 100
-				}
-				log.Printf("failed to unmarshal stream chunk for token usage: err=%v, data=%s", err, data[:dataLen])
-			} else {
-				if chunk.Usage.TotalTokens > 0 {
-					totalTokens = chunk.Usage.TotalTokens
-				}
-				if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
-					responseText.WriteString(chunk.Choices[0].Delta.Content)
-				}
-			}
-		}
-	}
-	if totalTokens == 0 && responseText.Len() > 0 {
-		totalTokens = countTokensWithTiktoken(responseText.String())
-	}
-	return totalTokens
-}
-
-func countTokensWithTiktoken(text string) int {
-	encoding, err := tiktoken.GetEncoding("cl100k_base")
-	if err != nil {
-		log.Printf("failed to get tiktoken encoding: %v", err)
-		return 0
-	}
-	tokens := encoding.Encode(text, nil, nil)
-	return len(tokens)
 }
 
 func (d *Dispatcher) logCall(token *model.Token, channel *model.Channel, modelItem *model.Model, startTime time.Time, tokenUsed int, status int, errMsg string) {

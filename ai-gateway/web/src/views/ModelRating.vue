@@ -211,13 +211,11 @@ onUnmounted(() => {
 async function loadData() {
   loading.value = true
   try {
-    const [statsRes, ratingsRes, sampleRatingsRes, extraRatingRes, costTimeRes, weightsRes] = await Promise.all([
+    const [scoresRes, weightsRes, statsRes, costTimeRes] = await Promise.all([
+      modelRatingAPI.getAllScores(),
+      modelRatingAPI.getWeights(),
       logAPI.modelStats(),
-      userRatingAPI.listDeduplicated(),
-      sampleAnalysisAPI.getRatingsMap(),
-      extraRatingAPI.getModelScores(),
-      modelRatingAPI.getCostTimeRatings(),
-      modelRatingAPI.getWeights()
+      modelRatingAPI.getCostTimeRatings()
     ])
     
     if (weightsRes.code === 0 && weightsRes.data) {
@@ -241,60 +239,45 @@ async function loadData() {
       costTimeRatings.value = ctMap
     }
 
+    const statsMap = {}
     if (statsRes.code === 0) {
-      const ratingsMap = {}
-      if (ratingsRes.code === 0) {
-        ;(ratingsRes.data || []).forEach(r => {
-          ratingsMap[r.model_name.toLowerCase()] = r.user_rating
-        })
-      }
-      userRatings.value = ratingsMap
-      
-      const sampleRatingsMap = {}
-      if (sampleRatingsRes.code === 0) {
-        ;(Object.values(sampleRatingsRes.data || {}) || []).forEach(r => {
-          sampleRatingsMap[r.model_key.toLowerCase()] = r.score
-        })
-      }
-      sampleRatings.value = sampleRatingsMap
+      ;(statsRes.data || []).forEach(s => {
+        const key = `${s.channel_name}_${s.format}_${s.type}_${s.model_name}`.toLowerCase()
+        statsMap[key] = s
+      })
+    }
 
-      const penaltyMap = {}
-      const rewardMap = {}
-      if (extraRatingRes.code === 0 && extraRatingRes.data) {
-        Object.entries(extraRatingRes.data).forEach(([key, value]) => {
-          const normalizedKey = key.toLowerCase()
-          penaltyMap[normalizedKey] = value.penalty || 0
-          rewardMap[normalizedKey] = value.reward || 0
-        })
-      }
-      extraPenaltyMap.value = penaltyMap
-      extraRewardMap.value = rewardMap
-      
-      const stats = statsRes.data || []
-      const scored = stats.map(s => {
-        const modelKey = normalizeModelKeyForExtra(s.channel_name, s.format, s.type, s.model_name)
-        const userRating = getUserRatingForModel(s.model_name)
-        const sampleRating = getSampleRatingForModel(modelKey)
-        const extraPenalty = extraPenaltyMap.value[modelKey] || 0
-        const extraReward = extraRewardMap.value[modelKey] || 0
-        const costRating = getCostRatingForModel(modelKey)
-        const timeRating = getTimeRatingForModel(modelKey)
-        const { 
-          score, 
-          successRatePercent, latencyScorePercent, reliabilityScorePercent,
-          userRatingPercent, sampleRatingPercent, costRatingPercent, timeRatingPercent,
-          successWeighted, latencyWeighted, reliabilityWeighted,
-          userRatingWeighted, sampleRatingWeighted, costRatingWeighted, timeRatingWeighted
-        } = calculateScoreDetailed(s, userRating, sampleRating, extraPenalty, extraReward, costRating, timeRating)
-        return { 
-          ...s, 
-          score, 
+    if (scoresRes.code === 0 && Array.isArray(scoresRes.data)) {
+      const w = weights.value
+      modelStats.value = scoresRes.data.map(sc => {
+        const modelKey = sc.model_key.toLowerCase()
+        const stats = statsMap[modelKey]
+        const costTime = costTimeRatings.value[modelKey] || {}
+        
+        const successRatePercent = sc.success_rate
+        const latencyScorePercent = sc.latency
+        const reliabilityScorePercent = sc.reliability
+        const userRatingPercent = sc.user_rating
+        const sampleRatingPercent = sc.sample_rating
+        const costRatingPercent = costTime.cost_rating || 50
+        const timeRatingPercent = costTime.time_rating || 50
+
+        const successWeighted = successRatePercent * w.success_weight
+        const latencyWeighted = latencyScorePercent * w.latency_weight
+        const reliabilityWeighted = reliabilityScorePercent * w.reliability_weight
+        const userRatingWeighted = userRatingPercent * w.user_rating_weight
+        const sampleRatingWeighted = sampleRatingPercent * w.sample_rating_weight
+        const costRatingWeighted = costRatingPercent * w.cost_rating_weight
+        const timeRatingWeighted = timeRatingPercent * w.time_rating_weight
+
+        return {
+          ...sc,
           success_rate_percent: successRatePercent,
           latency_score_percent: latencyScorePercent,
           reliability_score_percent: reliabilityScorePercent,
-          user_rating: userRatingPercent, 
-          sample_rating: sampleRatingPercent, 
-          cost_rating: costRatingPercent, 
+          user_rating: userRatingPercent,
+          sample_rating: sampleRatingPercent,
+          cost_rating: costRatingPercent,
           time_rating: timeRatingPercent,
           success_weighted: successWeighted,
           latency_weighted: latencyWeighted,
@@ -303,13 +286,12 @@ async function loadData() {
           sample_rating_weighted: sampleRatingWeighted,
           cost_rating_weighted: costRatingWeighted,
           time_rating_weighted: timeRatingWeighted,
-          extra_penalty: extraPenalty, 
-          extra_reward: extraReward
+          extra_penalty: sc.penalty || 0,
+          extra_reward: sc.reward || 0,
+          total_calls: stats ? stats.total_calls : 0,
+          total_tokens: stats ? stats.total_tokens : 0
         }
       })
-      scored.sort((a, b) => b.score - a.score)
-      scored.forEach((s, i) => s.rank = i + 1)
-      modelStats.value = scored
     }
   } catch (e) {
     ElMessage.error('加载失败')

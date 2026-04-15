@@ -276,8 +276,25 @@ func (d *Dispatcher) selectModelAndChannel(token *model.Token, req map[string]in
 
 	modelName, _ := req["model"].(string)
 
-	if modelName == "AUTO" || modelName == "POLL_ALL" {
+	if modelName == "POLL_ALL" {
 		modelItem, err = d.modelService.GetNextModelAny()
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get next model: %w", err)
+		}
+		if modelItem == nil {
+			return nil, nil, fmt.Errorf("no available models")
+		}
+	} else if modelName == "AUTO" {
+		config, _ := d.systemConfigRepo.Get()
+		dispatchMode := "polling"
+		if config != nil {
+			dispatchMode = config.DispatchMode
+		}
+		if dispatchMode == "smart" {
+			modelItem, err = d.GetNextModelSmart(token.Format, token.Type)
+		} else {
+			modelItem, err = d.modelService.GetNextModelAny()
+		}
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get next model: %w", err)
 		}

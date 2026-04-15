@@ -156,7 +156,8 @@ func (s *ModelRatingService) CalculateAllScores() ([]*ModelScore, error) {
 
 		penalty := 0
 		reward := 0
-		if extra, ok := extraScores[modelKey]; ok {
+		extraScoreKey := normalizeModelKeyWithoutChannel(m.Format, m.Type, m.Name)
+		if extra, ok := extraScores[extraScoreKey]; ok {
 			penalty = extra.penalty
 			reward = extra.reward
 		}
@@ -227,7 +228,7 @@ func (s *ModelRatingService) getExtraScoresMap() map[string]struct{ penalty, rew
 	if penaltyRecords, err := s.extraRatingSvc.GetPenaltyRecords(); err == nil {
 		for _, p := range penaltyRecords {
 			if p.CurrentScore < 0 {
-				key := strings.ToLower(p.ModelKey)
+				key := p.ModelKey
 				if v, ok := result[key]; ok {
 					v.penalty += p.CurrentScore
 					result[key] = v
@@ -241,7 +242,7 @@ func (s *ModelRatingService) getExtraScoresMap() map[string]struct{ penalty, rew
 	if rewardRecords, err := s.extraRatingSvc.GetRewardRecords(); err == nil {
 		for _, r := range rewardRecords {
 			if r.RewardScore > 0 {
-				key := strings.ToLower(r.ModelKey)
+				key := r.ModelKey
 				if v, ok := result[key]; ok {
 					v.reward += r.RewardScore
 					result[key] = v
@@ -426,4 +427,8 @@ func minFloat(a, b float64) float64 {
 
 func now() time.Time {
 	return time.Now()
+}
+
+func normalizeModelKeyWithoutChannel(format, modelType, modelName string) string {
+	return strings.ToLower(format + "_" + modelType + "_" + modelName)
 }

@@ -110,7 +110,7 @@ func (s *ModelService) BatchCreate(channelID int64, modelNames []string, modelTy
 			}
 			created, err := s.repo.Create(modelReq)
 			if err == nil && created != nil {
-				modelKey := NormalizeModelKey(channel.Name, created.Format, created.Type, created.Name)
+				modelKey := NormalizeModelKeyWithoutChannel(created.Format, created.Type, created.Name)
 				createdKeys = append(createdKeys, modelKey)
 			}
 		}

@@ -35,7 +35,7 @@ func (h *ModelHandler) Create(c *gin.Context) {
 		return
 	}
 
-	modelKey := service.NormalizeModelKey(modelItem.ChannelName, modelItem.Format, modelItem.Type, modelItem.Name)
+	modelKey := service.NormalizeModelKeyWithoutChannel(modelItem.Format, modelItem.Type, modelItem.Name)
 	h.extraRatingService.ApplyNewModelReward(modelKey)
 
 	c.JSON(http.StatusOK, model.APIResponse{Code: 0, Message: "创建成功", Data: modelItem})

@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
+	"ai-gateway/internal/repository"
 	"github.com/pkoukk/tiktoken-go"
 )
 
@@ -102,5 +104,60 @@ func getWindowDuration(window string) time.Duration {
 		return 365 * 24 * time.Hour
 	default:
 		return 0
+	}
+}
+
+var (
+	userRatings   = make(map[string]int)
+	sampleRatings = make(map[string]int)
+	ratingsMu     sync.RWMutex
+)
+
+func getUserRating(key string) int {
+	ratingsMu.RLock()
+	defer ratingsMu.RUnlock()
+	return userRatings[key]
+}
+
+func setUserRating(key string, val int) {
+	ratingsMu.Lock()
+	defer ratingsMu.Unlock()
+	userRatings[key] = val
+}
+
+func getSampleRating(key string) int {
+	ratingsMu.RLock()
+	defer ratingsMu.RUnlock()
+	return sampleRatings[key]
+}
+
+func setSampleRating(key string, val int) {
+	ratingsMu.Lock()
+	defer ratingsMu.Unlock()
+	sampleRatings[key] = val
+}
+
+func loadRatings() {
+	ratingsMu.Lock()
+	defer ratingsMu.Unlock()
+
+	userRepo := repository.NewUserRatingRepo()
+
+	if ratings, err := userRepo.GetDeduplicatedUserRatings(); err == nil {
+		for _, r := range ratings {
+			modelName, _ := r["model_name"].(string)
+			rating, _ := r["user_rating"].(int)
+			userRatings[strings.ToLower(modelName)] = rating
+		}
+		log.Printf("[loadRatings] Loaded %d user ratings from deduplicated", len(ratings))
+	} else {
+		log.Printf("[loadRatings] Failed to load user ratings: %v", err)
+	}
+
+	sampleRepo := repository.NewSampleRatingRepo()
+	if sampleRatingsMap, err := sampleRepo.GetAllAsMap(); err == nil {
+		for k, v := range sampleRatingsMap {
+			sampleRatings[k] = v.Score
+		}
 	}
 }

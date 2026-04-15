@@ -170,3 +170,16 @@ func (r *ExtraRatingRepo) UpsertRewardRecord(modelKey string, rewardScore int, e
 		modelKey, rewardScore, rewardScore, time.Now(), expiresAt)
 	return err
 }
+
+func (r *ExtraRatingRepo) RewardExists(modelKey string) (bool, error) {
+	var count int
+	err := DB.QueryRow(`
+		SELECT COUNT(*) FROM extra_rating_records 
+		WHERE model_key = ? AND record_type = 'reward' 
+		AND (expires_at IS NULL OR expires_at > datetime('now'))`,
+		modelKey).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}

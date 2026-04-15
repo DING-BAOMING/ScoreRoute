@@ -128,6 +128,9 @@ func (s *ExtraRatingService) ApplyPenaltyAndReward(modelKey string) error {
 	}
 
 	for _, p := range penaltyRecords {
+		if p.ModelKey != modelKey {
+			continue
+		}
 		newScore := p.CurrentScore + 1
 		if newScore >= 0 {
 			s.repo.DeleteRecord(p.ID)
@@ -144,6 +147,17 @@ func (s *ExtraRatingService) ApplyPenaltyAndReward(modelKey string) error {
 	expiresAt := time.Now().Add(time.Duration(config.PunishmentRounds) * time.Minute)
 	if err := s.repo.AddPenaltyRecord(modelKey, penaltyScore, 1, 0, &expiresAt); err != nil {
 		return fmt.Errorf("failed to add penalty record: %w", err)
+	}
+
+	exists, err := s.repo.RewardExists(modelKey)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		rewardExpiresAt := time.Now().Add(time.Duration(config.RewardHours) * time.Hour)
+		if err := s.repo.UpsertRewardRecord(modelKey, config.RewardScore, &rewardExpiresAt); err != nil {
+			return fmt.Errorf("failed to add reward record: %w", err)
+		}
 	}
 
 	return nil

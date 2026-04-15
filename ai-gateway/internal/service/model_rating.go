@@ -11,6 +11,8 @@ import (
 	"ai-gateway/internal/model"
 )
 
+const defaultExchangeRate = 7.2
+
 type ModelRatingService struct {
 	modelRepo        *repository.ModelRepo
 	logRepo          *repository.LogRepo
@@ -260,8 +262,8 @@ func (s *ModelRatingService) getCostTimeRatingsMap(models []*model.Model) map[st
 	}
 
 	config, _ := s.systemConfigRepo.Get()
-	exchangeRate := 7.2
-	if config != nil {
+	exchangeRate := defaultExchangeRate
+	if config != nil && config.ExchangeRate > 0 {
 		exchangeRate = config.ExchangeRate
 	}
 

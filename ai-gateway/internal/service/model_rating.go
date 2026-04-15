@@ -139,7 +139,7 @@ func (s *ModelRatingService) CalculateAllScores() ([]*ModelScore, error) {
 			reliabilityScore = 50
 		}
 
-		userRating := 50
+		userRating := 85
 		normalizedName := normalizeForUserRating(m.Name)
 		if ur, ok := userRatings[normalizedName]; ok {
 			userRating = ur

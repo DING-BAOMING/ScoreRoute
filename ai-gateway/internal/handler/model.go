@@ -11,12 +11,14 @@ import (
 )
 
 type ModelHandler struct {
-	service *service.ModelService
+	service            *service.ModelService
+	extraRatingService *service.ExtraRatingService
 }
 
 func NewModelHandler() *ModelHandler {
 	return &ModelHandler{
-		service: service.NewModelService(),
+		service:            service.NewModelService(),
+		extraRatingService: service.NewExtraRatingService(),
 	}
 }
 
@@ -32,6 +34,9 @@ func (h *ModelHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
 		return
 	}
+
+	modelKey := service.NormalizeModelKey(modelItem.ChannelName, modelItem.Format, modelItem.Type, modelItem.Name)
+	h.extraRatingService.ApplyNewModelReward(modelKey)
 
 	c.JSON(http.StatusOK, model.APIResponse{Code: 0, Message: "创建成功", Data: modelItem})
 }
@@ -165,6 +170,10 @@ func (h *ModelHandler) BatchCreate(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
 		return
+	}
+
+	for _, key := range createdKeys {
+		h.extraRatingService.ApplyNewModelReward(key)
 	}
 
 	c.JSON(http.StatusOK, model.APIResponse{Code: 0, Message: "批量创建成功", Data: len(createdKeys)})

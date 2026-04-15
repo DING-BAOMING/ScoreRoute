@@ -148,17 +148,6 @@ func (s *ExtraRatingService) ApplyPenaltyAndReward(modelKey string) error {
 		return fmt.Errorf("failed to add penalty record: %w", err)
 	}
 
-	exists, err := s.repo.RewardExists(modelKey)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		rewardExpiresAt := time.Now().Add(time.Duration(config.RewardHours) * time.Hour)
-		if err := s.repo.UpsertRewardRecord(modelKey, config.RewardScore, &rewardExpiresAt); err != nil {
-			return fmt.Errorf("failed to add reward record: %w", err)
-		}
-	}
-
 	return nil
 }
 

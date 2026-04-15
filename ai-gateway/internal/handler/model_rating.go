@@ -13,8 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var _ = fmt.Sprintf
-
 type ModelRatingHandler struct {
 	configRepo *repository.ModelRatingConfigRepo
 	modelRepo  *repository.ModelRepo

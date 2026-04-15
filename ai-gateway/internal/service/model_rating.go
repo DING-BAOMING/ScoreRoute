@@ -118,17 +118,17 @@ func (s *ModelRatingService) CalculateAllScores() ([]*ModelScore, error) {
 
 		modelKey := normalizeModelKey(m.ChannelName, m.Format, m.Type, m.Name)
 
-		successRate := 0.0
+		successRate := 85.0
 		if totalCalls > 0 {
 			successRate = float64(successCalls) / float64(totalCalls) * 100
 		}
 
-		latencyScore := 0.0
+		latencyScore := 85.0
 		if avgLatency > 0 {
 			latencyScore = maxFloat(0, 1-(avgLatency/30000))*100
 		}
 
-		reliabilityScore := 0.0
+		reliabilityScore := 85.0
 		if totalCalls >= 30 {
 			reliabilityScore = 100
 		} else if totalCalls >= 10 {
@@ -149,7 +149,7 @@ func (s *ModelRatingService) CalculateAllScores() ([]*ModelScore, error) {
 			userRating = ur
 		}
 
-		sampleRating := 0
+		sampleRating := 85
 		if sr, ok := sampleRatings[modelKey]; ok {
 			sampleRating = sr.Score
 		}

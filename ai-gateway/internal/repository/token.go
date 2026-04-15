@@ -39,9 +39,9 @@ func (r *TokenRepo) GetByID(id int64) (*model.Token, error) {
 		return nil, err
 	}
 	if len(token.Key) >= 4 {
-		token.MaskedKey = "****" + token.Key[len(token.Key)-4:]
+		token.Key = "****" + token.Key[len(token.Key)-4:]
 	} else {
-		token.MaskedKey = "****"
+		token.Key = "****"
 	}
 	return token, nil
 }
@@ -59,9 +59,9 @@ func (r *TokenRepo) GetByKey(key string) (*model.Token, error) {
 		return nil, err
 	}
 	if len(token.Key) >= 4 {
-		token.MaskedKey = "****" + token.Key[len(token.Key)-4:]
+		token.Key = "****" + token.Key[len(token.Key)-4:]
 	} else {
-		token.MaskedKey = "****"
+		token.Key = "****"
 	}
 	return token, nil
 }
@@ -90,9 +90,9 @@ func (r *TokenRepo) List(page, pageSize int) ([]*model.Token, int64, error) {
 			continue
 		}
 		if len(t.Key) >= 4 {
-			t.MaskedKey = "****" + t.Key[len(t.Key)-4:]
+			t.Key = "****" + t.Key[len(t.Key)-4:]
 		} else {
-			t.MaskedKey = "****"
+			t.Key = "****"
 		}
 		tokens = append(tokens, t)
 	}

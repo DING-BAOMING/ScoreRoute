@@ -21,7 +21,12 @@ func NewTokenService() *TokenService {
 
 func (s *TokenService) Create(req *model.TokenRequest) (*model.Token, error) {
 	key := "sk-" + uuid.New().String()
-	return s.repo.Create(key, req.Name, req.Format, req.Type, req.ModelName)
+	token, err := s.repo.Create(key, req.Name, req.Format, req.Type, req.ModelName)
+	if err != nil {
+		return nil, err
+	}
+	token.Key = key
+	return token, nil
 }
 
 func (s *TokenService) GetByID(id int64) (*model.Token, error) {
@@ -68,5 +73,10 @@ func (s *TokenService) RegenerateKey(id int64) (*model.Token, error) {
 
 	s.repo.Delete(id)
 
-	return s.repo.GetByKey(newKey)
+	token, err = s.repo.GetByKey(newKey)
+	if err != nil || token == nil {
+		return nil, fmt.Errorf("token not found")
+	}
+	token.Key = newKey
+	return token, nil
 }

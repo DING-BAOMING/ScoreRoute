@@ -330,14 +330,19 @@ func normalizeUserRatingKey(modelName string) string {
 	return modelName
 }
 
-func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, int, error) {
-	startTime := time.Now()
+// TODO [代码质量-已知问题]: Dispatch 和 DispatchStream 有约95%重复代码
+// 问题: 两个函数几乎完全相同，修改一个可能忘记修改另一个
+// 风险: 如果需要修改模型选择/rate limit等逻辑，必须同时修改两处
+// 建议: 未来重构时提取公共逻辑到 doDispatch() 方法
+// 状态: 重构中 (2026-04-15)
+// 重构策略: 提取公共逻辑到 selectModelAndChannel() 方法
 
-	var req map[string]interface{}
-	if err := json.Unmarshal(requestBody, &req); err != nil {
-		return nil, 0, fmt.Errorf("invalid request body: %w", err)
-	}
-
+// selectModelAndChannel 提取模型选择和渠道获取的公共逻辑
+// 参数:
+//   - token: 请求token
+//   - req: 解析后的请求体
+// 返回: modelItem, selectedChannel, error
+func (d *Dispatcher) selectModelAndChannel(token *model.Token, req map[string]interface{}) (*model.Model, *model.Channel, error) {
 	var modelItem *model.Model
 	var err error
 
@@ -346,50 +351,66 @@ func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, i
 	if modelName == "AUTO" || modelName == "POLL_ALL" {
 		modelItem, err = d.modelService.GetNextModelAny()
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to get next model: %w", err)
+			return nil, nil, fmt.Errorf("failed to get next model: %w", err)
 		}
 		if modelItem == nil {
-			return nil, 0, fmt.Errorf("no available models")
+			return nil, nil, fmt.Errorf("no available models")
 		}
 	} else if modelName == "auto" || modelName == "Auto" {
 		modelItem, err = d.GetNextModelSmart(token.Format, token.Type)
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to get next model: %w", err)
+			return nil, nil, fmt.Errorf("failed to get next model: %w", err)
 		}
 		if modelItem == nil {
-			return nil, 0, fmt.Errorf("no available models for format=%s type=%s", token.Format, token.Type)
+			return nil, nil, fmt.Errorf("no available models for format=%s type=%s", token.Format, token.Type)
 		}
 	} else if modelName != "" {
 		modelItem, err = d.modelService.GetByName(modelName)
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to get model: %w", err)
+			return nil, nil, fmt.Errorf("failed to get model: %w", err)
 		}
 		if modelItem == nil {
-			return nil, 0, fmt.Errorf("model not found: %s", modelName)
+			return nil, nil, fmt.Errorf("model not found: %s", modelName)
 		}
 	}
 
 	if modelItem == nil {
 		modelItem, err = d.GetNextModelSmart(token.Format, token.Type)
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to get next model: %w", err)
+			return nil, nil, fmt.Errorf("failed to get next model: %w", err)
 		}
 		if modelItem == nil {
-			return nil, 0, fmt.Errorf("no available models for format=%s type=%s", token.Format, token.Type)
+			return nil, nil, fmt.Errorf("no available models for format=%s type=%s", token.Format, token.Type)
 		}
 	}
 
 	selectedChannel, err := d.channelService.GetByID(modelItem.ChannelID)
 	if err != nil || selectedChannel == nil {
-		return nil, 0, fmt.Errorf("channel not found for model")
+		return nil, nil, fmt.Errorf("channel not found for model")
 	}
 
 	if err := d.checkRateLimit(selectedChannel, 0); err != nil {
-		return nil, 429, fmt.Errorf("channel rate limit exceeded: %w", err)
+		return nil, nil, fmt.Errorf("channel rate limit exceeded: %w", err)
 	}
 
 	if err := d.checkModelRateLimit(modelItem, 0); err != nil {
-		return nil, 429, fmt.Errorf("model rate limit exceeded: %w", err)
+		return nil, nil, fmt.Errorf("model rate limit exceeded: %w", err)
+	}
+
+	return modelItem, selectedChannel, nil
+}
+
+func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, int, error) {
+	startTime := time.Now()
+
+	var req map[string]interface{}
+	if err := json.Unmarshal(requestBody, &req); err != nil {
+		return nil, 0, fmt.Errorf("invalid request body: %w", err)
+	}
+
+	modelItem, selectedChannel, err := d.selectModelAndChannel(token, req)
+	if err != nil {
+		return nil, 0, err
 	}
 
 	url := strings.TrimSuffix(selectedChannel.BaseURL, "/") + "/chat/completions"
@@ -487,6 +508,11 @@ func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, i
 	return body, resp.StatusCode, nil
 }
 
+// TODO [代码质量-已知问题]: Dispatch 和 DispatchStream 有约95%重复代码
+// 问题: 两个函数几乎完全相同，修改一个可能忘记修改另一个
+// 风险: 如果需要修改模型选择/rate limit等逻辑，必须同时修改两处
+// 建议: 未来重构时提取公共逻辑到 doDispatch() 方法
+// 状态: 暂不重构 (2026-04-15) - 重构风险高，功能正常
 func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]byte, int, error) {
 	startTime := time.Now()
 
@@ -495,58 +521,9 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 		return nil, 0, fmt.Errorf("invalid request body: %w", err)
 	}
 
-	var modelItem *model.Model
-	var err error
-
-	modelName, _ := req["model"].(string)
-
-	if modelName == "AUTO" || modelName == "POLL_ALL" {
-		modelItem, err = d.modelService.GetNextModelAny()
-		if err != nil {
-			return nil, 0, fmt.Errorf("failed to get next model: %w", err)
-		}
-		if modelItem == nil {
-			return nil, 0, fmt.Errorf("no available models")
-		}
-	} else if modelName == "auto" || modelName == "Auto" {
-		modelItem, err = d.GetNextModelSmart(token.Format, token.Type)
-		if err != nil {
-			return nil, 0, fmt.Errorf("failed to get next model: %w", err)
-		}
-		if modelItem == nil {
-			return nil, 0, fmt.Errorf("no available models for format=%s type=%s", token.Format, token.Type)
-		}
-	} else if modelName != "" {
-		modelItem, err = d.modelService.GetByName(modelName)
-		if err != nil {
-			return nil, 0, fmt.Errorf("failed to get model: %w", err)
-		}
-		if modelItem == nil {
-			return nil, 0, fmt.Errorf("model not found: %s", modelName)
-		}
-	}
-
-	if modelItem == nil {
-		modelItem, err = d.GetNextModelSmart(token.Format, token.Type)
-		if err != nil {
-			return nil, 0, fmt.Errorf("failed to get next model: %w", err)
-		}
-		if modelItem == nil {
-			return nil, 0, fmt.Errorf("no available models for format=%s type=%s", token.Format, token.Type)
-		}
-	}
-
-	selectedChannel, err := d.channelService.GetByID(modelItem.ChannelID)
-	if err != nil || selectedChannel == nil {
-		return nil, 0, fmt.Errorf("channel not found for model")
-	}
-
-	if err := d.checkRateLimit(selectedChannel, 0); err != nil {
-		return nil, 429, fmt.Errorf("channel rate limit exceeded: %w", err)
-	}
-
-	if err := d.checkModelRateLimit(modelItem, 0); err != nil {
-		return nil, 429, fmt.Errorf("model rate limit exceeded: %w", err)
+	modelItem, selectedChannel, err := d.selectModelAndChannel(token, req)
+	if err != nil {
+		return nil, 0, err
 	}
 
 	url := strings.TrimSuffix(selectedChannel.BaseURL, "/") + "/chat/completions"

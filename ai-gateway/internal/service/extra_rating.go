@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -146,6 +147,19 @@ func (s *ExtraRatingService) ApplyPenaltyAndReward(modelKey string) error {
 	}
 
 	return nil
+}
+
+func (s *ExtraRatingService) ApplyPenaltyAndRewardContext(ctx context.Context, modelKey string) error {
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- s.ApplyPenaltyAndReward(modelKey)
+	}()
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (s *ExtraRatingService) ApplyNewModelReward(modelKey string) error {

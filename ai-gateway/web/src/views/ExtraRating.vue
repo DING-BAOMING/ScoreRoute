@@ -6,19 +6,19 @@
       </template>
       <el-descriptions :column="1" border>
         <el-descriptions-item label="惩罚机制">
-          当任意模型被调用时，<el-tag type="danger" size="small">所有模型</el-tag>都会被扣除分数（实现模型轮转调用）
+          当某个<el-tag type="danger" size="small">特定模型</el-tag>被调用时，该模型会获得一个新的惩罚分数（实现模型轮转调用）
         </el-descriptions-item>
         <el-descriptions-item label="惩罚衰减">
-          每当有新的API请求时，所有现有惩罚分数都会减少1分，低于0分时自动清除
+          每当该模型被再次调用时，其所有现有惩罚分数都会减少1分，低于0分时自动清除
         </el-descriptions-item>
         <el-descriptions-item label="惩罚叠加">
-          多次调用模型可以叠加惩罚分数，惩罚持续期间可以累加
+          多次调用同一模型可以叠加惩罚分数，惩罚持续期间可以累加
         </el-descriptions-item>
         <el-descriptions-item label="奖励机制">
           当<el-tag type="success" size="small">新模型</el-tag>被添加到系统时，该模型会获得奖励分数（吸引使用新加入的模型）
         </el-descriptions-item>
         <el-descriptions-item label="奖励衰减">
-          奖励是基于时间的线性衰减，持续24小时，每小时衰减约0.21分
+          奖励是基于时间的线性衰减，持续24小时（可配置），每小时衰减约1/24
         </el-descriptions-item>
         <el-descriptions-item label="模型标识">
           奖励和惩罚的模型以 <el-tag size="small">API渠道名_格式_类型_模型名</el-tag> 为一个单位

@@ -4,6 +4,9 @@
       <template #header>
         <div class="card-header">
           <span>开发文档</span>
+          <el-button type="text" @click="openDevDocs">
+            <el-icon><Document /></el-icon> 完整开发日志
+          </el-button>
         </div>
       </template>
 
@@ -424,15 +427,23 @@
 
 <script setup>
 import { ref } from 'vue'
+import { Document } from '@element-plus/icons-vue'
 
 const activeTab = ref('usage')
 const baseUrl = window.location.origin
+
+function openDevDocs() {
+  window.open('/docs/开发计划.md', '_blank')
+}
 </script>
 
 <style scoped>
 .card-header {
   font-size: 18px;
   font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .doc-content {

@@ -115,7 +115,8 @@ export const extraRatingAPI = {
 export const modelRatingAPI = {
   getWeights: () => api.get('/model-rating/weights'),
   updateWeights: (data) => api.put('/model-rating/weights', data),
-  getCostTimeRatings: () => api.get('/model-rating/cost-time')
+  getCostTimeRatings: () => api.get('/model-rating/cost-time'),
+  getAllScores: () => api.get('/model-rating/scores')
 }
 
 export default api

@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"ai-gateway/internal/model"
@@ -208,18 +209,18 @@ func (d *Dispatcher) calculateCompositeScore(m *model.Model, weights *modelRatin
 
 	userRating := 50
 	normalizedKey := normalizeUserRatingKey(m.Name)
-	if ur, ok := userRatings[normalizedKey]; ok {
+	if ur := getUserRating(normalizedKey); ur != 0 {
 		userRating = ur
-	} else if ur, ok := userRatings[m.Name]; ok {
+	} else if ur := getUserRating(m.Name); ur != 0 {
 		userRating = ur
-	} else if ur, ok := userRatings[strings.ToLower(m.Name)]; ok {
+	} else if ur := getUserRating(strings.ToLower(m.Name)); ur != 0 {
 		userRating = ur
 	}
 	userScore := float64(userRating) / 100.0
 
 	sampleRating := 50
 	sampleKey := NormalizeModelKey(m.ChannelName, m.Format, m.Type, m.Name)
-	if sr, ok := sampleRatings[sampleKey]; ok {
+	if sr := getSampleRating(sampleKey); sr != 0 {
 		sampleRating = sr
 	}
 	sampleScore := float64(sampleRating) / 100.0
@@ -259,24 +260,40 @@ func (d *Dispatcher) calculateCompositeScore(m *model.Model, weights *modelRatin
 	return compositeScore
 }
 
-var userRatings = make(map[string]int)
-var sampleRatings = make(map[string]int)
+var (
+	userRatings    = make(map[string]int)
+	sampleRatings  = make(map[string]int)
+	ratingsMu      sync.RWMutex
+)
 
-func normalizeUserRatingKey(modelName string) string {
-	modelName = strings.ToLower(strings.TrimSpace(modelName))
-	
-	vendorPrefixes := []string{"google/", "qwen/", "z-ai/", "anthropic/", "openai/", "meta/", "mistral/", "cohere/", "azure/", "aws/", "alibaba/", "baidu/", "tencent/", "minimaxai/"}
-	for _, prefix := range vendorPrefixes {
-		if strings.HasPrefix(modelName, prefix) {
-			modelName = strings.TrimPrefix(modelName, prefix)
-			break
-		}
-	}
-	
-	return modelName
+func getUserRating(key string) int {
+	ratingsMu.RLock()
+	defer ratingsMu.RUnlock()
+	return userRatings[key]
+}
+
+func setUserRating(key string, val int) {
+	ratingsMu.Lock()
+	defer ratingsMu.Unlock()
+	userRatings[key] = val
+}
+
+func getSampleRating(key string) int {
+	ratingsMu.RLock()
+	defer ratingsMu.RUnlock()
+	return sampleRatings[key]
+}
+
+func setSampleRating(key string, val int) {
+	ratingsMu.Lock()
+	defer ratingsMu.Unlock()
+	sampleRatings[key] = val
 }
 
 func loadRatings() {
+	ratingsMu.Lock()
+	defer ratingsMu.Unlock()
+
 	userRepo := repository.NewUserRatingRepo()
 	
 	if ratings, err := userRepo.GetDeduplicatedUserRatings(); err == nil {
@@ -296,6 +313,20 @@ func loadRatings() {
 			sampleRatings[k] = v.Score
 		}
 	}
+}
+
+func normalizeUserRatingKey(modelName string) string {
+	modelName = strings.ToLower(strings.TrimSpace(modelName))
+	
+	vendorPrefixes := []string{"google/", "qwen/", "z-ai/", "anthropic/", "openai/", "meta/", "mistral/", "cohere/", "azure/", "aws/", "alibaba/", "baidu/", "tencent/", "minimaxai/"}
+	for _, prefix := range vendorPrefixes {
+		if strings.HasPrefix(modelName, prefix) {
+			modelName = strings.TrimPrefix(modelName, prefix)
+			break
+		}
+	}
+	
+	return modelName
 }
 
 func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, int, error) {

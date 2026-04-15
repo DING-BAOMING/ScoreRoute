@@ -11,14 +11,12 @@ import (
 )
 
 type ModelHandler struct {
-	service          *service.ModelService
-	extraRatingService *service.ExtraRatingService
+	service *service.ModelService
 }
 
 func NewModelHandler() *ModelHandler {
 	return &ModelHandler{
-		service:            service.NewModelService(),
-		extraRatingService: service.NewExtraRatingService(),
+		service: service.NewModelService(),
 	}
 }
 

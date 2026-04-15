@@ -62,8 +62,8 @@ type Model struct {
 
 type Token struct {
 	ID        int64     `json:"id"`
-	Key       string    `json:"-"`           // Never expose in JSON
-	MaskedKey string    `json:"key"`       // Masked version for display
+	Key       string    `json:"key"`        // Full key (only for Create response)
+	MaskedKey string    `json:"-"`          // Masked version (internal use)
 	Name      string    `json:"name"`
 	Format    string    `json:"format"`
 	Type      string    `json:"type"`

@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -448,16 +449,39 @@ func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, i
 	d.logCall(token, selectedChannel, modelItem, startTime, tokenUsed, resp.StatusCode, "")
 
 	if resp.StatusCode == 200 {
-		go d.updateChannelUsage(selectedChannel.ID, tokenUsed, modelItem.CostPerToken, modelItem.Currency)
-		go d.updateModelUsage(modelItem.ID, tokenUsed)
-		go d.extraRatingService.ApplyPenaltyAndReward(
-			NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name),
-		)
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := d.updateChannelUsageContext(ctx, selectedChannel.ID, tokenUsed, modelItem.CostPerToken, modelItem.Currency); err != nil {
+				log.Printf("[ERROR] updateChannelUsage failed: channel=%s, err=%v", selectedChannel.Name, err)
+			}
+		}()
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := d.updateModelUsageContext(ctx, modelItem.ID, tokenUsed); err != nil {
+				log.Printf("[ERROR] updateModelUsage failed: model=%s, err=%v", modelItem.Name, err)
+			}
+		}()
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
+			if err := d.extraRatingService.ApplyPenaltyAndRewardContext(ctx, modelKey); err != nil {
+				log.Printf("[ERROR] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
+			}
+		}()
 	}
 
 	if resp.StatusCode == 200 && tokenUsed > 0 {
 		modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
-		go d.saveSampleAsync(modelKey, string(requestBody), string(body), tokenUsed)
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if err := d.saveSampleAsyncContext(ctx, modelKey, string(requestBody), string(body), tokenUsed); err != nil {
+				log.Printf("[ERROR] saveSampleAsync failed: model=%s, err=%v", modelItem.Name, err)
+			}
+		}()
 	}
 
 	return body, resp.StatusCode, nil
@@ -567,16 +591,39 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 	d.logCall(token, selectedChannel, modelItem, startTime, tokenUsed, resp.StatusCode, "")
 
 	if resp.StatusCode == 200 {
-		go d.updateChannelUsage(selectedChannel.ID, tokenUsed, modelItem.CostPerToken, modelItem.Currency)
-		go d.updateModelUsage(modelItem.ID, tokenUsed)
-		go d.extraRatingService.ApplyPenaltyAndReward(
-			NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name),
-		)
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := d.updateChannelUsageContext(ctx, selectedChannel.ID, tokenUsed, modelItem.CostPerToken, modelItem.Currency); err != nil {
+				log.Printf("[ERROR] updateChannelUsage failed: channel=%s, err=%v", selectedChannel.Name, err)
+			}
+		}()
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := d.updateModelUsageContext(ctx, modelItem.ID, tokenUsed); err != nil {
+				log.Printf("[ERROR] updateModelUsage failed: model=%s, err=%v", modelItem.Name, err)
+			}
+		}()
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
+			if err := d.extraRatingService.ApplyPenaltyAndRewardContext(ctx, modelKey); err != nil {
+				log.Printf("[ERROR] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
+			}
+		}()
 	}
 
 	if resp.StatusCode == 200 && tokenUsed > 0 {
 		modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
-		go d.saveSampleAsync(modelKey, string(requestBody), string(body), tokenUsed)
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if err := d.saveSampleAsyncContext(ctx, modelKey, string(requestBody), string(body), tokenUsed); err != nil {
+				log.Printf("[ERROR] saveSampleAsync failed: model=%s, err=%v", modelItem.Name, err)
+			}
+		}()
 	}
 
 	return body, resp.StatusCode, nil
@@ -661,6 +708,20 @@ func (d *Dispatcher) logCall(token *model.Token, channel *model.Channel, modelIt
 func (d *Dispatcher) saveSampleAsync(modelKey, requestContent, responseContent string, tokenCount int) {
 	if err := d.sampleRepo.SaveSample(modelKey, requestContent, responseContent, tokenCount); err != nil {
 		log.Printf("failed to save sample: %v", err)
+	}
+}
+
+func (d *Dispatcher) saveSampleAsyncContext(ctx context.Context, modelKey, requestContent, responseContent string, tokenCount int) error {
+	errCh := make(chan error, 1)
+	go func() {
+		d.saveSampleAsync(modelKey, requestContent, responseContent, tokenCount)
+		errCh <- nil
+	}()
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
@@ -846,6 +907,19 @@ func (d *Dispatcher) updateChannelUsage(channelID int64, tokenUsed int, costPerT
 	}
 
 	return nil
+}
+
+func (d *Dispatcher) updateChannelUsageContext(ctx context.Context, channelID int64, tokenUsed int, costPerToken float64, costCurrency string) error {
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- d.updateChannelUsage(channelID, tokenUsed, costPerToken, costCurrency)
+	}()
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (d *Dispatcher) checkModelRateLimit(modelItem *model.Model, tokenUsed int) error {
@@ -1045,6 +1119,19 @@ func (d *Dispatcher) updateModelUsage(modelID int64, tokenUsed int) error {
 	}
 
 	return nil
+}
+
+func (d *Dispatcher) updateModelUsageContext(ctx context.Context, modelID int64, tokenUsed int) error {
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- d.updateModelUsage(modelID, tokenUsed)
+	}()
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (d *Dispatcher) updateInheritedChannelUsage(modelItem *model.Model, tokenUsed int) {

@@ -129,8 +129,8 @@ func (d *Dispatcher) GetNextModelSmart(format, modelType string) (*model.Model, 
 		d.modelRepo.IncrementCallCount(selectedModel.ID)
 		d.channelRepo.IncrementCallCount(selectedModel.ChannelID)
 
-		log.Printf("[GetNextModelSmart] selected %s/%s score=%.2f rank=1", 
-			score.ChannelName, score.ModelName, score.Score)
+		log.Printf("[GetNextModelSmart] selected %s/%s score=%.2f rank=%d",
+			score.ChannelName, score.ModelName, score.Score, score.Rank)
 		return selectedModel, nil
 	}
 

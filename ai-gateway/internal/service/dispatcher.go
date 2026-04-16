@@ -594,17 +594,31 @@ func (d *Dispatcher) DispatchStreamToWriter(w io.Writer, token *model.Token, req
 	writer := io.MultiWriter(w, bodyBuf)
 
 	tokenUsed := 0
+	lastKeepalive := time.Now()
+	keepaliveInterval := 30 * time.Second
+
 	for {
 		buf := make([]byte, 4096)
 		n, err := resp.Body.Read(buf)
 		if n > 0 {
 			if _, err := writer.Write(buf[:n]); err != nil {
-				log.Printf("[WARN] failed to write chunk to response: %v", err)
+				log.Printf("[WARN] client disconnected: %v", err)
+				d.logCall(token, selectedChannel, modelItem, startTime, tokenUsed, resp.StatusCode, "client disconnected")
+				return resp.StatusCode, nil
 			}
 			if flusher, ok := w.(http.Flusher); ok {
 				flusher.Flush()
 			}
 		}
+
+		if time.Since(lastKeepalive) >= keepaliveInterval {
+			fmt.Fprintf(w, ": keepalive\n\n")
+			if flusher, ok := w.(http.Flusher); ok {
+				flusher.Flush()
+			}
+			lastKeepalive = time.Now()
+		}
+
 		if err != nil {
 			if err == io.EOF {
 				break

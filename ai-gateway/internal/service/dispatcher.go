@@ -284,7 +284,7 @@ func (d *Dispatcher) selectModelAndChannel(token *model.Token, req map[string]in
 		if modelItem == nil {
 			return nil, nil, fmt.Errorf("no available models")
 		}
-	} else if modelName == "AUTO" {
+	} else if modelName == "AUTO" || modelName == "__AUTO__" {
 		config, _ := d.systemConfigRepo.Get()
 		dispatchMode := "polling"
 		if config != nil {

@@ -288,7 +288,3 @@ func NormalizeModelKey(channelName, format, modelType, modelName string) string 
 	return key
 }
 
-func NormalizeModelKeyWithoutChannel(format, modelType, modelName string) string {
-	key := strings.ToLower(fmt.Sprintf("%s_%s_%s", format, modelType, modelName))
-	return key
-}

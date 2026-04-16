@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"log"
 	"sort"
 	"strings"
 	"time"
@@ -87,7 +88,11 @@ func (s *ModelRatingService) CalculateAllScores() ([]*ModelScore, error) {
 	statsMap := s.logRepo.GetModelStatsMap()
 
 	userRatings := s.getUserRatingsMap()
-	sampleRatings, _ := s.sampleRatingRepo.GetAllAsMap()
+	sampleRatings, err := s.sampleRatingRepo.GetAllAsMap()
+	if err != nil {
+		log.Printf("[CalculateAllScores] failed to get sample ratings: %v", err)
+		sampleRatings = make(map[string]*model.SampleRating)
+	}
 	extraScores := s.getExtraScoresMap()
 	costTimeRatings := s.getCostTimeRatingsMap(models)
 
@@ -211,12 +216,15 @@ func (s *ModelRatingService) CalculateAllScores() ([]*ModelScore, error) {
 
 func (s *ModelRatingService) getUserRatingsMap() map[string]int {
 	ratings := make(map[string]int)
-	if deduped, err := s.userRatingRepo.GetDeduplicatedUserRatings(); err == nil {
-		for _, r := range deduped {
-			modelName, _ := r["model_name"].(string)
-			rating, _ := r["user_rating"].(int)
-			ratings[strings.ToLower(modelName)] = rating
-		}
+	deduped, err := s.userRatingRepo.GetDeduplicatedUserRatings()
+	if err != nil {
+		log.Printf("[getUserRatingsMap] failed to get user ratings: %v", err)
+		return ratings
+	}
+	for _, r := range deduped {
+		modelName, _ := r["model_name"].(string)
+		rating, _ := r["user_rating"].(int)
+		ratings[strings.ToLower(modelName)] = rating
 	}
 	return ratings
 }
@@ -224,7 +232,10 @@ func (s *ModelRatingService) getUserRatingsMap() map[string]int {
 func (s *ModelRatingService) getExtraScoresMap() map[string]struct{ penalty, reward int } {
 	result := make(map[string]struct{ penalty, reward int })
 
-	if penaltyRecords, err := s.extraRatingSvc.GetPenaltyRecords(); err == nil {
+	penaltyRecords, err := s.extraRatingSvc.GetPenaltyRecords()
+	if err != nil {
+		log.Printf("[getExtraScoresMap] failed to get penalty records: %v", err)
+	} else {
 		for _, p := range penaltyRecords {
 			if p.CurrentScore < 0 {
 				key := p.ModelKey
@@ -238,7 +249,10 @@ func (s *ModelRatingService) getExtraScoresMap() map[string]struct{ penalty, rew
 		}
 	}
 
-	if rewardRecords, err := s.extraRatingSvc.GetRewardRecords(); err == nil {
+	rewardRecords, err := s.extraRatingSvc.GetRewardRecords()
+	if err != nil {
+		log.Printf("[getExtraScoresMap] failed to get reward records: %v", err)
+	} else {
 		for _, r := range rewardRecords {
 			if r.RewardScore > 0 {
 				key := r.ModelKey
@@ -415,19 +429,4 @@ func maxFloat(a, b float64) float64 {
 		return a
 	}
 	return b
-}
-
-func minFloat(a, b float64) float64 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func now() time.Time {
-	return time.Now()
-}
-
-func normalizeModelKeyWithoutChannel(format, modelType, modelName string) string {
-	return strings.ToLower(format + "_" + modelType + "_" + modelName)
 }

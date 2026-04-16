@@ -258,12 +258,13 @@ func (d *Dispatcher) calculateCompositeScore(m *model.Model, weights *modelRatin
 	return compositeScore
 }
 
-// TODO [代码质量-已知问题]: Dispatch 和 DispatchStream 有约95%重复代码
-// 问题: 两个函数几乎完全相同，修改一个可能忘记修改另一个
-// 风险: 如果需要修改模型选择/rate limit等逻辑，必须同时修改两处
-// 建议: 未来重构时提取公共逻辑到 doDispatch() 方法
-// 状态: 重构中 (2026-04-15)
-// 重构策略: 提取公共逻辑到 selectModelAndChannel() 方法
+// TODO [代码质量-历史问题]: Dispatch 和 DispatchStream 曾经有约95%重复代码
+// 状态: 已重构 (2026-04-16)
+// 重构方案:
+//   - Dispatch/DispatchStream 成为包装函数，调用内部 dispatch()
+//   - dispatch() 处理所有公共逻辑
+//   - calculateTokenUsage() 处理token计数差异
+//   - performAsyncUpdates() 处理异步更新
 
 // selectModelAndChannel 提取模型选择和渠道获取的公共逻辑
 // 参数:
@@ -346,6 +347,14 @@ func (d *Dispatcher) selectModelAndChannel(token *model.Token, req map[string]in
 }
 
 func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, int, error) {
+	return d.dispatch(token, requestBody, false)
+}
+
+func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]byte, int, error) {
+	return d.dispatch(token, requestBody, true)
+}
+
+func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStream bool) ([]byte, int, error) {
 	startTime := time.Now()
 
 	var req map[string]interface{}
@@ -393,50 +402,23 @@ func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, i
 		return nil, resp.StatusCode, fmt.Errorf("upstream API returned HTML error page (invalid API key or endpoint)")
 	}
 
-	var tokenUsed int
-	isStream, _ := req["stream"].(bool)
-	if strings.HasPrefix(bodyStr, "data: ") {
-		isStream = true
-		log.Printf("detected SSE response despite stream flag=%v, model=%s", req["stream"], modelItem.Name)
-	}
+	isStream := forceStream
 	if !isStream {
-		var relayResp RelayResponse
-		if err := json.Unmarshal(body, &relayResp); err != nil {
-			bodyLen := len(body)
-			if bodyLen > 200 {
-				bodyLen = 200
-			}
-			log.Printf("failed to unmarshal response for token usage: err=%v, body=%s, model=%s", err, string(body[:bodyLen]), modelItem.Name)
-		} else {
-			tokenUsed = relayResp.Usage.TotalTokens
-		}
+		isStream, _ = req["stream"].(bool)
 	}
+	if strings.HasPrefix(bodyStr, "data: ") {
+		if !isStream {
+			log.Printf("detected SSE response despite stream flag=%v, model=%s", req["stream"], modelItem.Name)
+		}
+		isStream = true
+	}
+
+	tokenUsed := d.calculateTokenUsage(body, isStream, modelItem.Name)
 
 	d.logCall(token, selectedChannel, modelItem, startTime, tokenUsed, resp.StatusCode, "")
 
 	if resp.StatusCode == 200 {
-		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			if err := d.updateChannelUsageContext(ctx, selectedChannel.ID, tokenUsed, modelItem.CostPerToken, modelItem.Currency); err != nil {
-				log.Printf("[ERROR] updateChannelUsage failed: channel=%s, err=%v", selectedChannel.Name, err)
-			}
-		}()
-		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			if err := d.updateModelUsageContext(ctx, modelItem.ID, tokenUsed); err != nil {
-				log.Printf("[ERROR] updateModelUsage failed: model=%s, err=%v", modelItem.Name, err)
-			}
-		}()
-		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
-			if err := d.extraRatingService.ApplyPenaltyAndRewardContext(ctx, modelKey); err != nil {
-				log.Printf("[ERROR] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
-			}
-		}()
+		d.performAsyncUpdates(selectedChannel, modelItem, tokenUsed)
 	}
 
 	if resp.StatusCode == 200 && tokenUsed > 0 {
@@ -453,102 +435,46 @@ func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, i
 	return body, resp.StatusCode, nil
 }
 
-// TODO [代码质量-已知问题]: Dispatch 和 DispatchStream 有约95%重复代码
-// 问题: 两个函数几乎完全相同，修改一个可能忘记修改另一个
-// 风险: 如果需要修改模型选择/rate limit等逻辑，必须同时修改两处
-// 建议: 未来重构时提取公共逻辑到 doDispatch() 方法
-// 状态: 暂不重构 (2026-04-15) - 重构风险高，功能正常
-func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]byte, int, error) {
-	startTime := time.Now()
-
-	var req map[string]interface{}
-	if err := json.Unmarshal(requestBody, &req); err != nil {
-		return nil, 0, fmt.Errorf("invalid request body: %w", err)
+func (d *Dispatcher) calculateTokenUsage(body []byte, isStream bool, modelName string) int {
+	if isStream {
+		return parseStreamUsageFromBytes(body)
 	}
 
-	modelItem, selectedChannel, err := d.selectModelAndChannel(token, req)
-	if err != nil {
-		return nil, 0, err
+	var relayResp RelayResponse
+	if err := json.Unmarshal(body, &relayResp); err != nil {
+		bodyLen := len(body)
+		if bodyLen > 200 {
+			bodyLen = 200
+		}
+		log.Printf("failed to unmarshal response for token usage: err=%v, body=%s, model=%s", err, string(body[:bodyLen]), modelName)
+		return 0
 	}
+	return relayResp.Usage.TotalTokens
+}
 
-	url := strings.TrimSuffix(selectedChannel.BaseURL, "/") + "/chat/completions"
-
-	req["model"] = modelItem.Name
-	modifiedBody, err := json.Marshal(req)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to marshal request: %w", err)
-	}
-
-	proxyReq, err := http.NewRequest("POST", url, bytes.NewReader(modifiedBody))
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	proxyReq.Header.Set("Content-Type", "application/json")
-	proxyReq.Header.Set("Authorization", "Bearer "+selectedChannel.APIKey)
-	proxyReq.Header.Set("User-Agent", "AI-Gateway/1.0")
-
-	resp, err := d.client.Do(proxyReq)
-	if err != nil {
-		d.logCall(token, selectedChannel, modelItem, startTime, 0, 503, err.Error())
-		return nil, 503, fmt.Errorf("upstream request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, resp.StatusCode, fmt.Errorf("failed to read response: %w", err)
-	}
-
-	bodyStr := strings.TrimSpace(string(body))
-	bodyStrLower := strings.ToLower(bodyStr)
-	if strings.HasPrefix(bodyStrLower, "<!doctype") || strings.HasPrefix(bodyStrLower, "<html") {
-		return nil, resp.StatusCode, fmt.Errorf("upstream API returned HTML error page (invalid API key or endpoint)")
-	}
-
-	tokenUsed := parseStreamUsageFromBytes(body)
-	if tokenUsed == 0 {
-		log.Printf("warning: streaming response returned 0 tokens for model=%s, channel=%s. NVIDIA streaming API does not provide usage info in streaming chunks.", modelItem.Name, selectedChannel.Name)
-	}
-	d.logCall(token, selectedChannel, modelItem, startTime, tokenUsed, resp.StatusCode, "")
-
-	if resp.StatusCode == 200 {
-		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			if err := d.updateChannelUsageContext(ctx, selectedChannel.ID, tokenUsed, modelItem.CostPerToken, modelItem.Currency); err != nil {
-				log.Printf("[ERROR] updateChannelUsage failed: channel=%s, err=%v", selectedChannel.Name, err)
-			}
-		}()
-		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			if err := d.updateModelUsageContext(ctx, modelItem.ID, tokenUsed); err != nil {
-				log.Printf("[ERROR] updateModelUsage failed: model=%s, err=%v", modelItem.Name, err)
-			}
-		}()
-		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
-			if err := d.extraRatingService.ApplyPenaltyAndRewardContext(ctx, modelKey); err != nil {
-				log.Printf("[ERROR] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
-			}
-		}()
-	}
-
-	if resp.StatusCode == 200 && tokenUsed > 0 {
+func (d *Dispatcher) performAsyncUpdates(selectedChannel *model.Channel, modelItem *model.Model, tokenUsed int) {
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := d.updateChannelUsageContext(ctx, selectedChannel.ID, tokenUsed, modelItem.CostPerToken, modelItem.Currency); err != nil {
+			log.Printf("[ERROR] updateChannelUsage failed: channel=%s, err=%v", selectedChannel.Name, err)
+		}
+	}()
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := d.updateModelUsageContext(ctx, modelItem.ID, tokenUsed); err != nil {
+			log.Printf("[ERROR] updateModelUsage failed: model=%s, err=%v", modelItem.Name, err)
+		}
+	}()
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 		modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
-		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-			if err := d.saveSampleAsyncContext(ctx, modelKey, string(requestBody), string(body), tokenUsed); err != nil {
-				log.Printf("[ERROR] saveSampleAsync failed: model=%s, err=%v", modelItem.Name, err)
-			}
-		}()
-	}
-
-	return body, resp.StatusCode, nil
+		if err := d.extraRatingService.ApplyPenaltyAndRewardContext(ctx, modelKey); err != nil {
+			log.Printf("[ERROR] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
+		}
+	}()
 }
 
 

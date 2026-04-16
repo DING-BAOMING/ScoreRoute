@@ -384,13 +384,15 @@ function calculateScoreDetailed(stat, userRating, sampleRating, extraPenalty = 0
   const maxLatencyThreshold = 30000
   const latencyScorePercent = Math.max(0, 1 - (stat.avg_latency / maxLatencyThreshold)) * 100
 
-  let reliabilityScorePercent = 100
-  if (stat.total_calls < 5) {
-    reliabilityScorePercent = stat.total_calls / 5 * 50
-  } else if (stat.total_calls < 10) {
-    reliabilityScorePercent = 50 + (stat.total_calls - 5) / 10 * 30
-  } else if (stat.total_calls < 30) {
+  let reliabilityScorePercent = 85
+  if (stat.total_calls >= 30) {
+    reliabilityScorePercent = 100
+  } else if (stat.total_calls >= 10) {
     reliabilityScorePercent = 80 + (stat.total_calls - 10) / 20 * 20
+  } else if (stat.total_calls >= 5) {
+    reliabilityScorePercent = 50 + (stat.total_calls - 5) / 5 * 30
+  } else if (stat.total_calls > 0) {
+    reliabilityScorePercent = 50
   }
 
   const userRatingPercent = userRating

@@ -224,7 +224,7 @@ func (d *Dispatcher) calculateCompositeScore(m *model.Model, weights *modelRatin
 	sampleScore := float64(sampleRating) / 100.0
 
 	penalty, reward, _ := d.extraRatingService.GetModelExtraScore(sampleKey)
-	extraScore := float64(reward+penalty) / 100.0
+	extraScore := float64(reward+penalty)
 
 	costRating := 90
 	if m.CostPerToken > 0 {

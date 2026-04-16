@@ -113,17 +113,14 @@ func (h *ProxyHandler) HandleStream(c *gin.Context) {
 }
 
 func (h *ProxyHandler) HandleStreamWithBody(c *gin.Context, token *model.Token, body []byte) {
-	c.Header("Content-Type", "text/event-stream")
-	c.Status(http.StatusOK)
-	c.Writer.Flush()
-
-	statusCode, err := h.dispatcher.DispatchStreamToWriter(c.Writer, token, body)
+	respBody, statusCode, err := h.dispatcher.DispatchStream(token, body)
 	if err != nil {
-		log.Printf("[ERROR] DispatchStreamToWriter failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": err.Error()}})
+		return
 	}
-	if statusCode != 200 {
-		c.JSON(statusCode, gin.H{"error": gin.H{"message": fmt.Sprintf("upstream error: status %d", statusCode)}})
-	}
+
+	c.Header("Content-Type", "text/event-stream")
+	c.Data(statusCode, "text/event-stream", respBody)
 }
 
 func (h *ProxyHandler) HandleModels(c *gin.Context) {

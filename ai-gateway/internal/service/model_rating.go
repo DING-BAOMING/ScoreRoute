@@ -156,8 +156,7 @@ func (s *ModelRatingService) CalculateAllScores() ([]*ModelScore, error) {
 
 		penalty := 0
 		reward := 0
-		extraScoreKey := normalizeModelKeyWithoutChannel(m.Format, m.Type, m.Name)
-		if extra, ok := extraScores[extraScoreKey]; ok {
+		if extra, ok := extraScores[modelKey]; ok {
 			penalty = extra.penalty
 			reward = extra.reward
 		}

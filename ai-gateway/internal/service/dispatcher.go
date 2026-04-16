@@ -432,8 +432,8 @@ func (d *Dispatcher) Dispatch(token *model.Token, requestBody []byte) ([]byte, i
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			penaltyModelKey := NormalizeModelKeyWithoutChannel(selectedChannel.Format, modelItem.Type, modelItem.Name)
-			if err := d.extraRatingService.ApplyPenaltyAndRewardContext(ctx, penaltyModelKey); err != nil {
+			modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
+			if err := d.extraRatingService.ApplyPenaltyAndRewardContext(ctx, modelKey); err != nil {
 				log.Printf("[ERROR] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
 			}
 		}()
@@ -530,8 +530,8 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			penaltyModelKey := NormalizeModelKeyWithoutChannel(selectedChannel.Format, modelItem.Type, modelItem.Name)
-			if err := d.extraRatingService.ApplyPenaltyAndRewardContext(ctx, penaltyModelKey); err != nil {
+			modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
+			if err := d.extraRatingService.ApplyPenaltyAndRewardContext(ctx, modelKey); err != nil {
 				log.Printf("[ERROR] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
 			}
 		}()

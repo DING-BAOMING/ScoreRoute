@@ -552,3 +552,117 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 }
 
 
+
+func (d *Dispatcher) DispatchStreamToWriter(w io.Writer, token *model.Token, requestBody []byte) (int, error) {
+	startTime := time.Now()
+
+	var req map[string]interface{}
+	if err := json.Unmarshal(requestBody, &req); err != nil {
+		return 0, fmt.Errorf("invalid request body: %w", err)
+	}
+
+	modelItem, selectedChannel, err := d.selectModelAndChannel(token, req)
+	if err != nil {
+		return 0, err
+	}
+
+	url := strings.TrimSuffix(selectedChannel.BaseURL, "/") + "/chat/completions"
+
+	req["model"] = modelItem.Name
+	modifiedBody, err := json.Marshal(req)
+	if err != nil {
+		return 0, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	proxyReq, err := http.NewRequest("POST", url, bytes.NewReader(modifiedBody))
+	if err != nil {
+		return 0, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	proxyReq.Header.Set("Content-Type", "application/json")
+	proxyReq.Header.Set("Authorization", "Bearer "+selectedChannel.APIKey)
+	proxyReq.Header.Set("User-Agent", "AI-Gateway/1.0")
+
+	resp, err := d.client.Do(proxyReq)
+	if err != nil {
+		d.logCall(token, selectedChannel, modelItem, startTime, 0, 503, err.Error())
+		return 503, fmt.Errorf("upstream request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBuf := &bytes.Buffer{}
+	writer := io.MultiWriter(w, bodyBuf)
+
+	tokenUsed := 0
+	for {
+		buf := make([]byte, 4096)
+		n, err := resp.Body.Read(buf)
+		if n > 0 {
+			if _, err := writer.Write(buf[:n]); err != nil {
+				log.Printf("[WARN] failed to write chunk to response: %v", err)
+			}
+			if flusher, ok := w.(http.Flusher); ok {
+				flusher.Flush()
+			}
+		}
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			d.logCall(token, selectedChannel, modelItem, startTime, tokenUsed, resp.StatusCode, fmt.Sprintf("read error: %v", err))
+			return resp.StatusCode, fmt.Errorf("failed to read response: %w", err)
+		}
+	}
+
+	bodyStr := strings.TrimSpace(bodyBuf.String())
+	bodyStrLower := strings.ToLower(bodyStr)
+	if strings.HasPrefix(bodyStrLower, "<!doctype") || strings.HasPrefix(bodyStrLower, "<html") {
+		d.logCall(token, selectedChannel, modelItem, startTime, 0, resp.StatusCode, "upstream API returned HTML error page")
+		return resp.StatusCode, fmt.Errorf("upstream API returned HTML error page")
+	}
+
+	tokenUsed = parseStreamUsageFromBytes(bodyBuf.Bytes())
+	if tokenUsed == 0 {
+		log.Printf("warning: streaming response returned 0 tokens for model=%s, channel=%s", modelItem.Name, selectedChannel.Name)
+	}
+
+	d.logCall(token, selectedChannel, modelItem, startTime, tokenUsed, resp.StatusCode, "")
+
+	if resp.StatusCode == 200 {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := d.updateChannelUsageContext(ctx, selectedChannel.ID, tokenUsed, modelItem.CostPerToken, modelItem.Currency); err != nil {
+				log.Printf("[ERROR] updateChannelUsage failed: channel=%s, err=%v", selectedChannel.Name, err)
+			}
+		}()
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := d.updateModelUsageContext(ctx, modelItem.ID, tokenUsed); err != nil {
+				log.Printf("[ERROR] updateModelUsage failed: model=%s, err=%v", modelItem.Name, err)
+			}
+		}()
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
+			if err := d.extraRatingService.ApplyPenaltyAndRewardContext(ctx, modelKey); err != nil {
+				log.Printf("[ERROR] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
+			}
+		}()
+	}
+
+	if resp.StatusCode == 200 && tokenUsed > 0 {
+		modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if err := d.saveSampleAsyncContext(ctx, modelKey, string(requestBody), bodyStr, tokenUsed); err != nil {
+				log.Printf("[ERROR] saveSampleAsync failed: model=%s, err=%v", modelItem.Name, err)
+			}
+		}()
+	}
+
+	return resp.StatusCode, nil
+}

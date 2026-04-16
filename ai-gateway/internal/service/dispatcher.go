@@ -258,14 +258,6 @@ func (d *Dispatcher) calculateCompositeScore(m *model.Model, weights *modelRatin
 	return compositeScore
 }
 
-// TODO [代码质量-历史问题]: Dispatch 和 DispatchStream 曾经有约95%重复代码
-// 状态: 已重构 (2026-04-16)
-// 重构方案:
-//   - Dispatch/DispatchStream 成为包装函数，调用内部 dispatch()
-//   - dispatch() 处理所有公共逻辑
-//   - calculateTokenUsage() 处理token计数差异
-//   - performAsyncUpdates() 处理异步更新
-
 // selectModelAndChannel 提取模型选择和渠道获取的公共逻辑
 // 参数:
 //   - token: 请求token

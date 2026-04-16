@@ -128,9 +128,6 @@ func (s *ExtraRatingService) ApplyPenaltyAndReward(modelKey string) error {
 	}
 
 	for _, p := range penaltyRecords {
-		if p.ModelKey != modelKey {
-			continue
-		}
 		newScore := p.CurrentScore + 1
 		if newScore >= 0 {
 			s.repo.DeleteRecord(p.ID)

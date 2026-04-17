@@ -190,10 +190,6 @@ func (s *ExtraRatingService) GetModelExtraScore(modelKey string) (int, int, erro
 	totalPenalty := 0
 	for _, p := range penaltyRecords {
 		if p.ModelKey == modelKey {
-			expiresAt := p.ExpiresAt
-			if expiresAt != nil && now.After(*expiresAt) {
-				continue
-			}
 			totalPenalty += p.CurrentScore
 		}
 	}

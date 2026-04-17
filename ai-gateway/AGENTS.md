@@ -65,8 +65,8 @@ ai-gateway/
 
 ## Default Credentials
 
-- **Admin Login**: admin / dbm52100
-- **API Key**: Any created token key (e.g., `sk-2af11d51-57db-4e2a-a9ab-9ab14b4ab6e2`)
+- **Admin Login**: admin / (set ADMIN_PASSWORD in .env)
+- **API Key**: Any created token key from the Tokens page
 
 ## Key Features
 

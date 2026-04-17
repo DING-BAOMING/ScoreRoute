@@ -38,20 +38,20 @@ go build -o server ./cmd/server
 
 ## 访问地址
 
-- 管理后台: http://api.029101.xyz
-- API端点: http://api.029101.xyz/v1
+- 管理后台: http://localhost:3000
+- API端点: http://localhost:3000/v1
 
 ## 默认登录信息
 
 - 用户名: admin
-- 密码: dbm52100
+- 密码: (请在 .env 文件中设置 ADMIN_PASSWORD)
 
 ## API使用示例
 
 ```bash
-curl http://api.029101.xyz/v1/chat/completions \
+curl http://localhost:3000/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer sk-your-api-key" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
     "model": "minimax2.7",
     "messages": [{"role": "user", "content": "Hello"}]

@@ -346,6 +346,45 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 	return d.dispatch(token, requestBody, true)
 }
 
+func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte) (*http.Response, int, error) {
+	startTime := time.Now()
+
+	var req map[string]interface{}
+	if err := json.Unmarshal(requestBody, &req); err != nil {
+		return nil, 0, fmt.Errorf("invalid request body: %w", err)
+	}
+
+	modelItem, selectedChannel, err := d.selectModelAndChannel(token, req)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	url := strings.TrimSuffix(selectedChannel.BaseURL, "/") + "/chat/completions"
+
+	req["model"] = modelItem.Name
+	modifiedBody, err := json.Marshal(req)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	proxyReq, err := http.NewRequest("POST", url, bytes.NewReader(modifiedBody))
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	proxyReq.Header.Set("Content-Type", "application/json")
+	proxyReq.Header.Set("Authorization", "Bearer "+selectedChannel.APIKey)
+	proxyReq.Header.Set("User-Agent", "AI-Gateway/1.0")
+
+	resp, err := d.client.Do(proxyReq)
+	if err != nil {
+		d.logCall(token, selectedChannel, modelItem, startTime, 0, 503, err.Error())
+		return nil, 503, fmt.Errorf("upstream request failed: %w", err)
+	}
+
+	return resp, resp.StatusCode, nil
+}
+
 func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStream bool) ([]byte, int, error) {
 	startTime := time.Now()
 

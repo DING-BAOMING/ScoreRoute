@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -148,14 +149,23 @@ func (h *ProxyHandler) HandleStreamWithBody(c *gin.Context, token *model.Token, 
 
 	var responseBody []byte
 	buf := make([]byte, 4096)
+	chunkBuf := bytes.NewBuffer(nil)
 	for {
 		n, err := streamResp.Resp.Body.Read(buf)
 		if n > 0 {
-			c.Writer.Write(buf[:n])
-			flush()
+			chunkBuf.Write(buf[:n])
 			responseBody = append(responseBody, buf[:n]...)
 		}
+		if chunkBuf.Len() >= 1024 {
+			c.Writer.Write(chunkBuf.Bytes())
+			chunkBuf.Reset()
+			flush()
+		}
 		if err != nil {
+			if chunkBuf.Len() > 0 {
+				c.Writer.Write(chunkBuf.Bytes())
+				flush()
+			}
 			if err == io.EOF {
 				break
 			}

@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -68,7 +69,12 @@ func (h *ProxyHandler) Handle(c *gin.Context) {
 	respBody, statusCode, err := h.dispatcher.Dispatch(token, body)
 	log.Printf("Dispatch result: statusCode=%d, err=%v, bodyLen=%d", statusCode, err, len(respBody))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": err.Error()}})
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "rate limit") {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": gin.H{"message": errMsg}})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": errMsg}})
+		}
 		return
 	}
 	if respBody == nil {
@@ -117,7 +123,12 @@ func (h *ProxyHandler) HandleStreamWithBody(c *gin.Context, token *model.Token, 
 	startTime := time.Now()
 	streamResp, statusCode, err := h.dispatcher.DispatchStreamDirect(token, body)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": err.Error()}})
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "rate limit") {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": gin.H{"message": errMsg}})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": errMsg}})
+		}
 		return
 	}
 	defer streamResp.Resp.Body.Close()

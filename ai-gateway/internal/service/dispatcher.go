@@ -27,6 +27,7 @@ type Dispatcher struct {
 	modelRepo           *repository.ModelRepo
 	systemConfigRepo    *repository.SystemConfigRepo
 	extraRatingService  *ExtraRatingService
+	tokenRepo           *repository.TokenRepo
 	client              *http.Client
 }
 
@@ -55,6 +56,7 @@ func NewDispatcher() *Dispatcher {
 		modelRepo:           repository.NewModelRepo(),
 		systemConfigRepo:    repository.NewSystemConfigRepo(),
 		extraRatingService:  NewExtraRatingService(),
+		tokenRepo:           repository.NewTokenRepo(),
 		client: &http.Client{
 			Timeout:   1200 * time.Second,
 			Transport: transport,
@@ -85,6 +87,15 @@ type RelayResponse struct {
 		Code    string `json:"code"`
 		Type    string `json:"type"`
 	} `json:"error,omitempty"`
+}
+
+type StreamResponse struct {
+	Resp          *http.Response
+	ChannelName   string
+	ModelName     string
+	ChannelID     int64
+	ModelID      int64
+	TokenUsed    int
 }
 
 func (d *Dispatcher) ListEnabledModels() ([]*model.Model, error) {
@@ -346,7 +357,7 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 	return d.dispatch(token, requestBody, true)
 }
 
-func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte) (*http.Response, int, error) {
+func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte) (*StreamResponse, int, error) {
 	startTime := time.Now()
 
 	var req map[string]interface{}
@@ -382,7 +393,64 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 		return nil, 503, fmt.Errorf("upstream request failed: %w", err)
 	}
 
-	return resp, resp.StatusCode, nil
+	return &StreamResponse{
+		Resp:        resp,
+		ChannelName: selectedChannel.Name,
+		ModelName:   modelItem.Name,
+		ChannelID:   selectedChannel.ID,
+		ModelID:    modelItem.ID,
+	}, resp.StatusCode, nil
+}
+
+func (d *Dispatcher) LogStreamCompletion(tokenID int64, tokenName string, channelName string, modelName string, statusCode int, latency int, tokenUsed int) {
+	if statusCode != 200 {
+		d.logRepo.Create(&model.CallLog{
+			TokenName:    tokenName,
+			ChannelName:  channelName,
+			ModelName:    modelName,
+			LatencyMs:    latency,
+			TokenUsed:    0,
+			Status:       statusCode,
+			Error:        "stream failed",
+		})
+		return
+	}
+
+	d.logRepo.Create(&model.CallLog{
+		TokenName:    tokenName,
+		ChannelName:  channelName,
+		ModelName:    modelName,
+		LatencyMs:    latency,
+		TokenUsed:    tokenUsed,
+		Status:       statusCode,
+	})
+}
+
+func (d *Dispatcher) ParseStreamUsage(body []byte) int {
+	return parseStreamUsageFromBytes(body)
+}
+
+func (d *Dispatcher) extractModelKeyFromResponse(body []byte) string {
+	lines := strings.Split(string(body), "\n")
+	for _, line := range lines {
+		line = strings.TrimRight(line, " \t\r")
+		if strings.HasPrefix(line, "data:") {
+			data := strings.TrimPrefix(line, "data:")
+			data = strings.TrimLeft(data, " ")
+			if !strings.HasPrefix(data, "{") {
+				continue
+			}
+			var chunk struct {
+				Model string `json:"model"`
+			}
+			if err := json.Unmarshal([]byte(data), &chunk); err == nil {
+				if chunk.Model != "" {
+					return chunk.Model
+				}
+			}
+		}
+	}
+	return ""
 }
 
 func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStream bool) ([]byte, int, error) {

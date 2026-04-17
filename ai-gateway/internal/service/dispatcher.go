@@ -56,7 +56,7 @@ func NewDispatcher() *Dispatcher {
 		systemConfigRepo:    repository.NewSystemConfigRepo(),
 		extraRatingService:  NewExtraRatingService(),
 		client: &http.Client{
-			Timeout:   300 * time.Second,
+			Timeout:   1200 * time.Second,
 			Transport: transport,
 		},
 	}

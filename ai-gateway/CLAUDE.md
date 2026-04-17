@@ -1,6 +1,6 @@
-# CLAUDE.md - AI Gateway
+# CLAUDE.md - ScoreRoute
 
-This project uses the AI Gateway application. For essential context, see @AGENTS.md
+This project uses the ScoreRoute application. For essential context, see @AGENTS.md
 
 ## Quick Start
 

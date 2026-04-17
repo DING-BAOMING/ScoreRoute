@@ -1,7 +1,7 @@
 <template>
   <el-container class="layout-container">
     <el-aside width="200px" class="aside">
-      <div class="logo">AI Gateway</div>
+      <div class="logo">ScoreRoute</div>
       <el-menu :default-active="activeMenu" router class="menu">
         <el-menu-item index="/">
           <el-icon><House /></el-icon>

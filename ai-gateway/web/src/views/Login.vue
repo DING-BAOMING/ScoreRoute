@@ -3,7 +3,7 @@
     <el-card class="login-card">
       <template #header>
         <div class="card-header">
-          <h2>AI Gateway</h2>
+          <h2>ScoreRoute</h2>
           <p>API网关管理系统</p>
         </div>
       </template>

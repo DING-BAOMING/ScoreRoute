@@ -385,7 +385,7 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 
 	proxyReq.Header.Set("Content-Type", "application/json")
 	proxyReq.Header.Set("Authorization", "Bearer "+selectedChannel.APIKey)
-	proxyReq.Header.Set("User-Agent", "AI-Gateway/1.0")
+	proxyReq.Header.Set("User-Agent", "ScoreRoute/1.0")
 
 	resp, err := d.client.Do(proxyReq)
 	if err != nil {
@@ -481,7 +481,7 @@ func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStrea
 
 	proxyReq.Header.Set("Content-Type", "application/json")
 	proxyReq.Header.Set("Authorization", "Bearer "+selectedChannel.APIKey)
-	proxyReq.Header.Set("User-Agent", "AI-Gateway/1.0")
+	proxyReq.Header.Set("User-Agent", "ScoreRoute/1.0")
 
 	resp, err := d.client.Do(proxyReq)
 	if err != nil {

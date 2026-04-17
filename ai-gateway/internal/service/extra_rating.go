@@ -140,8 +140,7 @@ func (s *ExtraRatingService) ApplyPenaltyAndReward(modelKey string) error {
 	if config.PunishmentScore > 0 {
 		penaltyScore = -config.PunishmentScore
 	}
-	expiresAt := time.Now().Add(time.Duration(config.PunishmentRounds) * time.Minute)
-	if err := s.repo.AddPenaltyRecord(modelKey, penaltyScore, 1, 0, &expiresAt); err != nil {
+	if err := s.repo.AddPenaltyRecord(modelKey, penaltyScore, 1, 0, nil); err != nil {
 		return fmt.Errorf("failed to add penalty record: %w", err)
 	}
 

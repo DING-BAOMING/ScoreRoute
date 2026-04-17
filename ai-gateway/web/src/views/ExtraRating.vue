@@ -88,10 +88,9 @@
             </el-table-column>
             <el-table-column prop="decay_per_request" label="每次递减" width="100" />
             <el-table-column prop="request_count" label="请求次数" width="100" />
-            <el-table-column label="剩余有效期" width="140">
+            <el-table-column label="剩余衰减次数" width="140">
               <template #default="{ row }">
-                <span v-if="row.expires_at">{{ formatExpiry(row.expires_at) }}</span>
-                <span v-else>-</span>
+                <span>{{ Math.abs(row.current_score) }}/{{ row.decay_per_request }}</span>
               </template>
             </el-table-column>
             <el-table-column label="创建时间" width="180">

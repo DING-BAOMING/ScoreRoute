@@ -113,14 +113,40 @@ func (h *ProxyHandler) HandleStream(c *gin.Context) {
 }
 
 func (h *ProxyHandler) HandleStreamWithBody(c *gin.Context, token *model.Token, body []byte) {
-	respBody, statusCode, err := h.dispatcher.DispatchStream(token, body)
+	resp, statusCode, err := h.dispatcher.DispatchStreamDirect(token, body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": err.Error()}})
 		return
 	}
+	defer resp.Body.Close()
 
 	c.Header("Content-Type", "text/event-stream")
-	c.Data(statusCode, "text/event-stream", respBody)
+	c.Header("Transfer-Encoding", "chunked")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("X-Accel-Buffering", "no")
+
+	c.Status(statusCode)
+
+	flush := func() {
+		if f, ok := c.Writer.(http.Flusher); ok {
+			f.Flush()
+		}
+	}
+
+	buf := make([]byte, 4096)
+	for {
+		n, err := resp.Body.Read(buf)
+		if n > 0 {
+			c.Writer.Write(buf[:n])
+			flush()
+		}
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			break
+		}
+	}
 }
 
 func (h *ProxyHandler) HandleModels(c *gin.Context) {

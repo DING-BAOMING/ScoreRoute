@@ -1,5 +1,10 @@
 # ScoreRoute - API网关管理系统
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8.svg)](https://golang.org/)
+[![Vue3](https://img.shields.io/badge/Vue-3-green.svg)](https://vuejs.org/)
+[![Release](https://img.shields.io/badge/Release-v1.0.0-blue.svg)](https://github.com/DING-BAOMING/ScoreRoute/releases)
+
 基于Go + Vue3的AI API网关系统，支持多种AI模型的统一接入和轮询调度。
 
 ## 功能特性

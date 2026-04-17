@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -113,12 +114,13 @@ func (h *ProxyHandler) HandleStream(c *gin.Context) {
 }
 
 func (h *ProxyHandler) HandleStreamWithBody(c *gin.Context, token *model.Token, body []byte) {
-	resp, statusCode, err := h.dispatcher.DispatchStreamDirect(token, body)
+	startTime := time.Now()
+	streamResp, statusCode, err := h.dispatcher.DispatchStreamDirect(token, body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": err.Error()}})
 		return
 	}
-	defer resp.Body.Close()
+	defer streamResp.Resp.Body.Close()
 
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Transfer-Encoding", "chunked")
@@ -133,12 +135,14 @@ func (h *ProxyHandler) HandleStreamWithBody(c *gin.Context, token *model.Token, 
 		}
 	}
 
+	var responseBody []byte
 	buf := make([]byte, 4096)
 	for {
-		n, err := resp.Body.Read(buf)
+		n, err := streamResp.Resp.Body.Read(buf)
 		if n > 0 {
 			c.Writer.Write(buf[:n])
 			flush()
+			responseBody = append(responseBody, buf[:n]...)
 		}
 		if err != nil {
 			if err == io.EOF {
@@ -147,6 +151,11 @@ func (h *ProxyHandler) HandleStreamWithBody(c *gin.Context, token *model.Token, 
 			break
 		}
 	}
+
+	latency := int(time.Since(startTime).Milliseconds())
+	tokenUsed := h.dispatcher.ParseStreamUsage(responseBody)
+
+	go h.dispatcher.LogStreamCompletion(token.ID, token.Name, streamResp.ChannelName, streamResp.ModelName, statusCode, latency, tokenUsed)
 }
 
 func (h *ProxyHandler) HandleModels(c *gin.Context) {

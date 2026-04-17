@@ -28,8 +28,6 @@ ENV PORT=3000
 ENV DATABASE_PATH=/app/data/gateway.db
 ENV LOG_PATH=/app/logs
 ENV TIKTOKEN_CACHE_DIR=/app/cache
-ENV ADMIN_PASSWORD=dbm52100
-ENV JWT_SECRET=ai-gateway-secret-key-2024
 
 EXPOSE 3000
 

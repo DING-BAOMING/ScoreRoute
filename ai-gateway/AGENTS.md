@@ -65,8 +65,8 @@ ai-gateway/
 
 ## Default Credentials
 
-- **Admin Login**: admin / YOUR_PASSWORD
-- **API Key**: Any created token key (e.g., `YOUR_API_KEY`)
+- **Admin Login**: admin / (set ADMIN_PASSWORD in .env)
+- **API Key**: Any created token key from the Tokens page
 
 ## Key Features
 

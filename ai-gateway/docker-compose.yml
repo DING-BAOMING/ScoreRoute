@@ -15,8 +15,8 @@ services:
       - PORT=3000
       - DATABASE_PATH=/app/data/gateway.db
       - LOG_PATH=/app/logs
-      - ADMIN_PASSWORD=dbm52100
-      - JWT_SECRET=ai-gateway-secret-key-2024
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
     networks:
       - ai-gateway-network
 

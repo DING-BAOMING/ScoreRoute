@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/spf13/viper"
 )
 
@@ -17,8 +19,6 @@ var AppConfig *Config
 func Load() (*Config, error) {
 	viper.SetDefault("server.port", "3000")
 	viper.SetDefault("database.path", "./data/gateway.db")
-	viper.SetDefault("jwt.secret", "ai-gateway-secret-key-2024")
-	viper.SetDefault("admin.password", "dbm52100")
 	viper.SetDefault("log.path", "./logs")
 
 	viper.SetConfigName(".env")
@@ -35,6 +35,13 @@ func Load() (*Config, error) {
 		JwtSecret:     viper.GetString("jwt.secret"),
 		AdminPassword: viper.GetString("admin.password"),
 		LogPath:       viper.GetString("log.path"),
+	}
+
+	if AppConfig.JwtSecret == "" {
+		return nil, fmt.Errorf("JWT_SECRET environment variable is required")
+	}
+	if AppConfig.AdminPassword == "" {
+		return nil, fmt.Errorf("ADMIN_PASSWORD environment variable is required")
 	}
 
 	return AppConfig, nil

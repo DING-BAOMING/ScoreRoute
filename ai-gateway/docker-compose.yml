@@ -11,12 +11,12 @@ services:
       - ./data:/app/data
       - ./logs:/app/logs
       - ./cache:/app/cache
+    env_file:
+      - .env
     environment:
       - PORT=3000
       - DATABASE_PATH=/app/data/gateway.db
       - LOG_PATH=/app/logs
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      - JWT_SECRET=${JWT_SECRET}
     networks:
       - ai-gateway-network
 

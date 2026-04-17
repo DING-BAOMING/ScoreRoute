@@ -25,6 +25,12 @@ func Load() (*Config, error) {
 	viper.SetConfigType("env")
 	viper.AutomaticEnv()
 
+	viper.BindEnv("server.port", "PORT")
+	viper.BindEnv("database.path", "DATABASE_PATH")
+	viper.BindEnv("log.path", "LOG_PATH")
+	viper.BindEnv("jwt.secret", "JWT_SECRET")
+	viper.BindEnv("admin.password", "ADMIN_PASSWORD")
+
 	if err := viper.ReadInConfig(); err != nil {
 		// Config file not found, use defaults
 	}

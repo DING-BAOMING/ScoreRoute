@@ -82,7 +82,7 @@ func (r *ExtraRatingRepo) GetPenaltyRecords() ([]*model.ExtraRatingRecord, error
 	rows, err := DB.Query(`
 		SELECT id, model_key, penalty_score, current_score, decay_per_request, request_count, created_at, expires_at
 		FROM extra_rating_records
-		WHERE record_type = 'penalty' AND (expires_at IS NULL OR expires_at > datetime('now'))
+		WHERE record_type = 'penalty'
 		ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query penalty records: %w", err)

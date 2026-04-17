@@ -54,7 +54,11 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="时间" width="180" />
+        <el-table-column prop="created_at" label="时间" width="180">
+          <template #default="{ row }">
+            {{ formatTime(row.created_at) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="error" label="错误信息" show-overflow-tooltip />
       </el-table>
 
@@ -83,6 +87,12 @@ const page = ref(1)
 const pageSize = ref(20)
 const dateRange = ref([])
 const refreshInterval = ref(null)
+
+function formatTime(timeStr) {
+  if (!timeStr) return '-'
+  const date = new Date(timeStr)
+  return date.toLocaleString('zh-CN')
+}
 
 onMounted(() => {
   loadData()

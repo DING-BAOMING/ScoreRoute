@@ -601,7 +601,7 @@ function getScoreType(score) {
 function formatTime(time) {
   if (!time) return '-'
   const date = new Date(time)
-  return date.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })
+  return date.toLocaleString('zh-CN')
 }
 
 function formatRemaining(minutes) {

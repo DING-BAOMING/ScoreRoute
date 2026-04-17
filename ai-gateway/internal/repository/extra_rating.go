@@ -104,6 +104,28 @@ func (r *ExtraRatingRepo) GetPenaltyRecords() ([]*model.ExtraRatingRecord, error
 	return records, nil
 }
 
+func (r *ExtraRatingRepo) GetPenaltyRecordByModel(modelKey string) (*model.ExtraRatingRecord, error) {
+	row := DB.QueryRow(`
+		SELECT id, model_key, penalty_score, current_score, decay_per_request, request_count, created_at, expires_at
+		FROM extra_rating_records
+		WHERE record_type = 'penalty' AND model_key = ?
+		ORDER BY created_at DESC LIMIT 1`, modelKey)
+
+	rec := &model.ExtraRatingRecord{RecordType: "penalty"}
+	var expiresAt sql.NullTime
+	err := row.Scan(&rec.ID, &rec.ModelKey, &rec.PenaltyScore, &rec.CurrentScore, &rec.DecayPerReq, &rec.RequestCount, &rec.CreatedAt, &expiresAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to query penalty record: %w", err)
+	}
+	if expiresAt.Valid {
+		rec.ExpiresAt = &expiresAt.Time
+	}
+	return rec, nil
+}
+
 func (r *ExtraRatingRepo) GetRewardRecords() ([]*model.ExtraRatingRecord, error) {
 	rows, err := DB.Query(`
 		SELECT id, model_key, reward_score, current_score, decay_per_request, request_count, created_at, expires_at

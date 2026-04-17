@@ -61,15 +61,20 @@ type Model struct {
 }
 
 type Token struct {
-	ID        int64     `json:"id"`
-	Key       string    `json:"key"`        // Full key (only for Create response)
-	MaskedKey string    `json:"-"`          // Masked version (internal use)
-	Name      string    `json:"name"`
-	Format    string    `json:"format"`
-	Type      string    `json:"type"`
-	ModelName string    `json:"model_name"`
-	Enabled   int       `json:"enabled"`
-	CreatedAt time.Time `json:"created_at"`
+	ID              int64      `json:"id"`
+	Key             string     `json:"key"`              // Full key (only for Create response)
+	MaskedKey       string     `json:"-"`                // Masked version (internal use)
+	Name            string     `json:"name"`
+	Format          string     `json:"format"`
+	Type            string     `json:"type"`
+	ModelName       string     `json:"model_name"`
+	Enabled         int        `json:"enabled"`
+	RateLimits      string     `json:"rate_limits"`       // JSON array of rate limit rules
+	TotalTokenLimit int64      `json:"total_token_limit"`  // 0 = unlimited
+	ExpiresAt       *time.Time `json:"expires_at"`         // nil = never expires
+	TotalCalls      int64      `json:"total_calls"`        // total accumulated calls
+	TotalTokens     int64      `json:"total_tokens"`       // total accumulated tokens
+	CreatedAt       time.Time  `json:"created_at"`
 }
 
 type SystemConfig struct {
@@ -115,11 +120,15 @@ type ModelRequest struct {
 }
 
 type TokenRequest struct {
-	Name      string `json:"name" binding:"required"`
-	Format    string `json:"format" binding:"required"`
-	Type      string `json:"type" binding:"required"`
-	ModelName string `json:"model_name"`
-	Enabled   int    `json:"enabled"`
+	Key             string     `json:"key"`               // For internal use (regenerate)
+	Name            string     `json:"name" binding:"required"`
+	Format          string     `json:"format" binding:"required"`
+	Type            string     `json:"type" binding:"required"`
+	ModelName       string     `json:"model_name"`
+	Enabled         int        `json:"enabled"`
+	RateLimits      string     `json:"rate_limits"`
+	TotalTokenLimit int64      `json:"total_token_limit"`
+	ExpiresAt       *time.Time `json:"expires_at"`
 }
 
 type APIResponse struct {

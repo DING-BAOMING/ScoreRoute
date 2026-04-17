@@ -20,12 +20,17 @@ func NewTokenService() *TokenService {
 }
 
 func (s *TokenService) Create(req *model.TokenRequest) (*model.Token, error) {
-	key := "sk-" + uuid.New().String()
-	token, err := s.repo.Create(key, req.Name, req.Format, req.Type, req.ModelName)
+	if req.RateLimits == "" {
+		req.RateLimits = "[]"
+	}
+	if req.Enabled == 0 {
+		req.Enabled = 1
+	}
+	token, err := s.repo.Create(req)
 	if err != nil {
 		return nil, err
 	}
-	token.Key = key
+	token.Key = "sk-" + uuid.New().String()
 	return token, nil
 }
 
@@ -52,7 +57,10 @@ func (s *TokenService) SetEnabled(id int64, enabled int) error {
 }
 
 func (s *TokenService) Update(id int64, req *model.TokenRequest) (*model.Token, error) {
-	return s.repo.Update(id, req.Name, req.Format, req.Type, req.ModelName)
+	if req.RateLimits == "" {
+		req.RateLimits = "[]"
+	}
+	return s.repo.Update(id, req)
 }
 
 func (s *TokenService) Delete(id int64) error {
@@ -60,23 +68,32 @@ func (s *TokenService) Delete(id int64) error {
 }
 
 func (s *TokenService) RegenerateKey(id int64) (*model.Token, error) {
-	token, err := s.repo.GetByID(id)
-	if err != nil || token == nil {
+	oldToken, err := s.repo.GetByID(id)
+	if err != nil || oldToken == nil {
 		return nil, fmt.Errorf("token not found")
+	}
+
+	req := &model.TokenRequest{
+		Name:            oldToken.Name,
+		Format:          oldToken.Format,
+		Type:            oldToken.Type,
+		ModelName:       oldToken.ModelName,
+		Enabled:         oldToken.Enabled,
+		RateLimits:      oldToken.RateLimits,
+		TotalTokenLimit: oldToken.TotalTokenLimit,
+		ExpiresAt:       oldToken.ExpiresAt,
 	}
 
 	newKey := "sk-" + uuid.New().String()
-	_, err = s.repo.Create(newKey, token.Name, token.Format, token.Type, token.ModelName)
+	req.Key = newKey
+
+	newToken, err := s.repo.Create(req)
 	if err != nil {
 		return nil, err
 	}
+	newToken.Key = newKey
 
 	s.repo.Delete(id)
 
-	token, err = s.repo.GetByKey(newKey)
-	if err != nil || token == nil {
-		return nil, fmt.Errorf("token not found")
-	}
-	token.Key = newKey
-	return token, nil
+	return newToken, nil
 }

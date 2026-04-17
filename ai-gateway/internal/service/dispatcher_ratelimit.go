@@ -103,3 +103,104 @@ func (d *Dispatcher) calculateCostInTargetCurrency(tokenUsed int, costPerToken f
 	}
 	return int64(baseCost * 100)
 }
+
+// checkTokenRateLimit 检查Token的速率限制
+func (d *Dispatcher) checkTokenRateLimit(token *model.Token) error {
+	now := time.Now()
+
+	if token.ExpiresAt != nil && now.After(*token.ExpiresAt) {
+		return fmt.Errorf("token expired at %s", token.ExpiresAt.Format("2006-01-02 15:04:05"))
+	}
+
+	if token.TotalTokenLimit > 0 && token.TotalTokens >= token.TotalTokenLimit {
+		return fmt.Errorf("total token limit exceeded: %d/%d", token.TotalTokens, token.TotalTokenLimit)
+	}
+
+	if token.RateLimits == "" || token.RateLimits == "[]" {
+		return nil
+	}
+
+	var rules []model.RateLimitRule
+	if err := json.Unmarshal([]byte(token.RateLimits), &rules); err != nil {
+		log.Printf("failed to parse rate limits for token %s: %v", token.Name, err)
+		return nil
+	}
+
+	for idx, rule := range rules {
+		windowDuration := getWindowDuration(rule.Window)
+		if windowDuration == 0 {
+			continue
+		}
+
+		usage, err := d.tokenRateLimitRepo.GetUsage(token.ID, idx)
+		if err != nil {
+			log.Printf("failed to get rate limit usage for token %s rule %d: %v", token.Name, idx, err)
+			continue
+		}
+
+		var currentCount int64
+		var windowStart time.Time
+
+		if usage == nil {
+			currentCount = 0
+			windowStart = now
+		} else {
+			currentCount = usage.CurrentCount
+			windowStart = usage.WindowStart
+
+			if now.Sub(windowStart) >= windowDuration {
+				currentCount = 0
+				windowStart = now
+				d.tokenRateLimitRepo.UpsertUsage(token.ID, idx, 0, windowStart, true)
+			}
+		}
+
+		if rule.Type == "calls" && currentCount >= rule.MaxCount {
+			return fmt.Errorf("token calls rate limit exceeded: %d/%d per %s", currentCount, rule.MaxCount, rule.Window)
+		}
+
+		if rule.Type == "tokens" && currentCount >= rule.MaxCount {
+			return fmt.Errorf("token tokens rate limit exceeded: %d/%d per %s", currentCount, rule.MaxCount, rule.Window)
+		}
+	}
+
+	return nil
+}
+
+// updateTokenUsage 更新Token使用量
+func (d *Dispatcher) updateTokenUsage(token *model.Token, tokenUsed int) error {
+	if err := d.tokenRepo.IncrementUsage(token.ID, tokenUsed); err != nil {
+		log.Printf("failed to increment token usage: %v", err)
+	}
+
+	now := time.Now()
+	if token.RateLimits == "" || token.RateLimits == "[]" {
+		return nil
+	}
+
+	var rules []model.RateLimitRule
+	if err := json.Unmarshal([]byte(token.RateLimits), &rules); err != nil {
+		return nil
+	}
+
+	for idx, rule := range rules {
+		windowDuration := getWindowDuration(rule.Window)
+		if windowDuration == 0 {
+			continue
+		}
+
+		var increment int64 = 1
+		if rule.Type == "tokens" {
+			increment = int64(tokenUsed)
+		}
+
+		windowStart := now.Truncate(windowDuration)
+		if windowStart.Before(now) {
+			windowStart = windowStart.Add(windowDuration)
+		}
+
+		d.tokenRateLimitRepo.UpsertUsage(token.ID, idx, increment, windowStart, false)
+	}
+
+	return nil
+}

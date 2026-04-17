@@ -91,6 +91,50 @@
             <el-option v-for="m in models" :key="m.id" :label="m.name" :value="m.name" />
           </el-select>
         </el-form-item>
+
+        <el-form-item label="总Token限制">
+          <el-input-number v-model="form.total_token_limit" :min="0" :step="1000000" placeholder="0表示无限制" style="width: 100%">
+            <template #suffix>
+              <span style="margin-right: 10px">Token</span>
+            </template>
+          </el-input-number>
+          <div class="form-help">0表示无限制</div>
+        </el-form-item>
+
+        <el-form-item label="API有效期">
+          <el-date-picker
+            v-model="form.expires_at"
+            type="datetime"
+            placeholder="不设置则永不过期"
+            style="width: 100%"
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DDTHH:mm:ssZ"
+          />
+        </el-form-item>
+
+        <el-form-item label="调用频率限制">
+          <div class="rate-limit-rules">
+            <div v-for="(rule, idx) in rateLimitRules" :key="idx" class="rate-limit-rule">
+              <el-select v-model="rule.type" style="width: 120px">
+                <el-option label="调用次数" value="calls" />
+                <el-option label="Token数" value="tokens" />
+              </el-select>
+              <el-input-number v-model="rule.max_count" :min="1" style="width: 120px" />
+              <span style="width: 60px; text-align: center">次/</span>
+              <el-select v-model="rule.window" style="width: 100px">
+                <el-option label="分钟" value="minute" />
+                <el-option label="小时" value="hour" />
+                <el-option label="天" value="day" />
+                <el-option label="周" value="week" />
+                <el-option label="月" value="month" />
+                <el-option label="年" value="year" />
+              </el-select>
+              <el-button type="danger" size="small" @click="removeRateLimitRule(idx)">删除</el-button>
+            </div>
+            <el-button type="primary" size="small" @click="addRateLimitRule">添加限制规则</el-button>
+            <div class="form-help">可添加多个限制规则，例如：每小时最多1000次调用且每天最多5000次</div>
+          </div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -118,7 +162,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { tokenAPI, modelAPI } from '../api'
 
@@ -141,8 +185,12 @@ const form = reactive({
   name: '',
   format: 'openai',
   type: 'chat',
-  model_name: ''
+  model_name: '',
+  total_token_limit: 0,
+  expires_at: null
 })
+
+const rateLimitRules = ref([])
 
 const rules = {
   name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
@@ -188,6 +236,9 @@ function showDialog() {
   form.format = 'openai'
   form.type = 'chat'
   form.model_name = ''
+  form.total_token_limit = 0
+  form.expires_at = null
+  rateLimitRules.value = []
   dialogVisible.value = true
 }
 
@@ -198,6 +249,9 @@ function editToken(row) {
   form.format = row.format
   form.type = row.type
   form.model_name = row.model_name
+  form.total_token_limit = row.total_token_limit || 0
+  form.expires_at = row.expires_at || null
+  rateLimitRules.value = parseRateLimits(row.rate_limits)
   dialogVisible.value = true
 }
 
@@ -206,9 +260,13 @@ async function submitForm() {
   if (!valid) return
 
   try {
+    const submitData = {
+      ...form,
+      rate_limits: JSON.stringify(rateLimitRules.value)
+    }
     let res
     if (isEdit.value) {
-      res = await tokenAPI.update(editingId.value, form)
+      res = await tokenAPI.update(editingId.value, submitData)
       if (res.code === 0) {
         ElMessage.success('保存成功')
         dialogVisible.value = false
@@ -217,7 +275,7 @@ async function submitForm() {
         ElMessage.error(res.message || '保存失败')
       }
     } else {
-      res = await tokenAPI.create(form)
+      res = await tokenAPI.create(submitData)
       if (res.code === 0) {
         createdKey.value = res.data.key
         dialogVisible.value = false
@@ -257,6 +315,26 @@ function copyKey(key) {
   navigator.clipboard.writeText(key)
   ElMessage.success('已复制到剪贴板')
 }
+
+function parseRateLimits(rateLimitsStr) {
+  try {
+    return JSON.parse(rateLimitsStr || '[]')
+  } catch {
+    return []
+  }
+}
+
+function addRateLimitRule() {
+  rateLimitRules.value.push({
+    type: 'calls',
+    max_count: 1000,
+    window: 'hour'
+  })
+}
+
+function removeRateLimitRule(idx) {
+  rateLimitRules.value.splice(idx, 1)
+}
 </script>
 
 <style scoped>
@@ -271,5 +349,23 @@ code {
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 12px;
+}
+
+.rate-limit-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rate-limit-rule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-help {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
 }
 </style>

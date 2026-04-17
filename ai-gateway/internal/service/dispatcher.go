@@ -24,6 +24,7 @@ type Dispatcher struct {
 	channelRepo         *repository.ChannelRepo
 	rateLimitRepo       *repository.RateLimitRepo
 	modelRateLimitRepo  *repository.ModelRateLimitRepo
+	tokenRateLimitRepo  *repository.TokenRateLimitRepo
 	modelRepo           *repository.ModelRepo
 	systemConfigRepo    *repository.SystemConfigRepo
 	extraRatingService  *ExtraRatingService
@@ -53,6 +54,7 @@ func NewDispatcher() *Dispatcher {
 		channelRepo:         repository.NewChannelRepo(),
 		rateLimitRepo:       repository.NewRateLimitRepo(),
 		modelRateLimitRepo:  repository.NewModelRateLimitRepo(),
+		tokenRateLimitRepo:  repository.NewTokenRateLimitRepo(),
 		modelRepo:           repository.NewModelRepo(),
 		systemConfigRepo:    repository.NewSystemConfigRepo(),
 		extraRatingService:  NewExtraRatingService(),
@@ -375,6 +377,10 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte) (*StreamResponse, int, error) {
 	startTime := time.Now()
 
+	if err := d.checkTokenRateLimit(token); err != nil {
+		return nil, 0, fmt.Errorf("token rate limit: %w", err)
+	}
+
 	var req map[string]interface{}
 	if err := json.Unmarshal(requestBody, &req); err != nil {
 		return nil, 0, fmt.Errorf("invalid request body: %w", err)
@@ -554,6 +560,13 @@ func (d *Dispatcher) LogStreamCompletion(tokenID int64, tokenName string, channe
 		TokenUsed:    tokenUsed,
 		Status:       statusCode,
 	})
+
+	if tokenUsed > 0 {
+		token, err := d.tokenRepo.GetByID(tokenID)
+		if err == nil && token != nil {
+			d.updateTokenUsage(token, tokenUsed)
+		}
+	}
 }
 
 func (d *Dispatcher) ParseStreamUsage(body []byte) int {
@@ -585,6 +598,10 @@ func (d *Dispatcher) extractModelKeyFromResponse(body []byte) string {
 
 func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStream bool) ([]byte, int, error) {
 	startTime := time.Now()
+
+	if err := d.checkTokenRateLimit(token); err != nil {
+		return nil, 0, fmt.Errorf("token rate limit: %w", err)
+	}
 
 	var req map[string]interface{}
 	if err := json.Unmarshal(requestBody, &req); err != nil {
@@ -707,6 +724,7 @@ func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStrea
 
 		if resp.StatusCode == 200 {
 			d.performAsyncUpdates(selectedChannel, modelItem, tokenUsed)
+			d.updateTokenUsage(token, tokenUsed)
 		}
 
 		if resp.StatusCode == 200 && tokenUsed > 0 {

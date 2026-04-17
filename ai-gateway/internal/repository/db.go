@@ -374,5 +374,46 @@ func migrateTables() error {
 		log.Println("system_config table already has dispatch_mode column, skipping")
 	}
 
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('tokens') WHERE name='rate_limits'")
+	var tokenRateLimitsCount int
+	if err := row.Scan(&tokenRateLimitsCount); err != nil {
+		return fmt.Errorf("failed to check rate_limits column in tokens: %w", err)
+	}
+	if tokenRateLimitsCount == 0 {
+		log.Println("Adding rate limiting columns to tokens table...")
+		DB.Exec(`ALTER TABLE tokens ADD COLUMN rate_limits TEXT DEFAULT '[]'`)
+		DB.Exec(`ALTER TABLE tokens ADD COLUMN total_token_limit INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE tokens ADD COLUMN expires_at DATETIME`)
+		DB.Exec(`ALTER TABLE tokens ADD COLUMN total_calls INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE tokens ADD COLUMN total_tokens INTEGER DEFAULT 0`)
+		log.Println("Token rate limiting columns added successfully")
+	} else {
+		log.Println("Tokens table already has rate limiting columns, skipping")
+	}
+
+	var tokenRateLimitTableCount int
+	row = DB.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE name='token_rate_limit_usage'")
+	if err := row.Scan(&tokenRateLimitTableCount); err != nil {
+		return fmt.Errorf("failed to check token_rate_limit_usage table: %w", err)
+	}
+	if tokenRateLimitTableCount == 0 {
+		log.Println("Creating token_rate_limit_usage table...")
+		DB.Exec(`CREATE TABLE token_rate_limit_usage (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			token_id INTEGER NOT NULL,
+			rule_index INTEGER NOT NULL,
+			current_count INTEGER DEFAULT 0,
+			window_start DATETIME NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (token_id) REFERENCES tokens(id),
+			UNIQUE(token_id, rule_index)
+		)`)
+		DB.Exec(`CREATE INDEX idx_token_rate_limit_token ON token_rate_limit_usage(token_id)`)
+		log.Println("Token rate limit usage table created successfully")
+	} else {
+		log.Println("Token rate limit usage table already exists, skipping")
+	}
+
 	return nil
 }

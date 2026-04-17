@@ -1,4 +1,4 @@
-# AI Gateway - API网关管理系统
+# ScoreRoute - API网关管理系统
 
 基于Go + Vue3的AI API网关系统，支持多种AI模型的统一接入和轮询调度。
 

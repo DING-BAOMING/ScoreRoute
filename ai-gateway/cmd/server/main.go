@@ -74,7 +74,7 @@ func main() {
 		port = "3000"
 	}
 
-	log.Printf("Starting AI Gateway on port %s", port)
+	log.Printf("Starting ScoreRoute on port %s", port)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}

@@ -56,6 +56,6 @@ func (h *AuthHandler) Validate(c *gin.Context) {
 func (h *AuthHandler) HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "healthy",
-		"service": "ai-gateway",
+		"service": "ScoreRoute",
 	})
 }

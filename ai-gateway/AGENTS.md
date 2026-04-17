@@ -1,4 +1,4 @@
-# AI Gateway - Agent Context File
+# ScoreRoute - Agent Context File
 
 ## CRITICAL: About This Environment
 

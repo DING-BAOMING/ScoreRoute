@@ -127,8 +127,13 @@ func (s *ExtraRatingService) ApplyPenaltyAndReward(modelKey string) error {
 		return err
 	}
 
+	decayPerRequest := 1
+	if config.PunishmentRounds > 0 {
+		decayPerRequest = config.PunishmentScore / config.PunishmentRounds
+	}
+
 	for _, p := range penaltyRecords {
-		newScore := p.CurrentScore + 1
+		newScore := p.CurrentScore + decayPerRequest
 		if newScore >= 0 {
 			s.repo.DeleteRecord(p.ID)
 		} else {
@@ -140,7 +145,7 @@ func (s *ExtraRatingService) ApplyPenaltyAndReward(modelKey string) error {
 	if config.PunishmentScore > 0 {
 		penaltyScore = -config.PunishmentScore
 	}
-	if err := s.repo.AddPenaltyRecord(modelKey, penaltyScore, 1, 0, nil); err != nil {
+	if err := s.repo.AddPenaltyRecord(modelKey, penaltyScore, decayPerRequest, 0, nil); err != nil {
 		return fmt.Errorf("failed to add penalty record: %w", err)
 	}
 

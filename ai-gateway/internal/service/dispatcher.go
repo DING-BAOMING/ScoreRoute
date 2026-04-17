@@ -103,6 +103,14 @@ func (d *Dispatcher) ListEnabledModels() ([]*model.Model, error) {
 }
 
 func (d *Dispatcher) GetNextModelSmart(format, modelType string) (*model.Model, error) {
+	models, err := d.GetRankedModelsSmart(format, modelType, 1)
+	if err != nil || len(models) == 0 {
+		return d.modelService.GetNextModelGlobal(format, modelType)
+	}
+	return models[0], nil
+}
+
+func (d *Dispatcher) GetRankedModelsSmart(format, modelType string, limit int) ([]*model.Model, error) {
 	config, err := d.systemConfigRepo.Get()
 	if err != nil {
 		return nil, err
@@ -114,16 +122,21 @@ func (d *Dispatcher) GetNextModelSmart(format, modelType string) (*model.Model, 
 	}
 
 	if dispatchMode != "smart" {
-		return d.modelService.GetNextModelGlobal(format, modelType)
+		selectedModel, err := d.modelService.GetNextModelGlobal(format, modelType)
+		if err != nil || selectedModel == nil {
+			return nil, err
+		}
+		return []*model.Model{selectedModel}, nil
 	}
 
 	modelRatingSvc := NewModelRatingService()
 	allScores, err := modelRatingSvc.CalculateAllScores()
 	if err != nil {
-		log.Printf("[GetNextModelSmart] failed to calculate scores: %v", err)
-		return d.modelService.GetNextModelGlobal(format, modelType)
+		log.Printf("[GetRankedModelsSmart] failed to calculate scores: %v", err)
+		return nil, err
 	}
 
+	var rankedModels []*model.Model
 	for _, score := range allScores {
 		if format != "" && score.Format != format {
 			continue
@@ -137,15 +150,17 @@ func (d *Dispatcher) GetNextModelSmart(format, modelType string) (*model.Model, 
 			continue
 		}
 
-		d.modelRepo.IncrementCallCount(selectedModel.ID)
-		d.channelRepo.IncrementCallCount(selectedModel.ChannelID)
-
-		log.Printf("[GetNextModelSmart] selected %s/%s score=%.2f rank=1", 
-			score.ChannelName, score.ModelName, score.Score)
-		return selectedModel, nil
+		rankedModels = append(rankedModels, selectedModel)
+		if limit > 0 && len(rankedModels) >= limit {
+			break
+		}
 	}
 
-	return d.modelService.GetNextModelGlobal(format, modelType)
+	if len(rankedModels) == 0 {
+		return nil, fmt.Errorf("no available models for format=%s type=%s", format, modelType)
+	}
+
+	return rankedModels, nil
 }
 
 type modelRatingWeights struct {
@@ -365,41 +380,156 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 		return nil, 0, fmt.Errorf("invalid request body: %w", err)
 	}
 
-	modelItem, selectedChannel, err := d.selectModelAndChannel(token, req)
-	if err != nil {
-		return nil, 0, err
+	modelName, _ := req["model"].(string)
+
+	useSmartRetry := modelName == "auto" || modelName == "AUTO" || modelName == "__AUTO__" || modelName == "Auto" || modelName == "POLL_ALL"
+
+	var rankedModels []*model.Model
+	var err error
+
+	if useSmartRetry {
+		rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else if modelName != "" {
+		singleModel, err := d.modelService.GetByName(modelName)
+		if err != nil {
+			return nil, 0, err
+		}
+		if singleModel == nil {
+			return nil, 0, fmt.Errorf("model not found: %s", modelName)
+		}
+		rankedModels = []*model.Model{singleModel}
+	} else {
+		rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
+		if err != nil {
+			return nil, 0, err
+		}
 	}
 
-	url := strings.TrimSuffix(selectedChannel.BaseURL, "/") + "/chat/completions"
+	var lastErr error
+	var lastStatusCode int
+	var lastBody []byte
 
-	req["model"] = modelItem.Name
-	modifiedBody, err := json.Marshal(req)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to marshal request: %w", err)
+	for i, modelItem := range rankedModels {
+		selectedChannel, err := d.channelService.GetByID(modelItem.ChannelID)
+		if err != nil || selectedChannel == nil {
+			lastErr = fmt.Errorf("channel not found for model")
+			continue
+		}
+
+		if err := d.checkRateLimit(selectedChannel, 0); err != nil {
+			lastErr = fmt.Errorf("channel rate limit exceeded: %w", err)
+			continue
+		}
+
+		if err := d.checkModelRateLimit(modelItem, 0); err != nil {
+			lastErr = fmt.Errorf("model rate limit exceeded: %w", err)
+			continue
+		}
+
+		url := strings.TrimSuffix(selectedChannel.BaseURL, "/") + "/chat/completions"
+
+		req["model"] = modelItem.Name
+		modifiedBody, err := json.Marshal(req)
+		if err != nil {
+			lastErr = fmt.Errorf("failed to marshal request: %w", err)
+			continue
+		}
+
+		proxyReq, err := http.NewRequest("POST", url, bytes.NewReader(modifiedBody))
+		if err != nil {
+			lastErr = fmt.Errorf("failed to create request: %w", err)
+			continue
+		}
+
+		proxyReq.Header.Set("Content-Type", "application/json")
+		proxyReq.Header.Set("Authorization", "Bearer "+selectedChannel.APIKey)
+		proxyReq.Header.Set("User-Agent", "ScoreRoute/1.0")
+
+		resp, err := d.client.Do(proxyReq)
+		if err != nil {
+			modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
+			if err := d.extraRatingService.ApplyPenaltyAndReward(modelKey); err != nil {
+				log.Printf("[DispatchStreamDirect] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
+			}
+			d.logCall(token, selectedChannel, modelItem, startTime, 0, 503, err.Error())
+			lastErr = fmt.Errorf("upstream request failed: %w", err)
+			lastStatusCode = 503
+			continue
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
+			if err := d.extraRatingService.ApplyPenaltyAndReward(modelKey); err != nil {
+				log.Printf("[DispatchStreamDirect] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
+			}
+			lastErr = fmt.Errorf("failed to read response: %w", err)
+			lastStatusCode = resp.StatusCode
+			continue
+		}
+
+		bodyStr := strings.TrimSpace(string(body))
+		bodyStrLower := strings.ToLower(bodyStr)
+		if strings.HasPrefix(bodyStrLower, "<!doctype") || strings.HasPrefix(bodyStrLower, "<html") {
+			modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
+			if err := d.extraRatingService.ApplyPenaltyAndReward(modelKey); err != nil {
+				log.Printf("[DispatchStreamDirect] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
+			}
+			lastErr = fmt.Errorf("upstream API returned HTML error page (invalid API key or endpoint)")
+			lastStatusCode = resp.StatusCode
+			lastBody = body
+			continue
+		}
+
+		if resp.StatusCode == 200 {
+			modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
+			if err := d.extraRatingService.ApplyPenaltyAndReward(modelKey); err != nil {
+				log.Printf("[DispatchStreamDirect] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
+			}
+			log.Printf("[DispatchStreamDirect] succeeded on try %d: %s/%s score rank %d", i+1, selectedChannel.Name, modelItem.Name, i+1)
+
+			reader := bytes.NewReader(body)
+			return &StreamResponse{
+				Resp: &http.Response{
+					StatusCode:    resp.StatusCode,
+					Body:          io.NopCloser(reader),
+					ContentLength: int64(len(body)),
+					Header:        resp.Header,
+				},
+				ChannelName: selectedChannel.Name,
+				ModelName:   modelItem.Name,
+				ChannelID:   selectedChannel.ID,
+				ModelID:     modelItem.ID,
+			}, resp.StatusCode, nil
+		}
+
+		modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
+		if err := d.extraRatingService.ApplyPenaltyAndReward(modelKey); err != nil {
+			log.Printf("[DispatchStreamDirect] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
+		}
+		lastErr = fmt.Errorf("upstream returned status %d", resp.StatusCode)
+		lastStatusCode = resp.StatusCode
+		lastBody = body
+		log.Printf("[DispatchStreamDirect] failed on try %d: %s/%s status=%d, trying next model", i+1, selectedChannel.Name, modelItem.Name, resp.StatusCode)
 	}
 
-	proxyReq, err := http.NewRequest("POST", url, bytes.NewReader(modifiedBody))
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to create request: %w", err)
+	if lastBody != nil {
+		return &StreamResponse{
+			Resp: &http.Response{
+				StatusCode:    lastStatusCode,
+				Body:          io.NopCloser(bytes.NewReader(lastBody)),
+				ContentLength: int64(len(lastBody)),
+				Header:        make(http.Header),
+			},
+			ChannelName: "",
+			ModelName:   "",
+		}, lastStatusCode, lastErr
 	}
-
-	proxyReq.Header.Set("Content-Type", "application/json")
-	proxyReq.Header.Set("Authorization", "Bearer "+selectedChannel.APIKey)
-	proxyReq.Header.Set("User-Agent", "ScoreRoute/1.0")
-
-	resp, err := d.client.Do(proxyReq)
-	if err != nil {
-		d.logCall(token, selectedChannel, modelItem, startTime, 0, 503, err.Error())
-		return nil, 503, fmt.Errorf("upstream request failed: %w", err)
-	}
-
-	return &StreamResponse{
-		Resp:        resp,
-		ChannelName: selectedChannel.Name,
-		ModelName:   modelItem.Name,
-		ChannelID:   selectedChannel.ID,
-		ModelID:    modelItem.ID,
-	}, resp.StatusCode, nil
+	return nil, lastStatusCode, lastErr
 }
 
 func (d *Dispatcher) LogStreamCompletion(tokenID int64, tokenName string, channelName string, modelName string, statusCode int, latency int, tokenUsed int) {
@@ -461,77 +591,149 @@ func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStrea
 		return nil, 0, fmt.Errorf("invalid request body: %w", err)
 	}
 
-	modelItem, selectedChannel, err := d.selectModelAndChannel(token, req)
-	if err != nil {
-		return nil, 0, err
-	}
+	modelName, _ := req["model"].(string)
 
-	url := strings.TrimSuffix(selectedChannel.BaseURL, "/") + "/chat/completions"
+	useSmartRetry := modelName == "auto" || modelName == "AUTO" || modelName == "__AUTO__" || modelName == "Auto" || modelName == "POLL_ALL"
 
-	req["model"] = modelItem.Name
-	modifiedBody, err := json.Marshal(req)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to marshal request: %w", err)
-	}
+	var rankedModels []*model.Model
+	var err error
 
-	proxyReq, err := http.NewRequest("POST", url, bytes.NewReader(modifiedBody))
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	proxyReq.Header.Set("Content-Type", "application/json")
-	proxyReq.Header.Set("Authorization", "Bearer "+selectedChannel.APIKey)
-	proxyReq.Header.Set("User-Agent", "ScoreRoute/1.0")
-
-	resp, err := d.client.Do(proxyReq)
-	if err != nil {
-		d.logCall(token, selectedChannel, modelItem, startTime, 0, 503, err.Error())
-		return nil, 503, fmt.Errorf("upstream request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, resp.StatusCode, fmt.Errorf("failed to read response: %w", err)
-	}
-
-	bodyStr := strings.TrimSpace(string(body))
-	bodyStrLower := strings.ToLower(bodyStr)
-	if strings.HasPrefix(bodyStrLower, "<!doctype") || strings.HasPrefix(bodyStrLower, "<html") {
-		return nil, resp.StatusCode, fmt.Errorf("upstream API returned HTML error page (invalid API key or endpoint)")
-	}
-
-	isStream := forceStream
-	if !isStream {
-		isStream, _ = req["stream"].(bool)
-	}
-	if strings.HasPrefix(bodyStr, "data: ") {
-		if !isStream {
-			log.Printf("detected SSE response despite stream flag=%v, model=%s", req["stream"], modelItem.Name)
+	if useSmartRetry {
+		rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
+		if err != nil {
+			return nil, 0, err
 		}
-		isStream = true
+	} else if modelName != "" {
+		singleModel, err := d.modelService.GetByName(modelName)
+		if err != nil {
+			return nil, 0, err
+		}
+		if singleModel == nil {
+			return nil, 0, fmt.Errorf("model not found: %s", modelName)
+		}
+		rankedModels = []*model.Model{singleModel}
+	} else {
+		rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
+		if err != nil {
+			return nil, 0, err
+		}
 	}
 
-	tokenUsed := d.calculateTokenUsage(body, isStream, modelItem.Name)
+	var lastErr error
+	var lastStatusCode int
+	var lastBody []byte
 
-	d.logCall(token, selectedChannel, modelItem, startTime, tokenUsed, resp.StatusCode, "")
+	for i, modelItem := range rankedModels {
+		selectedChannel, err := d.channelService.GetByID(modelItem.ChannelID)
+		if err != nil || selectedChannel == nil {
+			lastErr = fmt.Errorf("channel not found for model")
+			continue
+		}
 
-	if resp.StatusCode == 200 {
-		d.performAsyncUpdates(selectedChannel, modelItem, tokenUsed)
-	}
+		if err := d.checkRateLimit(selectedChannel, 0); err != nil {
+			lastErr = fmt.Errorf("channel rate limit exceeded: %w", err)
+			continue
+		}
 
-	if resp.StatusCode == 200 && tokenUsed > 0 {
+		if err := d.checkModelRateLimit(modelItem, 0); err != nil {
+			lastErr = fmt.Errorf("model rate limit exceeded: %w", err)
+			continue
+		}
+
 		modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
-		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-			if err := d.saveSampleAsyncContext(ctx, modelKey, string(requestBody), string(body), tokenUsed); err != nil {
-				log.Printf("[ERROR] saveSampleAsync failed: model=%s, err=%v", modelItem.Name, err)
+
+		url := strings.TrimSuffix(selectedChannel.BaseURL, "/") + "/chat/completions"
+
+		req["model"] = modelItem.Name
+		modifiedBody, err := json.Marshal(req)
+		if err != nil {
+			lastErr = fmt.Errorf("failed to marshal request: %w", err)
+			continue
+		}
+
+		proxyReq, err := http.NewRequest("POST", url, bytes.NewReader(modifiedBody))
+		if err != nil {
+			lastErr = fmt.Errorf("failed to create request: %w", err)
+			continue
+		}
+
+		proxyReq.Header.Set("Content-Type", "application/json")
+		proxyReq.Header.Set("Authorization", "Bearer "+selectedChannel.APIKey)
+		proxyReq.Header.Set("User-Agent", "ScoreRoute/1.0")
+
+		resp, err := d.client.Do(proxyReq)
+		if err != nil {
+			d.logCall(token, selectedChannel, modelItem, startTime, 0, 503, err.Error())
+			lastErr = fmt.Errorf("upstream request failed: %w", err)
+			lastStatusCode = 503
+			continue
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			lastErr = fmt.Errorf("failed to read response: %w", err)
+			lastStatusCode = resp.StatusCode
+			continue
+		}
+
+		bodyStr := strings.TrimSpace(string(body))
+		bodyStrLower := strings.ToLower(bodyStr)
+		if strings.HasPrefix(bodyStrLower, "<!doctype") || strings.HasPrefix(bodyStrLower, "<html") {
+			lastErr = fmt.Errorf("upstream API returned HTML error page (invalid API key or endpoint)")
+			lastStatusCode = resp.StatusCode
+			lastBody = body
+			continue
+		}
+
+		isStream := forceStream
+		if !isStream {
+			isStream, _ = req["stream"].(bool)
+		}
+		if strings.HasPrefix(bodyStr, "data: ") {
+			if !isStream {
+				log.Printf("detected SSE response despite stream flag=%v, model=%s", req["stream"], modelItem.Name)
 			}
-		}()
+			isStream = true
+		}
+
+		tokenUsed := d.calculateTokenUsage(body, isStream, modelItem.Name)
+
+		d.logCall(token, selectedChannel, modelItem, startTime, tokenUsed, resp.StatusCode, "")
+
+		if err := d.extraRatingService.ApplyPenaltyAndReward(modelKey); err != nil {
+			log.Printf("[dispatch] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
+		}
+
+		if resp.StatusCode == 200 {
+			d.performAsyncUpdates(selectedChannel, modelItem, tokenUsed)
+		}
+
+		if resp.StatusCode == 200 && tokenUsed > 0 {
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cancel()
+				if err := d.saveSampleAsyncContext(ctx, modelKey, string(requestBody), string(body), tokenUsed); err != nil {
+					log.Printf("[ERROR] saveSampleAsync failed: model=%s, err=%v", modelItem.Name, err)
+				}
+			}()
+		}
+
+		if resp.StatusCode == 200 {
+			log.Printf("[dispatch] succeeded on try %d: %s/%s score rank %d", i+1, selectedChannel.Name, modelItem.Name, i+1)
+			return body, resp.StatusCode, nil
+		}
+
+		lastErr = fmt.Errorf("upstream returned status %d", resp.StatusCode)
+		lastStatusCode = resp.StatusCode
+		lastBody = body
+		log.Printf("[dispatch] failed on try %d: %s/%s status=%d, trying next model", i+1, selectedChannel.Name, modelItem.Name, resp.StatusCode)
 	}
 
-	return body, resp.StatusCode, nil
+	if lastBody != nil {
+		return lastBody, lastStatusCode, lastErr
+	}
+	return nil, lastStatusCode, lastErr
 }
 
 func (d *Dispatcher) calculateTokenUsage(body []byte, isStream bool, modelName string) int {
@@ -564,14 +766,6 @@ func (d *Dispatcher) performAsyncUpdates(selectedChannel *model.Channel, modelIt
 		defer cancel()
 		if err := d.updateModelUsageContext(ctx, modelItem.ID, tokenUsed); err != nil {
 			log.Printf("[ERROR] updateModelUsage failed: model=%s, err=%v", modelItem.Name, err)
-		}
-	}()
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
-		if err := d.extraRatingService.ApplyPenaltyAndRewardContext(ctx, modelKey); err != nil {
-			log.Printf("[ERROR] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
 		}
 	}()
 }

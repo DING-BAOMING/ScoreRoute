@@ -39,3 +39,4 @@ server
 # Output of the go coverage tool
 *.out
 AGENT_LOG.md
+.agent/

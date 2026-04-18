@@ -141,7 +141,7 @@ func (s *ModelService) TestModel(modelID int64) (map[string]interface{}, error) 
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
 		return map[string]interface{}{
-			"success":   false,
+			"success":    false,
 			"error":      fmt.Sprintf("failed to marshal request: %v", err),
 			"latency_ms": time.Since(startTime).Milliseconds(),
 		}, nil
@@ -151,7 +151,7 @@ func (s *ModelService) TestModel(modelID int64) (map[string]interface{}, error) 
 	req, err := http.NewRequest("POST", url, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return map[string]interface{}{
-			"success":   false,
+			"success":    false,
 			"error":      fmt.Sprintf("failed to create request: %v", err),
 			"latency_ms": time.Since(startTime).Milliseconds(),
 		}, nil
@@ -162,7 +162,7 @@ func (s *ModelService) TestModel(modelID int64) (map[string]interface{}, error) 
 	resp, err := s.client.Do(req)
 	if err != nil {
 		return map[string]interface{}{
-			"success":   false,
+			"success":    false,
 			"error":      err.Error(),
 			"latency_ms": time.Since(startTime).Milliseconds(),
 		}, nil

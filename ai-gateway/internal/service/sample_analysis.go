@@ -35,19 +35,19 @@ func NewSampleAnalysisService() *SampleAnalysisService {
 }
 
 type AnalysisPrompt struct {
-	ModelKey         string `json:"model_key"`
+	ModelKey        string `json:"model_key"`
 	RequestContent  string `json:"request_content"`
 	ResponseContent string `json:"response_content"`
 }
 
 type AnalysisResult struct {
-	Score                    int    `json:"score"`
-	ToolCallingScore         int    `json:"tool_calling_score"`
-	CompletenessScore        int    `json:"completeness_score"`
+	Score                     int    `json:"score"`
+	ToolCallingScore          int    `json:"tool_calling_score"`
+	CompletenessScore         int    `json:"completeness_score"`
 	ContextUnderstandingScore int    `json:"context_understanding_score"`
-	ErrorHandlingScore       int    `json:"error_handling_score"`
-	ResponseQualityScore     int    `json:"response_quality_score"`
-	Reasoning                string `json:"reasoning"`
+	ErrorHandlingScore        int    `json:"error_handling_score"`
+	ResponseQualityScore      int    `json:"response_quality_score"`
+	Reasoning                 string `json:"reasoning"`
 }
 
 func (s *SampleAnalysisService) GetConfig() (*model.SampleAnalysisConfig, error) {
@@ -279,13 +279,13 @@ func (s *SampleAnalysisService) RunScheduledAnalysis(maxSamples int) (int, error
 			analysisLog.AnalysisDetails = string(details)
 
 			rating := &model.SampleRating{
-				ModelKey:                 sample.ModelKey,
-				Score:                    result.Score,
-				ToolCallingScore:         result.ToolCallingScore,
-				CompletenessScore:        result.CompletenessScore,
+				ModelKey:                  sample.ModelKey,
+				Score:                     result.Score,
+				ToolCallingScore:          result.ToolCallingScore,
+				CompletenessScore:         result.CompletenessScore,
 				ContextUnderstandingScore: result.ContextUnderstandingScore,
-				ErrorHandlingScore:       result.ErrorHandlingScore,
-				ResponseQualityScore:     result.ResponseQualityScore,
+				ErrorHandlingScore:        result.ErrorHandlingScore,
+				ResponseQualityScore:      result.ResponseQualityScore,
 			}
 			if err := s.ratingRepo.Upsert(rating); err != nil {
 				log.Printf("Failed to save rating for %s: %v", sample.ModelKey, err)

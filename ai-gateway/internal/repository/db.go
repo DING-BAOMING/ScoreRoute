@@ -179,11 +179,11 @@ func createTables() error {
 
 func migrateTables() error {
 	log.Println("Running database migration...")
-	
+
 	row := DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('channels') WHERE name='type'")
 	var channelTypeCount int
 	row.Scan(&channelTypeCount)
-	
+
 	if channelTypeCount > 0 {
 		log.Println("Found 'type' column in channels table, recreating table to remove it...")
 		DB.Exec(`CREATE TABLE IF NOT EXISTS channels_new (
@@ -201,7 +201,7 @@ func migrateTables() error {
 		DB.Exec(`ALTER TABLE channels_new RENAME TO channels`)
 		log.Println("Channels table recreated successfully")
 	}
-	
+
 	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('models') WHERE name='type'")
 	var count int
 	if err := row.Scan(&count); err != nil {

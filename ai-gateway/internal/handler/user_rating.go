@@ -51,7 +51,7 @@ func (h *UserRatingHandler) List(c *gin.Context) {
 		c.JSON(http.StatusOK, model.APIResponse{Code: 0, Message: "查询成功", Data: ratings})
 		return
 	}
-	
+
 	ratings, err := h.service.GetAllUserRatingsWithDefaults()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})

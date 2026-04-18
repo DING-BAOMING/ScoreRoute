@@ -14,17 +14,17 @@ import (
 )
 
 type ModelRatingHandler struct {
-	configRepo *repository.ModelRatingConfigRepo
-	modelRepo  *repository.ModelRepo
-	configSvc  *repository.SystemConfigRepo
+	configRepo     *repository.ModelRatingConfigRepo
+	modelRepo      *repository.ModelRepo
+	configSvc      *repository.SystemConfigRepo
 	modelRatingSvc *service.ModelRatingService
 }
 
 func NewModelRatingHandler() *ModelRatingHandler {
 	return &ModelRatingHandler{
-		configRepo: repository.NewModelRatingConfigRepo(),
-		modelRepo:  repository.NewModelRepo(),
-		configSvc:  repository.NewSystemConfigRepo(),
+		configRepo:     repository.NewModelRatingConfigRepo(),
+		modelRepo:      repository.NewModelRepo(),
+		configSvc:      repository.NewSystemConfigRepo(),
 		modelRatingSvc: service.NewModelRatingService(),
 	}
 }
@@ -41,12 +41,12 @@ func (h *ModelRatingHandler) GetWeights(c *gin.Context) {
 func (h *ModelRatingHandler) UpdateWeights(c *gin.Context) {
 	var req struct {
 		SuccessWeight      float64 `json:"success_weight"`
-		LatencyWeight     float64 `json:"latency_weight"`
-		ReliabilityWeight float64 `json:"reliability_weight"`
-		UserRatingWeight  float64 `json:"user_rating_weight"`
+		LatencyWeight      float64 `json:"latency_weight"`
+		ReliabilityWeight  float64 `json:"reliability_weight"`
+		UserRatingWeight   float64 `json:"user_rating_weight"`
 		SampleRatingWeight float64 `json:"sample_rating_weight"`
-		CostRatingWeight  float64 `json:"cost_rating_weight"`
-		TimeRatingWeight  float64 `json:"time_rating_weight"`
+		CostRatingWeight   float64 `json:"cost_rating_weight"`
+		TimeRatingWeight   float64 `json:"time_rating_weight"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})
@@ -61,7 +61,7 @@ func (h *ModelRatingHandler) UpdateWeights(c *gin.Context) {
 
 	weights := &repository.ModelRatingWeights{
 		SuccessWeight:      req.SuccessWeight,
-		LatencyWeight:     req.LatencyWeight,
+		LatencyWeight:      req.LatencyWeight,
 		ReliabilityWeight:  req.ReliabilityWeight,
 		UserRatingWeight:   req.UserRatingWeight,
 		SampleRatingWeight: req.SampleRatingWeight,

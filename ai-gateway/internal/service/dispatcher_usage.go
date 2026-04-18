@@ -14,14 +14,14 @@ func (d *Dispatcher) logCall(token *model.Token, channel *model.Channel, modelIt
 	latency := int(time.Since(startTime).Milliseconds())
 
 	callLog := &model.CallLog{
-		TokenName:    token.Name,
-		ChannelName:  channel.Name,
-		ModelName:    modelItem.Name,
-		LatencyMs:    latency,
-		TokenUsed:    tokenUsed,
-		Status:       status,
-		Error:        errMsg,
-		CreatedAt:    time.Now(),
+		TokenName:   token.Name,
+		ChannelName: channel.Name,
+		ModelName:   modelItem.Name,
+		LatencyMs:   latency,
+		TokenUsed:   tokenUsed,
+		Status:      status,
+		Error:       errMsg,
+		CreatedAt:   time.Now(),
 	}
 
 	if err := d.logRepo.Save(callLog); err != nil {

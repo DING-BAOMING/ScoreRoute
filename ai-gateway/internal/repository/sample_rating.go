@@ -20,8 +20,8 @@ func (r *SampleRatingRepo) Upsert(rating *model.SampleRating) error {
 		INSERT OR REPLACE INTO sample_ratings 
 		(model_key, score, tool_calling_score, completeness_score, context_understanding_score, error_handling_score, response_quality_score, analyzed_at, expires_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, rating.ModelKey, rating.Score, rating.ToolCallingScore, rating.CompletenessScore, 
-		rating.ContextUnderstandingScore, rating.ErrorHandlingScore, rating.ResponseQualityScore, 
+	`, rating.ModelKey, rating.Score, rating.ToolCallingScore, rating.CompletenessScore,
+		rating.ContextUnderstandingScore, rating.ErrorHandlingScore, rating.ResponseQualityScore,
 		rating.AnalyzedAt, rating.ExpiresAt)
 	return err
 }
@@ -32,8 +32,8 @@ func (r *SampleRatingRepo) GetByModelKey(modelKey string) (*model.SampleRating, 
 		SELECT id, model_key, score, tool_calling_score, completeness_score, context_understanding_score, 
 		       error_handling_score, response_quality_score, analyzed_at, expires_at
 		FROM sample_ratings WHERE model_key = ?
-	`, modelKey).Scan(&rating.ID, &rating.ModelKey, &rating.Score, &rating.ToolCallingScore, 
-		&rating.CompletenessScore, &rating.ContextUnderstandingScore, &rating.ErrorHandlingScore, 
+	`, modelKey).Scan(&rating.ID, &rating.ModelKey, &rating.Score, &rating.ToolCallingScore,
+		&rating.CompletenessScore, &rating.ContextUnderstandingScore, &rating.ErrorHandlingScore,
 		&rating.ResponseQualityScore, &rating.AnalyzedAt, &rating.ExpiresAt)
 	if err != nil {
 		return nil, err
@@ -55,8 +55,8 @@ func (r *SampleRatingRepo) List() ([]*model.SampleRating, error) {
 	var ratings []*model.SampleRating
 	for rows.Next() {
 		r := &model.SampleRating{}
-		if err := rows.Scan(&r.ID, &r.ModelKey, &r.Score, &r.ToolCallingScore, &r.CompletenessScore, 
-			&r.ContextUnderstandingScore, &r.ErrorHandlingScore, &r.ResponseQualityScore, 
+		if err := rows.Scan(&r.ID, &r.ModelKey, &r.Score, &r.ToolCallingScore, &r.CompletenessScore,
+			&r.ContextUnderstandingScore, &r.ErrorHandlingScore, &r.ResponseQualityScore,
 			&r.AnalyzedAt, &r.ExpiresAt); err != nil {
 			continue
 		}

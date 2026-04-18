@@ -102,10 +102,10 @@ func (r *SampleRepo) SaveSample(modelKey, requestContent, responseContent string
 	}
 
 	sample := &model.Sample{
-		ModelKey:       modelKey,
-		RequestContent: requestContent,
+		ModelKey:        modelKey,
+		RequestContent:  requestContent,
 		ResponseContent: responseContent,
-		TokenCount:     tokenCount,
+		TokenCount:      tokenCount,
 	}
 	return r.Create(sample)
 }

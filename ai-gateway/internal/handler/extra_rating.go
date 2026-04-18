@@ -33,9 +33,9 @@ func (h *ExtraRatingHandler) GetConfig(c *gin.Context) {
 func (h *ExtraRatingHandler) SetConfig(c *gin.Context) {
 	var req struct {
 		PunishmentRounds int `json:"punishment_rounds"`
-		PunishmentScore   int `json:"punishment_score"`
-		RewardHours       int `json:"reward_hours"`
-		RewardScore       int `json:"reward_score"`
+		PunishmentScore  int `json:"punishment_score"`
+		RewardHours      int `json:"reward_hours"`
+		RewardScore      int `json:"reward_score"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})

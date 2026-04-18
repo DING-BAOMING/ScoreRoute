@@ -44,9 +44,9 @@ func (h *LogHandler) List(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, model.APIResponse{
-		Code: 0,
+		Code:    0,
 		Message: "查询成功",
-		Data: model.PageResult{Total: total, Items: logs},
+		Data:    model.PageResult{Total: total, Items: logs},
 	})
 }
 

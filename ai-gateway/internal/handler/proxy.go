@@ -184,7 +184,7 @@ func (h *ProxyHandler) HandleModels(c *gin.Context) {
 	if err != nil || models == nil {
 		c.JSON(http.StatusOK, gin.H{
 			"object": "list",
-			"data": []gin.H{},
+			"data":   []gin.H{},
 		})
 		return
 	}
@@ -192,10 +192,10 @@ func (h *ProxyHandler) HandleModels(c *gin.Context) {
 	data := make([]gin.H, 0, len(models))
 	for _, m := range models {
 		data = append(data, gin.H{
-			"id":         m.Name,
-			"object":     "model",
-			"created":    m.CreatedAt.Unix(),
-			"owned_by":   m.ChannelName,
+			"id":       m.Name,
+			"object":   "model",
+			"created":  m.CreatedAt.Unix(),
+			"owned_by": m.ChannelName,
 		})
 	}
 

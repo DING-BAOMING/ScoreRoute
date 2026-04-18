@@ -60,7 +60,7 @@ func (s *ChannelService) GetByFormatAndType(format, modelType string) ([]*model.
 
 func (s *ChannelService) TestCredentials(baseURL, apiKey string) (bool, error) {
 	url := strings.TrimSuffix(baseURL, "/") + "/chat/completions"
-	
+
 	testBody := `{"model":"__test_model__","messages":[{"role":"user","content":"test"}],"max_tokens":1}`
 	req, err := http.NewRequest("POST", url, strings.NewReader(testBody))
 	if err != nil {

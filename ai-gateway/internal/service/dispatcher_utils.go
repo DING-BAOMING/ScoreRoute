@@ -73,7 +73,7 @@ func countTokensWithTiktoken(text string) int {
 // normalizeUserRatingKey 标准化用户名用于用户评分
 func normalizeUserRatingKey(modelName string) string {
 	modelName = strings.ToLower(strings.TrimSpace(modelName))
-	
+
 	vendorPrefixes := []string{"google/", "qwen/", "z-ai/", "anthropic/", "openai/", "meta/", "mistral/", "cohere/", "azure/", "aws/", "alibaba/", "baidu/", "tencent/", "minimaxai/"}
 	for _, prefix := range vendorPrefixes {
 		if strings.HasPrefix(modelName, prefix) {
@@ -81,7 +81,7 @@ func normalizeUserRatingKey(modelName string) string {
 			break
 		}
 	}
-	
+
 	return modelName
 }
 

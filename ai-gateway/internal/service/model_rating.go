@@ -35,27 +35,27 @@ func NewModelRatingService() *ModelRatingService {
 }
 
 type ModelScore struct {
-	ChannelName   string  `json:"channel_name"`
-	Format        string  `json:"format"`
-	ModelType     string  `json:"model_type"`
-	ModelName     string  `json:"model_name"`
-	ModelKey      string  `json:"model_key"`
-	Score         float64 `json:"score"`
-	SuccessRate   float64 `json:"success_rate"`
-	Latency       float64 `json:"latency"`
-	Reliability   float64 `json:"reliability"`
-	UserRating    int     `json:"user_rating"`
-	SampleRating  int     `json:"sample_rating"`
-	Penalty       int     `json:"penalty"`
-	Reward        int     `json:"reward"`
-	Rank          int     `json:"rank"`
-	CallCount     int     `json:"call_count"`
+	ChannelName  string  `json:"channel_name"`
+	Format       string  `json:"format"`
+	ModelType    string  `json:"model_type"`
+	ModelName    string  `json:"model_name"`
+	ModelKey     string  `json:"model_key"`
+	Score        float64 `json:"score"`
+	SuccessRate  float64 `json:"success_rate"`
+	Latency      float64 `json:"latency"`
+	Reliability  float64 `json:"reliability"`
+	UserRating   int     `json:"user_rating"`
+	SampleRating int     `json:"sample_rating"`
+	Penalty      int     `json:"penalty"`
+	Reward       int     `json:"reward"`
+	Rank         int     `json:"rank"`
+	CallCount    int     `json:"call_count"`
 }
 
 type RatingWeights struct {
 	SuccessWeight      float64 `json:"success_weight"`
-	LatencyWeight     float64 `json:"latency_weight"`
-	ReliabilityWeight float64 `json:"reliability_weight"`
+	LatencyWeight      float64 `json:"latency_weight"`
+	ReliabilityWeight  float64 `json:"reliability_weight"`
 	UserRatingWeight   float64 `json:"user_rating_weight"`
 	SampleRatingWeight float64 `json:"sample_rating_weight"`
 	CostRatingWeight   float64 `json:"cost_rating_weight"`
@@ -70,8 +70,8 @@ func (s *ModelRatingService) GetWeights() (*RatingWeights, error) {
 	}
 	return &RatingWeights{
 		SuccessWeight:      weights.SuccessWeight,
-		LatencyWeight:     weights.LatencyWeight,
-		ReliabilityWeight: weights.ReliabilityWeight,
+		LatencyWeight:      weights.LatencyWeight,
+		ReliabilityWeight:  weights.ReliabilityWeight,
 		UserRatingWeight:   weights.UserRatingWeight,
 		SampleRatingWeight: weights.SampleRatingWeight,
 		CostRatingWeight:   weights.CostRatingWeight,
@@ -100,8 +100,8 @@ func (s *ModelRatingService) CalculateAllScores() ([]*ModelScore, error) {
 	if err != nil {
 		weights = &RatingWeights{
 			SuccessWeight:      0.15,
-			LatencyWeight:     0.1,
-			ReliabilityWeight: 0.1,
+			LatencyWeight:      0.1,
+			ReliabilityWeight:  0.1,
 			UserRatingWeight:   0.15,
 			SampleRatingWeight: 0.25,
 			CostRatingWeight:   0.15,
@@ -130,7 +130,7 @@ func (s *ModelRatingService) CalculateAllScores() ([]*ModelScore, error) {
 
 		latencyScore := 85.0
 		if avgLatency > 0 {
-			latencyScore = maxFloat(0, 1-(avgLatency/30000))*100
+			latencyScore = maxFloat(0, 1-(avgLatency/30000)) * 100
 		}
 
 		reliabilityScore := 85.0
@@ -183,21 +183,21 @@ func (s *ModelRatingService) CalculateAllScores() ([]*ModelScore, error) {
 			float64(penalty+reward)
 
 		scores = append(scores, &ModelScore{
-			ChannelName:   m.ChannelName,
-			Format:        m.Format,
-			ModelType:     m.Type,
-			ModelName:     m.Name,
-			ModelKey:      modelKey,
-			Score:         score,
-			SuccessRate:   successRate,
-			Latency:       latencyScore,
-			Reliability:   reliabilityScore,
-			UserRating:    userRating,
-			SampleRating:  sampleRating,
-			Penalty:       penalty,
-			Reward:        reward,
-		CallCount:    int(m.CallCount),
-	})
+			ChannelName:  m.ChannelName,
+			Format:       m.Format,
+			ModelType:    m.Type,
+			ModelName:    m.Name,
+			ModelKey:     modelKey,
+			Score:        score,
+			SuccessRate:  successRate,
+			Latency:      latencyScore,
+			Reliability:  reliabilityScore,
+			UserRating:   userRating,
+			SampleRating: sampleRating,
+			Penalty:      penalty,
+			Reward:       reward,
+			CallCount:    int(m.CallCount),
+		})
 	}
 
 	sort.Slice(scores, func(i, j int) bool {
@@ -298,12 +298,12 @@ func (s *ModelRatingService) getCostTimeRatingsMap(models []*model.Model) map[st
 
 	for _, m := range models {
 		modelKey := normalizeModelKey(m.ChannelName, m.Format, m.Type, m.Name)
-		
+
 		mRateLimits := m.RateLimits
 		if mRateLimits == "" || mRateLimits == "[]" {
 			mRateLimits = m.ChannelRateLimits
 		}
-		
+
 		costRating := 50
 		if isPeriodicBilling(mRateLimits) {
 			costRating = 100

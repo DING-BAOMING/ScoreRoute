@@ -117,13 +117,13 @@ func (s *SampleAnalysisService) AnalyzeSampleChunked(sample *model.Sample) (*Ana
 	}
 
 	finalResult := &AnalysisResult{
-		Score:                    totalScore / validParts,
-		ToolCallingScore:         totalToolScore / validParts,
-		CompletenessScore:        totalCompleteScore / validParts,
+		Score:                     totalScore / validParts,
+		ToolCallingScore:          totalToolScore / validParts,
+		CompletenessScore:         totalCompleteScore / validParts,
 		ContextUnderstandingScore: totalContextScore / validParts,
-		ErrorHandlingScore:       totalErrorScore / validParts,
-		ResponseQualityScore:     totalQualityScore / validParts,
-		Reasoning:                "Averaged from chunked analysis",
+		ErrorHandlingScore:        totalErrorScore / validParts,
+		ResponseQualityScore:      totalQualityScore / validParts,
+		Reasoning:                 "Averaged from chunked analysis",
 	}
 
 	return finalResult, nil

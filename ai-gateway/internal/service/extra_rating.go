@@ -23,10 +23,10 @@ func NewExtraRatingService() *ExtraRatingService {
 }
 
 type ExtraRatingConfig struct {
-	PunishmentRounds    int // Number of rounds punishment lasts
-	PunishmentScore    int // Score deducted per call
-	RewardHours        int // Hours reward lasts after call
-	RewardScore        int // Score added per call
+	PunishmentRounds int // Number of rounds punishment lasts
+	PunishmentScore  int // Score deducted per call
+	RewardHours      int // Hours reward lasts after call
+	RewardScore      int // Score added per call
 }
 
 func (s *ExtraRatingService) GetConfig() (*ExtraRatingConfig, error) {
@@ -37,7 +37,7 @@ func (s *ExtraRatingService) GetConfig() (*ExtraRatingConfig, error) {
 
 	config := &ExtraRatingConfig{
 		PunishmentRounds: 5,
-		PunishmentScore:   5,
+		PunishmentScore:  5,
 		RewardHours:      24,
 		RewardScore:      5,
 	}
@@ -221,4 +221,3 @@ func NormalizeModelKey(channelName, format, modelType, modelName string) string 
 	key := strings.ToLower(fmt.Sprintf("%s_%s_%s_%s", channelName, format, modelType, modelName))
 	return key
 }
-

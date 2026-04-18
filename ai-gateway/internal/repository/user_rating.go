@@ -28,7 +28,7 @@ func (r *UserRatingRepo) Upsert(modelName string, rating int) error {
 func (r *UserRatingRepo) GetByName(modelName string) (*model.UserRating, error) {
 	normalizedName := strings.ToLower(strings.TrimSpace(modelName))
 	row := DB.QueryRow(`SELECT id, model_name, user_rating, created_at, updated_at FROM user_ratings WHERE model_name = ?`, normalizedName)
-	
+
 	var ur model.UserRating
 	err := row.Scan(&ur.ID, &ur.ModelName, &ur.UserRating, &ur.CreatedAt, &ur.UpdatedAt)
 	if err != nil {
@@ -141,7 +141,7 @@ func (r *UserRatingRepo) GetAllUserRatings() ([]map[string]interface{}, error) {
 			continue
 		}
 		results = append(results, map[string]interface{}{
-			"model_name":   modelName,
+			"model_name":  modelName,
 			"user_rating": userRating,
 		})
 	}
@@ -151,7 +151,7 @@ func (r *UserRatingRepo) GetAllUserRatings() ([]map[string]interface{}, error) {
 func (r *UserRatingRepo) NormalizeModelName(name string) string {
 	name = strings.TrimSpace(name)
 	lowerName := strings.ToLower(name)
-	
+
 	if strings.HasPrefix(lowerName, "minimaxai/") {
 		name = strings.ToLower(name)
 		name = strings.TrimPrefix(name, "minimaxai/")
@@ -162,7 +162,7 @@ func (r *UserRatingRepo) NormalizeModelName(name string) string {
 		}
 		return "MiniMax-" + name
 	}
-	
+
 	if strings.HasPrefix(lowerName, "minimax-") || strings.HasPrefix(lowerName, "minimax") {
 		name = strings.ToLower(name)
 		name = strings.TrimPrefix(name, "minimax-")
@@ -172,9 +172,9 @@ func (r *UserRatingRepo) NormalizeModelName(name string) string {
 		}
 		return "MiniMax-" + name
 	}
-	
+
 	name = strings.ToLower(name)
-	
+
 	vendorPrefixes := []string{"google/", "qwen/", "z-ai/", "anthropic/", "openai/", "meta/", "mistral/", "cohere/", "azure/", "aws/", "alibaba/", "baidu/", "tencent/"}
 	for _, prefix := range vendorPrefixes {
 		if strings.HasPrefix(name, prefix) {
@@ -182,7 +182,7 @@ func (r *UserRatingRepo) NormalizeModelName(name string) string {
 			break
 		}
 	}
-	
+
 	return name
 }
 

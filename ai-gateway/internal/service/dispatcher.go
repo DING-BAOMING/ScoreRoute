@@ -17,19 +17,19 @@ import (
 )
 
 type Dispatcher struct {
-	channelService      *ChannelService
-	modelService        *ModelService
-	logRepo             *repository.LogRepo
-	sampleRepo          *repository.SampleRepo
-	channelRepo         *repository.ChannelRepo
-	rateLimitRepo       *repository.RateLimitRepo
-	modelRateLimitRepo  *repository.ModelRateLimitRepo
-	tokenRateLimitRepo  *repository.TokenRateLimitRepo
-	modelRepo           *repository.ModelRepo
-	systemConfigRepo    *repository.SystemConfigRepo
-	extraRatingService  *ExtraRatingService
-	tokenRepo           *repository.TokenRepo
-	client              *http.Client
+	channelService     *ChannelService
+	modelService       *ModelService
+	logRepo            *repository.LogRepo
+	sampleRepo         *repository.SampleRepo
+	channelRepo        *repository.ChannelRepo
+	rateLimitRepo      *repository.RateLimitRepo
+	modelRateLimitRepo *repository.ModelRateLimitRepo
+	tokenRateLimitRepo *repository.TokenRateLimitRepo
+	modelRepo          *repository.ModelRepo
+	systemConfigRepo   *repository.SystemConfigRepo
+	extraRatingService *ExtraRatingService
+	tokenRepo          *repository.TokenRepo
+	client             *http.Client
 }
 
 func NewDispatcher() *Dispatcher {
@@ -39,26 +39,26 @@ func NewDispatcher() *Dispatcher {
 	}
 
 	transport := &http.Transport{
-		DialContext:         dialer.DialContext,
-		MaxIdleConns:        100,
-		IdleConnTimeout:     90 * time.Second,
-		TLSHandshakeTimeout: 30 * time.Second,
+		DialContext:           dialer.DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   30 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 	}
 
 	return &Dispatcher{
-		channelService:      NewChannelService(),
-		modelService:        NewModelService(),
-		logRepo:             repository.NewLogRepo(),
-		sampleRepo:          repository.NewSampleRepo(),
-		channelRepo:         repository.NewChannelRepo(),
-		rateLimitRepo:       repository.NewRateLimitRepo(),
-		modelRateLimitRepo:  repository.NewModelRateLimitRepo(),
-		tokenRateLimitRepo:  repository.NewTokenRateLimitRepo(),
-		modelRepo:           repository.NewModelRepo(),
-		systemConfigRepo:    repository.NewSystemConfigRepo(),
-		extraRatingService:  NewExtraRatingService(),
-		tokenRepo:           repository.NewTokenRepo(),
+		channelService:     NewChannelService(),
+		modelService:       NewModelService(),
+		logRepo:            repository.NewLogRepo(),
+		sampleRepo:         repository.NewSampleRepo(),
+		channelRepo:        repository.NewChannelRepo(),
+		rateLimitRepo:      repository.NewRateLimitRepo(),
+		modelRateLimitRepo: repository.NewModelRateLimitRepo(),
+		tokenRateLimitRepo: repository.NewTokenRateLimitRepo(),
+		modelRepo:          repository.NewModelRepo(),
+		systemConfigRepo:   repository.NewSystemConfigRepo(),
+		extraRatingService: NewExtraRatingService(),
+		tokenRepo:          repository.NewTokenRepo(),
 		client: &http.Client{
 			Timeout:   1200 * time.Second,
 			Transport: transport,
@@ -92,12 +92,12 @@ type RelayResponse struct {
 }
 
 type StreamResponse struct {
-	Resp          *http.Response
-	ChannelName   string
-	ModelName     string
-	ChannelID     int64
-	ModelID      int64
-	TokenUsed    int
+	Resp        *http.Response
+	ChannelName string
+	ModelName   string
+	ChannelID   int64
+	ModelID     int64
+	TokenUsed   int
 }
 
 func (d *Dispatcher) ListEnabledModels() ([]*model.Model, error) {
@@ -184,8 +184,8 @@ func (d *Dispatcher) getModelRatingWeights() (*modelRatingWeights, error) {
 
 	w := &modelRatingWeights{
 		SuccessWeight:      repoWeights.SuccessWeight,
-		LatencyWeight:     repoWeights.LatencyWeight,
-		ReliabilityWeight: repoWeights.ReliabilityWeight,
+		LatencyWeight:      repoWeights.LatencyWeight,
+		ReliabilityWeight:  repoWeights.ReliabilityWeight,
 		UserRatingWeight:   repoWeights.UserRatingWeight,
 		SampleRatingWeight: repoWeights.SampleRatingWeight,
 		CostRatingWeight:   repoWeights.CostRatingWeight,
@@ -252,7 +252,7 @@ func (d *Dispatcher) calculateCompositeScore(m *model.Model, weights *modelRatin
 	sampleScore := float64(sampleRating) / 100.0
 
 	penalty, reward, _ := d.extraRatingService.GetModelExtraScore(sampleKey)
-	extraScore := float64(reward+penalty)
+	extraScore := float64(reward + penalty)
 
 	costRating := 90
 	if m.CostPerToken > 0 {
@@ -541,24 +541,24 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 func (d *Dispatcher) LogStreamCompletion(tokenID int64, tokenName string, channelName string, modelName string, statusCode int, latency int, tokenUsed int) {
 	if statusCode != 200 {
 		d.logRepo.Create(&model.CallLog{
-			TokenName:    tokenName,
-			ChannelName:  channelName,
-			ModelName:    modelName,
-			LatencyMs:    latency,
-			TokenUsed:    0,
-			Status:       statusCode,
-			Error:        "stream failed",
+			TokenName:   tokenName,
+			ChannelName: channelName,
+			ModelName:   modelName,
+			LatencyMs:   latency,
+			TokenUsed:   0,
+			Status:      statusCode,
+			Error:       "stream failed",
 		})
 		return
 	}
 
 	d.logRepo.Create(&model.CallLog{
-		TokenName:    tokenName,
-		ChannelName:  channelName,
-		ModelName:    modelName,
-		LatencyMs:    latency,
-		TokenUsed:    tokenUsed,
-		Status:       statusCode,
+		TokenName:   tokenName,
+		ChannelName: channelName,
+		ModelName:   modelName,
+		LatencyMs:   latency,
+		TokenUsed:   tokenUsed,
+		Status:      statusCode,
 	})
 
 	if tokenUsed > 0 {
@@ -787,5 +787,3 @@ func (d *Dispatcher) performAsyncUpdates(selectedChannel *model.Channel, modelIt
 		}
 	}()
 }
-
-

@@ -63,9 +63,9 @@ func (h *TokenHandler) List(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, model.APIResponse{
-		Code: 0,
+		Code:    0,
 		Message: "查询成功",
-		Data: model.PageResult{Total: total, Items: tokens},
+		Data:    model.PageResult{Total: total, Items: tokens},
 	})
 }
 

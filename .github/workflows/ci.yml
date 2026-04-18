@@ -32,6 +32,27 @@ jobs:
               - 'ai-gateway/go.sum'
               - '.github/workflows/ci.yml'
 
+  lint:
+    runs-on: ubuntu-latest
+    needs: changed
+    if: needs.changed.outputs.go_changed == 'true'
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+      - name: Check formatting
+        run: |
+          unformatted=$(gofmt -l ai-gateway/)
+          if [ -n "$unformatted" ]; then
+            echo "The following files are not formatted:"
+            echo "$unformatted"
+            exit 1
+          fi
+
   test:
     runs-on: ubuntu-latest
     needs: changed
@@ -79,7 +100,7 @@ jobs:
 
   build-docker:
     runs-on: ubuntu-latest
-    needs: [test, build]
+    needs: [lint, test, build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     timeout-minutes: 15
     steps:

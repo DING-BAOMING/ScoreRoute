@@ -8,13 +8,13 @@ import (
 
 type ExtractedSampleInfo struct {
 	Model        string   `json:"model"`
-	UserTask    string   `json:"user_task"`
-	SystemPrompt string  `json:"system_prompt,omitempty"`
+	UserTask     string   `json:"user_task"`
+	SystemPrompt string   `json:"system_prompt,omitempty"`
 	ToolCalls    []string `json:"tool_calls,omitempty"`
-	Completion  string   `json:"completion"`
-	HasError    bool     `json:"has_error"`
-	ErrorMsg    string   `json:"error_msg,omitempty"`
-	ResponseLen int      `json:"response_length"`
+	Completion   string   `json:"completion"`
+	HasError     bool     `json:"has_error"`
+	ErrorMsg     string   `json:"error_msg,omitempty"`
+	ResponseLen  int      `json:"response_length"`
 }
 
 type ExtractionStrategy int

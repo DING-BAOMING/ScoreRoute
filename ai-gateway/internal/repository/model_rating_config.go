@@ -13,19 +13,19 @@ func NewModelRatingConfigRepo() *ModelRatingConfigRepo {
 }
 
 type ModelRatingWeights struct {
-	SuccessWeight       float64 `json:"success_weight"`
+	SuccessWeight      float64 `json:"success_weight"`
 	LatencyWeight      float64 `json:"latency_weight"`
-	ReliabilityWeight   float64 `json:"reliability_weight"`
-	UserRatingWeight    float64 `json:"user_rating_weight"`
-	SampleRatingWeight  float64 `json:"sample_rating_weight"`
-	CostRatingWeight    float64 `json:"cost_rating_weight"`
-	TimeRatingWeight    float64 `json:"time_rating_weight"`
+	ReliabilityWeight  float64 `json:"reliability_weight"`
+	UserRatingWeight   float64 `json:"user_rating_weight"`
+	SampleRatingWeight float64 `json:"sample_rating_weight"`
+	CostRatingWeight   float64 `json:"cost_rating_weight"`
+	TimeRatingWeight   float64 `json:"time_rating_weight"`
 }
 
 func (r *ModelRatingConfigRepo) GetAll() (*ModelRatingWeights, error) {
 	weights := &ModelRatingWeights{
 		SuccessWeight:      0.28,
-		LatencyWeight:     0.21,
+		LatencyWeight:      0.21,
 		ReliabilityWeight:  0.21,
 		UserRatingWeight:   0.15,
 		SampleRatingWeight: 0.15,

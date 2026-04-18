@@ -31,6 +31,7 @@
 - 遵循 Go 官方代码规范
 - 使用 `gofmt` 格式化代码
 - 公共函数必须添加注释
+- **必须使用 Go 1.23**（CI 使用 Go 1.23，本地请保持一致）
 
 ### Vue 前端代码
 
@@ -65,12 +66,46 @@ Add a new page to display model rating details with:
 - User ratings overview
 ```
 
+## 开发环境要求
+
+- **Go 1.23+** - 必须安装此版本（项目根目录有 `.go-version` 文件）
+- Node.js 20+
+- Docker 和 Docker Compose
+
+### 安装 Go 1.23
+
+```bash
+# 使用 Homebrew (macOS/Linux)
+brew install go@1.23
+
+# 或从官网下载
+# https://go.dev/dl/go1.23.4.linux-arm64.tar.gz (Linux ARM64)
+# https://go.dev/dl/go1.23.4.darwin-arm64.tar.gz (macOS ARM64)
+```
+
+### 预提交检查
+
+项目包含 pre-commit hook，会在提交前自动检查代码格式：
+
+```bash
+# 如果 pre-commit hook 未自动生效，手动启用
+cd ai-gateway
+cp .git/hooks/pre-commit .git/hooks/pre-commit.bak 2>/dev/null || true
+# hook 已在 .git/hooks/pre-commit
+
+# 手动格式化代码（如果 githook 失败）
+gofmt -w .
+```
+
 ## 开发环境
 
 ```bash
 # 克隆仓库
 git clone https://github.com/DING-BAOMING/ScoreRoute.git
-cd ScoreRoute
+cd ScoreRoute/ai-gateway
+
+# 确认 Go 版本
+go version  # 应该显示 go1.23
 
 # 复制环境配置
 cp .env.example .env

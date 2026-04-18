@@ -46,19 +46,12 @@ jobs:
           cache: true
       - name: Check formatting
         run: |
-          echo "=== Debug info ==="
-          echo "Current directory: $(pwd)"
-          echo "gofmt version: $(gofmt --version)"
-          echo "gofmt -l ai-gateway/ output:"
           unformatted=$(gofmt -l ai-gateway/)
-          echo "[$unformatted]"
-          echo "=== End debug ==="
           if [ -n "$unformatted" ]; then
             echo "The following files are not formatted:"
             echo "$unformatted"
             exit 1
           fi
-          echo "All files are properly formatted."
 
   test:
     runs-on: ubuntu-latest

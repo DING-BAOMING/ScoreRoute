@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Get tag version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Build backend
+        run: |
+          CGO_ENABLED=0 go build \
+            -ldflags="-s -w" \
+            -o scoreroute-${{ steps.get_version.outputs.VERSION }}-linux-amd64 \
+            ./cmd/server
+
+      - name: Build frontend
+        run: |
+          npm ci
+          npm run build
+        working-directory: web
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          cp scoreroute-${{ steps.get_version.outputs.VERSION }}-linux-amd64 release/scoreroute
+          cp -r web/dist release/
+          cp docker-compose.yml release/
+          cp .env.example release/
+          cp -r docs release/ 2>/dev/null || true
+
+      - name: Create SHA256 checksums
+        run: |
+          cd release
+          sha256sum scoreroute > scoreroute_SHA256.txt
+          for f in *; do
+            if [ "$f" != "scoreroute_SHA256.txt" ]; then
+              sha256sum "$f" >> scoreroute_SHA256.txt
+            fi
+          done
+
+      - name: Create Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: |
+            scoreroute:${{ steps.get_version.outputs.VERSION }}
+            scoreroute:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Save Docker image
+        run: |
+          docker save scoreroute:${{ steps.get_version.outputs.VERSION }} -o release/scoreroute.tar
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref }}
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            release/*
+          body: |
+            ## ScoreRoute v${{ steps.get_version.outputs.VERSION }}
+
+            AI Gateway and intelligent routing system based on multi-dimensional model scoring.
+
+            ### Downloads
+            - scoreroute (Linux AMD64 binary)
+            - scoreroute.tar (Docker image)
+            - SHA256 checksums
+
+            ### Installation
+            See [DEPLOY.md](https://github.com/DING-BAOMING/ScoreRoute/blob/main/DEPLOY.md)
+
+            ### What's Changed
+            See [CHANGELOG](https://github.com/DING-BAOMING/ScoreRoute/blob/main/CHANGELOG.md)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

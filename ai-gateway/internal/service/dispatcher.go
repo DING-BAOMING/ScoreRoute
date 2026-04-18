@@ -290,6 +290,7 @@ func (d *Dispatcher) calculateCompositeScore(m *model.Model, weights *modelRatin
 // 参数:
 //   - token: 请求token
 //   - req: 解析后的请求体
+//
 // 返回: modelItem, selectedChannel, error
 func (d *Dispatcher) selectModelAndChannel(token *model.Token, req map[string]interface{}) (*model.Model, *model.Channel, error) {
 	var modelItem *model.Model

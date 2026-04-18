@@ -34,7 +34,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: ai-gateway/web/package-lock.json
 
       - name: Get tag version
         id: get_version
@@ -46,21 +46,22 @@ jobs:
             -ldflags="-s -w" \
             -o scoreroute-${{ steps.get_version.outputs.VERSION }}-linux-amd64 \
             ./cmd/server
+        working-directory: ai-gateway
 
       - name: Build frontend
         run: |
           npm ci
           npm run build
-        working-directory: web
+        working-directory: ai-gateway/web
 
       - name: Prepare release files
         run: |
           mkdir -p release
           cp scoreroute-${{ steps.get_version.outputs.VERSION }}-linux-amd64 release/scoreroute
-          cp -r web/dist release/
-          cp docker-compose.yml release/
-          cp .env.example release/
-          cp -r docs release/ 2>/dev/null || true
+          cp -r ai-gateway/web/dist release/
+          cp ai-gateway/docker-compose.yml release/
+          cp ai-gateway/.env.example release/
+          cp -r ai-gateway/docs release/ 2>/dev/null || true
 
       - name: Create SHA256 checksums
         run: |
@@ -75,7 +76,7 @@ jobs:
       - name: Create Docker image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./ai-gateway
           push: false
           tags: |
             scoreroute:${{ steps.get_version.outputs.VERSION }}
@@ -108,9 +109,9 @@ jobs:
             - SHA256 checksums
 
             ### Installation
-            See [DEPLOY.md](https://github.com/DING-BAOMING/ScoreRoute/blob/main/DEPLOY.md)
+            See [DEPLOY.md](https://github.com/DING-BAOMING/ScoreRoute/blob/main/ai-gateway/DEPLOY.md)
 
             ### What's Changed
-            See [CHANGELOG](https://github.com/DING-BAOMING/ScoreRoute/blob/main/CHANGELOG.md)
+            See [CHANGELOG](https://github.com/DING-BAOMING/ScoreRoute/blob/main/ai-gateway/CHANGELOG.md)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

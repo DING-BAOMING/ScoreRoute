@@ -3,24 +3,24 @@ package model
 import "time"
 
 type Channel struct {
-	ID              int64      `json:"id"`
-	Name            string     `json:"name"`
-	Format          string     `json:"format"`
-	BaseURL         string     `json:"base_url"`
-	APIKey          string     `json:"-"`       // Never expose in JSON
-	MaskedAPIKey    string     `json:"api_key"` // Masked version for display
-	Enabled         int        `json:"enabled"`
-	CallCount       int        `json:"call_count"`
-	RateLimits      string     `json:"rate_limits"`       // JSON array of rate limit rules
-	TotalTokenLimit int64      `json:"total_token_limit"` // 0 = unlimited
-	ExpiresAt       *time.Time `json:"expires_at"`        // nil = never expires
-	TotalCalls      int64      `json:"total_calls"`       // total accumulated calls
-	TotalTokens     int64      `json:"total_tokens"`      // total accumulated tokens
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
-	AutoDisabled       int        `json:"auto_disabled"`
-	AutoDisabledAt     *time.Time `json:"auto_disabled_at"`
-	AutoDisableReason  string     `json:"auto_disable_reason"`
+	ID                int64      `json:"id"`
+	Name              string     `json:"name"`
+	Format            string     `json:"format"`
+	BaseURL           string     `json:"base_url"`
+	APIKey            string     `json:"-"`       // Never expose in JSON
+	MaskedAPIKey      string     `json:"api_key"` // Masked version for display
+	Enabled           int        `json:"enabled"`
+	CallCount         int        `json:"call_count"`
+	RateLimits        string     `json:"rate_limits"`       // JSON array of rate limit rules
+	TotalTokenLimit   int64      `json:"total_token_limit"` // 0 = unlimited
+	ExpiresAt         *time.Time `json:"expires_at"`        // nil = never expires
+	TotalCalls        int64      `json:"total_calls"`       // total accumulated calls
+	TotalTokens       int64      `json:"total_tokens"`      // total accumulated tokens
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	AutoDisabled      int        `json:"auto_disabled"`
+	AutoDisabledAt    *time.Time `json:"auto_disabled_at"`
+	AutoDisableReason string     `json:"auto_disable_reason"`
 }
 
 type RateLimitRule struct {
@@ -61,28 +61,28 @@ type Model struct {
 	ChannelName       string     `json:"channel_name,omitempty"`
 	Format            string     `json:"format,omitempty"`
 	ChannelRateLimits string     `json:"channel_rate_limits,omitempty"` // channel's rate limits for billing detection
-	AutoDisabled       int        `json:"auto_disabled"`
-	AutoDisabledAt     *time.Time `json:"auto_disabled_at"`
-	AutoDisableReason  string     `json:"auto_disable_reason"`
+	AutoDisabled      int        `json:"auto_disabled"`
+	AutoDisabledAt    *time.Time `json:"auto_disabled_at"`
+	AutoDisableReason string     `json:"auto_disable_reason"`
 }
 
 type Token struct {
-	ID                 int64      `json:"id"`
-	Key                string     `json:"key"`
-	Name               string     `json:"name"`
-	Format             string     `json:"format"`
-	Type               string     `json:"type"`
-	ModelName          string     `json:"model_name"`
-	Enabled            int        `json:"enabled"`
-	RateLimits         string     `json:"rate_limits"`
-	TotalTokenLimit    int64      `json:"total_token_limit"`
-	ExpiresAt          *time.Time `json:"expires_at"`
-	TotalCalls         int64      `json:"total_calls"`
-	TotalTokens        int64      `json:"total_tokens"`
-	CreatedAt          time.Time  `json:"created_at"`
-	AutoDisabled       int        `json:"auto_disabled"`
-	AutoDisabledAt     *time.Time `json:"auto_disabled_at"`
-	AutoDisableReason  string     `json:"auto_disable_reason"`
+	ID                int64      `json:"id"`
+	Key               string     `json:"key"`
+	Name              string     `json:"name"`
+	Format            string     `json:"format"`
+	Type              string     `json:"type"`
+	ModelName         string     `json:"model_name"`
+	Enabled           int        `json:"enabled"`
+	RateLimits        string     `json:"rate_limits"`
+	TotalTokenLimit   int64      `json:"total_token_limit"`
+	ExpiresAt         *time.Time `json:"expires_at"`
+	TotalCalls        int64      `json:"total_calls"`
+	TotalTokens       int64      `json:"total_tokens"`
+	CreatedAt         time.Time  `json:"created_at"`
+	AutoDisabled      int        `json:"auto_disabled"`
+	AutoDisabledAt    *time.Time `json:"auto_disabled_at"`
+	AutoDisableReason string     `json:"auto_disable_reason"`
 }
 
 type SystemConfig struct {

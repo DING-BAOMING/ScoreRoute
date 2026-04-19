@@ -1,54 +1,65 @@
 <template>
-  <div class="docs-page">
+  <div class="docs-container">
     <div class="docs-sidebar">
       <div class="sidebar-header">
-        <span>文档中心</span>
-        <el-button size="small" @click="showSearch = !showSearch">
-          <el-icon><Search /></el-icon>
-        </el-button>
+        <span>📚 文档中心</span>
       </div>
       
-      <el-input
-        v-if="showSearch"
-        v-model="searchQuery"
-        placeholder="搜索文档..."
-        clearable
-        @input="filterDocs"
-      />
+      <div class="search-box">
+        <el-input
+          v-model="searchQuery"
+          placeholder="搜索文档..."
+          clearable
+          size="small"
+        >
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+      </div>
 
-      <el-collapse v-model="activeSection" @change="handleSectionChange">
-        <el-collapse-item title="用户文档" name="user">
-          <div 
-            v-for="doc in filteredUserDocs" 
-            :key="doc.path"
-            class="doc-item"
-            :class="{ active: currentDoc === doc.path }"
-            @click="loadDoc(doc.path)"
-          >
-            {{ doc.name }}
-          </div>
-        </el-collapse-item>
-        
-        <el-collapse-item title="开发者文档" name="dev">
-          <div 
-            v-for="doc in filteredDevDocs" 
-            :key="doc.path"
-            class="doc-item"
-            :class="{ active: currentDoc === doc.path }"
-            @click="loadDoc(doc.path)"
-          >
-            {{ doc.name }}
-          </div>
-        </el-collapse-item>
-      </el-collapse>
+      <div class="doc-section">
+        <div class="section-title">用户文档</div>
+        <div
+          v-for="doc in filteredUserDocs"
+          :key="doc.path"
+          class="doc-item"
+          :class="{ active: currentDoc === doc.path }"
+          @click="loadDoc(doc.path)"
+        >
+          {{ doc.name }}
+        </div>
+      </div>
+
+      <div class="doc-section">
+        <div class="section-title">开发者文档</div>
+        <div
+          v-for="doc in filteredDevDocs"
+          :key="doc.path"
+          class="doc-item"
+          :class="{ active: currentDoc === doc.path }"
+          @click="loadDoc(doc.path)"
+        >
+          {{ doc.name }}
+        </div>
+      </div>
     </div>
 
-    <div class="docs-content" v-loading="loading">
-      <div v-if="!currentDoc" class="welcome">
+    <div class="docs-main">
+      <div v-if="loading" class="loading">
+        <el-icon class="is-loading"><Loading /></el-icon>
+        <span>加载中...</span>
+      </div>
+      
+      <div v-else-if="error" class="error">
+        <p>加载文档失败: {{ error }}</p>
+        <el-button @click="loadDoc('/docs/README.md')">返回首页</el-button>
+      </div>
+      
+      <div v-else-if="renderedContent" class="markdown-content" v-html="renderedContent"></div>
+      
+      <div v-else class="welcome">
         <h1>ScoreRoute 文档中心</h1>
         <p>选择一个文档开始阅读</p>
       </div>
-      <div v-else class="markdown-body" v-html="renderedContent"></div>
     </div>
   </div>
 </template>
@@ -56,7 +67,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { marked } from 'marked'
-import { Search } from '@element-plus/icons-vue'
+import { Search, Loading } from '@element-plus/icons-vue'
 
 const userDocs = [
   { name: '快速开始', path: '/docs/getting-started.md' },
@@ -74,39 +85,43 @@ const devDocs = [
 
 const allDocs = [...userDocs, ...devDocs]
 
-const activeSection = ref(['user', 'dev'])
 const currentDoc = ref('')
 const renderedContent = ref('')
 const loading = ref(false)
-const showSearch = ref(false)
+const error = ref('')
 const searchQuery = ref('')
 
 const filteredUserDocs = computed(() => {
   if (!searchQuery.value) return userDocs
-  return userDocs.filter(d => d.name.includes(searchQuery.value))
+  const q = searchQuery.value.toLowerCase()
+  return userDocs.filter(d => d.name.toLowerCase().includes(q))
 })
 
 const filteredDevDocs = computed(() => {
   if (!searchQuery.value) return devDocs
-  return devDocs.filter(d => d.name.includes(searchQuery.value))
+  const q = searchQuery.value.toLowerCase()
+  return devDocs.filter(d => d.name.toLowerCase().includes(q))
 })
-
-const filterDocs = () => {}
 
 const loadDoc = async (path) => {
   loading.value = true
+  error.value = ''
   currentDoc.value = path
+  
   try {
     const response = await fetch(path)
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
     const text = await response.text()
     renderedContent.value = marked(text)
-  } catch (error) {
-    renderedContent.value = '<p>加载文档失败</p>'
+  } catch (e) {
+    error.value = e.message
+    renderedContent.value = ''
   }
+  
   loading.value = false
 }
-
-const handleSectionChange = () => {}
 
 onMounted(() => {
   loadDoc('/docs/README.md')
@@ -114,144 +129,185 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.docs-page {
+.docs-container {
   display: flex;
   height: calc(100vh - 60px);
   background: #f5f7fa;
 }
 
 .docs-sidebar {
-  width: 280px;
-  background: white;
+  width: 260px;
+  min-width: 260px;
+  background: #fff;
   border-right: 1px solid #e4e7ed;
-  overflow-y: auto;
-  padding-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .sidebar-header {
-  padding: 15px;
+  padding: 16px;
   border-bottom: 1px solid #e4e7ed;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   font-weight: bold;
+  font-size: 16px;
+  color: #303133;
+}
+
+.search-box {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.doc-section {
+  padding: 12px 0;
+}
+
+.section-title {
+  padding: 8px 16px;
+  font-size: 12px;
+  color: #909399;
+  text-transform: uppercase;
 }
 
 .doc-item {
-  padding: 10px 20px;
+  padding: 10px 16px 10px 24px;
   cursor: pointer;
   color: #606266;
   font-size: 14px;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
 .doc-item:hover {
-  background: #f5f7fa;
+  background: #ecf5ff;
   color: #409eff;
 }
 
 .doc-item.active {
-  background: #ecf5ff;
-  color: #409eff;
-  border-right: 3px solid #409eff;
+  background: #409eff;
+  color: #fff;
 }
 
-.docs-content {
+.docs-main {
   flex: 1;
   overflow-y: auto;
+  background: #fff;
+}
+
+.loading, .error, .welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #606266;
+}
+
+.loading .el-icon {
+  font-size: 32px;
+  margin-bottom: 10px;
+}
+
+.error {
+  color: #f56c6c;
+}
+
+.markdown-content {
   padding: 30px 50px;
-  background: white;
-}
-
-.welcome {
-  text-align: center;
-  margin-top: 100px;
-  color: #909399;
-}
-
-.markdown-body {
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
   line-height: 1.8;
 }
 
-.markdown-body :deep(h1) {
-  border-bottom: 2px solid #409eff;
-  padding-bottom: 10px;
-  margin-bottom: 20px;
+.markdown-content :deep(h1) {
+  font-size: 28px;
   color: #303133;
+  border-bottom: 2px solid #409eff;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
 }
 
-.markdown-body :deep(h2) {
+.markdown-content :deep(h2) {
+  font-size: 22px;
+  color: #303133;
   margin-top: 30px;
   margin-bottom: 15px;
-  color: #303133;
   border-left: 4px solid #409eff;
-  padding-left: 10px;
+  padding-left: 12px;
 }
 
-.markdown-body :deep(h3) {
+.markdown-content :deep(h3) {
+  font-size: 18px;
+  color: #606266;
   margin-top: 20px;
   margin-bottom: 10px;
+}
+
+.markdown-content :deep(p) {
+  margin: 12px 0;
   color: #606266;
 }
 
-.markdown-body :deep(code) {
+.markdown-content :deep(code) {
   background: #f5f7fa;
   padding: 2px 6px;
   border-radius: 4px;
   font-family: Monaco, Consolas, monospace;
+  font-size: 14px;
+  color: #e6a23c;
 }
 
-.markdown-body :deep(pre) {
+.markdown-content :deep(pre) {
   background: #f5f7fa;
-  padding: 15px;
+  padding: 16px;
   border-radius: 8px;
   overflow-x: auto;
+  margin: 15px 0;
 }
 
-.markdown-body :deep(pre code) {
+.markdown-content :deep(pre code) {
   background: none;
   padding: 0;
+  color: #303133;
 }
 
-.markdown-body :deep(table) {
+.markdown-content :deep(ul),
+.markdown-content :deep(ol) {
+  padding-left: 24px;
+  margin: 10px 0;
+}
+
+.markdown-content :deep(li) {
+  margin: 6px 0;
+}
+
+.markdown-content :deep(table) {
   width: 100%;
   border-collapse: collapse;
   margin: 15px 0;
 }
 
-.markdown-body :deep(th),
-.markdown-body :deep(td) {
+.markdown-content :deep(th),
+.markdown-content :deep(td) {
   border: 1px solid #e4e7ed;
-  padding: 10px;
+  padding: 10px 12px;
   text-align: left;
 }
 
-.markdown-body :deep(th) {
+.markdown-content :deep(th) {
   background: #f5f7fa;
   font-weight: bold;
 }
 
-.markdown-body :deep(ul),
-.markdown-body :deep(ol) {
-  padding-left: 25px;
-}
-
-.markdown-body :deep(li) {
-  margin: 5px 0;
-}
-
-.markdown-body :deep(a) {
+.markdown-content :deep(a) {
   color: #409eff;
   text-decoration: none;
 }
 
-.markdown-body :deep(a:hover) {
+.markdown-content :deep(a:hover) {
   text-decoration: underline;
 }
 
-.markdown-body :deep(blockquote) {
+.markdown-content :deep(blockquote) {
   border-left: 4px solid #67c23a;
   padding: 10px 15px;
   margin: 15px 0;
@@ -259,7 +315,13 @@ onMounted(() => {
   color: #606266;
 }
 
-.markdown-body :deep(strong) {
+.markdown-content :deep(strong) {
   color: #303133;
+}
+
+.markdown-content :deep(hr) {
+  border: none;
+  border-top: 1px solid #e4e7ed;
+  margin: 20px 0;
 }
 </style>

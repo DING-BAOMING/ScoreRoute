@@ -147,15 +147,35 @@ func (h *ChannelHandler) FetchModels(c *gin.Context) {
 
 func (h *ChannelHandler) TestCredentials(c *gin.Context) {
 	var req struct {
-		BaseURL string `json:"base_url" binding:"required"`
-		APIKey  string `json:"api_key" binding:"required"`
+		ChannelID int64  `json:"channel_id"`
+		BaseURL  string `json:"base_url"`
+		APIKey   string `json:"api_key"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})
 		return
 	}
 
-	success, err := h.service.TestCredentials(req.BaseURL, req.APIKey)
+	var baseURL, apiKey string
+	if req.ChannelID > 0 {
+		channel, err := h.service.GetByID(req.ChannelID)
+		if err != nil || channel == nil {
+			c.JSON(http.StatusNotFound, model.APIResponse{Code: 404, Message: "渠道不存在"})
+			return
+		}
+		baseURL = channel.BaseURL
+		apiKey = channel.APIKey
+	} else {
+		baseURL = req.BaseURL
+		apiKey = req.APIKey
+	}
+
+	if baseURL == "" || apiKey == "" {
+		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "缺少必要参数"})
+		return
+	}
+
+	success, err := h.service.TestCredentials(baseURL, apiKey)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
 		return

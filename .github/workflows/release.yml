@@ -57,36 +57,13 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p release
-          cp ai-gateway/scoreroute-${{ steps.get_version.outputs.VERSION }}-linux-amd64 release/scoreroute
+          ls -la ai-gateway/
+          cp ai-gateway/scoreroute-${{ steps.get_version.outputs.VERSION }}-linux-amd64 release/
           cp -r ai-gateway/web/dist release/
           cp ai-gateway/docker-compose.yml release/
           cp ai-gateway/.env.example release/
           cp -r ai-gateway/docs release/ 2>/dev/null || true
-
-      - name: Create SHA256 checksums
-        run: |
-          cd release
-          sha256sum scoreroute > scoreroute_SHA256.txt
-          for f in *; do
-            if [ "$f" != "scoreroute_SHA256.txt" ]; then
-              sha256sum "$f" >> scoreroute_SHA256.txt
-            fi
-          done
-
-      - name: Create Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./ai-gateway
-          push: false
-          tags: |
-            scoreroute:${{ steps.get_version.outputs.VERSION }}
-            scoreroute:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Save Docker image
-        run: |
-          docker save scoreroute:${{ steps.get_version.outputs.VERSION }} -o release/scoreroute.tar
+          ls -la release/
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -97,21 +74,10 @@ jobs:
           prerelease: false
           generate_release_notes: true
           files: |
-            release/*
+            release/**
           body: |
             ## ScoreRoute v${{ steps.get_version.outputs.VERSION }}
 
             AI Gateway and intelligent routing system based on multi-dimensional model scoring.
-
-            ### Downloads
-            - scoreroute (Linux AMD64 binary)
-            - scoreroute.tar (Docker image)
-            - SHA256 checksums
-
-            ### Installation
-            See [DEPLOY.md](https://github.com/DING-BAOMING/ScoreRoute/blob/main/ai-gateway/DEPLOY.md)
-
-            ### What's Changed
-            See [CHANGELOG](https://github.com/DING-BAOMING/ScoreRoute/blob/main/ai-gateway/CHANGELOG.md)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

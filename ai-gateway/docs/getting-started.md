@@ -9,7 +9,7 @@
 ### 2. 调用API
 
 ```bash
-curl -X POST "https://api.029101.xyz/v1/chat/completions" \
+curl -X POST "https://api.scoreroute.com/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -d '{
@@ -31,5 +31,5 @@ curl -X POST "https://api.029101.xyz/v1/chat/completions" \
 
 ## 下一步
 
-- 查看[用户指南](guide.md)了解更多功能
-- 查看[API文档](api.md)了解接口详情
+- 查看[用户指南](guide)了解更多功能
+- 查看[API文档](api)了解接口详情

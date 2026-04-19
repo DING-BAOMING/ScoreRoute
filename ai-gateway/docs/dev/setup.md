@@ -5,6 +5,7 @@
 - Go 1.21+
 - Node.js 18+
 - SQLite
+- Git
 
 ## 本地开发
 
@@ -20,7 +21,7 @@ cp .env.example .env
 # 编辑.env设置密码和密钥
 ```
 
-### 3. 启动服务
+### 3. 启动后端
 ```bash
 go run ./cmd/server
 ```
@@ -36,3 +37,18 @@ npm run dev
 ```bash
 docker-compose up -d
 ```
+
+## 生产环境变量
+
+| 变量 | 说明 | 示例 |
+|------|------|------|
+| JWT_SECRET | JWT签名密钥 | 随机字符串 |
+| ADMIN_PASSWORD | 管理员密码 | 强密码 |
+| PORT | 监听端口 | 3000 |
+| DATABASE_PATH | 数据库路径 | /app/data/gateway.db |
+
+## 相关链接
+
+- 官网: https://www.scoreroute.com
+- 演示: https://demo.scoreroute.com
+- API: https://api.scoreroute.com

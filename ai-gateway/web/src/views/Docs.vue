@@ -78,6 +78,7 @@ const userDocs = [
 ]
 
 const devDocs = [
+  { name: '工作流程', path: '/docs/dev/workflow.md' },
   { name: '开发环境搭建', path: '/docs/dev/setup.md' },
   { name: '系统架构', path: '/docs/dev/architecture.md' },
   { name: '完整开发日志', path: '/docs/dev/plan_full.md' }

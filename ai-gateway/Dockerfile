@@ -5,8 +5,8 @@ RUN apk add --no-cache go git musl-dev gcc
 WORKDIR /app
 
 COPY go.mod go.sum ./
-
 COPY . ./
+
 RUN rm -rf .git
 
 RUN GOTOOLCHAIN=auto go get modernc.org/sqlite@v1.28.0 && \
@@ -19,9 +19,6 @@ RUN GOTOOLCHAIN=auto go get modernc.org/sqlite@v1.28.0 && \
 RUN GOTOOLCHAIN=auto go mod download
 
 RUN CGO_ENABLED=1 GOOS=linux GOTOOLCHAIN=auto go build -ldflags "-s -w" -o server ./cmd/server
-
-RUN mkdir -p web/dist && \
-    cp -r /app/web/dist ./web/ || true
 
 RUN mkdir -p /app/logs /app/data /app/cache
 

@@ -123,7 +123,7 @@ onMounted(() => {
 <style scoped>
 .docs-page {
   display: flex;
-  height: calc(100vh - 60px);
+  min-height: calc(100vh - 60px);
   background: #ffffff;
 }
 

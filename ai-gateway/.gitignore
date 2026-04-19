@@ -40,3 +40,4 @@ server
 *.out
 AGENT_LOG.md
 .agent/
+.session_state.md

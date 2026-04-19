@@ -1,5 +1,5 @@
 <template>
-  <div class="docs-container">
+  <div class="docs-page">
     <div class="docs-sidebar">
       <div class="sidebar-header">
         <span>📚 文档中心</span>
@@ -43,7 +43,7 @@
       </div>
     </div>
 
-    <div class="docs-main">
+    <div class="docs-main" :class="{ 'has-content': renderedContent }">
       <div v-if="loading" class="loading">
         <el-icon class="is-loading"><Loading /></el-icon>
         <span>加载中...</span>
@@ -54,7 +54,7 @@
         <el-button @click="loadDoc('/docs/README.md')">返回首页</el-button>
       </div>
       
-      <div v-else-if="renderedContent" class="markdown-content" v-html="renderedContent"></div>
+      <div v-else-if="renderedContent" class="markdown-body" v-html="renderedContent"></div>
       
       <div v-else class="welcome">
         <h1>ScoreRoute 文档中心</h1>
@@ -83,8 +83,6 @@ const devDocs = [
   { name: '完整开发日志', path: '/docs/dev/plan_full.md' }
 ]
 
-const allDocs = [...userDocs, ...devDocs]
-
 const currentDoc = ref('')
 const renderedContent = ref('')
 const loading = ref(false)
@@ -93,33 +91,27 @@ const searchQuery = ref('')
 
 const filteredUserDocs = computed(() => {
   if (!searchQuery.value) return userDocs
-  const q = searchQuery.value.toLowerCase()
-  return userDocs.filter(d => d.name.toLowerCase().includes(q))
+  return userDocs.filter(d => d.name.includes(searchQuery.value))
 })
 
 const filteredDevDocs = computed(() => {
   if (!searchQuery.value) return devDocs
-  const q = searchQuery.value.toLowerCase()
-  return devDocs.filter(d => d.name.toLowerCase().includes(q))
+  return devDocs.filter(d => d.name.includes(searchQuery.value))
 })
 
 const loadDoc = async (path) => {
   loading.value = true
   error.value = ''
   currentDoc.value = path
-  
   try {
     const response = await fetch(path)
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
-    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const text = await response.text()
     renderedContent.value = marked(text)
   } catch (e) {
     error.value = e.message
     renderedContent.value = ''
   }
-  
   loading.value = false
 }
 
@@ -129,20 +121,20 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.docs-container {
+.docs-page {
   display: flex;
   height: calc(100vh - 60px);
-  background: #f5f7fa;
+  background: #ffffff;
 }
 
 .docs-sidebar {
   width: 260px;
   min-width: 260px;
-  background: #fff;
+  background: #ffffff;
   border-right: 1px solid #e4e7ed;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .sidebar-header {
@@ -151,15 +143,18 @@ onMounted(() => {
   font-weight: bold;
   font-size: 16px;
   color: #303133;
+  background: #ffffff;
 }
 
 .search-box {
   padding: 12px 16px;
   border-bottom: 1px solid #e4e7ed;
+  background: #ffffff;
 }
 
 .doc-section {
   padding: 12px 0;
+  background: #ffffff;
 }
 
 .section-title {
@@ -175,6 +170,7 @@ onMounted(() => {
   color: #606266;
   font-size: 14px;
   transition: all 0.2s;
+  background: #ffffff;
 }
 
 .doc-item:hover {
@@ -184,13 +180,18 @@ onMounted(() => {
 
 .doc-item.active {
   background: #409eff;
-  color: #fff;
+  color: #ffffff;
 }
 
 .docs-main {
   flex: 1;
   overflow-y: auto;
-  background: #fff;
+  background: #ffffff;
+  padding: 30px 50px;
+}
+
+.docs-main.has-content {
+  background: #ffffff;
 }
 
 .loading, .error, .welcome {
@@ -200,6 +201,7 @@ onMounted(() => {
   justify-content: center;
   height: 100%;
   color: #606266;
+  background: #ffffff;
 }
 
 .loading .el-icon {
@@ -209,45 +211,51 @@ onMounted(() => {
 
 .error {
   color: #f56c6c;
+  background: #ffffff;
 }
 
-.markdown-content {
-  padding: 30px 50px;
-  max-width: 1000px;
+.markdown-body {
+  max-width: 900px;
   margin: 0 auto;
   line-height: 1.8;
+  color: #303133;
+  background: #ffffff;
 }
 
-.markdown-content :deep(h1) {
+.markdown-body :deep(h1) {
   font-size: 28px;
   color: #303133;
   border-bottom: 2px solid #409eff;
   padding-bottom: 12px;
   margin-bottom: 20px;
+  background: #ffffff;
 }
 
-.markdown-content :deep(h2) {
+.markdown-body :deep(h2) {
   font-size: 22px;
   color: #303133;
   margin-top: 30px;
   margin-bottom: 15px;
   border-left: 4px solid #409eff;
   padding-left: 12px;
+  background: #ffffff;
 }
 
-.markdown-content :deep(h3) {
+.markdown-body :deep(h3) {
   font-size: 18px;
   color: #606266;
   margin-top: 20px;
   margin-bottom: 10px;
+  background: #ffffff;
 }
 
-.markdown-content :deep(p) {
+.markdown-body :deep(p) {
   margin: 12px 0;
   color: #606266;
+  background: #ffffff;
 }
 
-.markdown-content :deep(code) {
+.markdown-body :deep(code) {
   background: #f5f7fa;
   padding: 2px 6px;
   border-radius: 4px;
@@ -256,7 +264,7 @@ onMounted(() => {
   color: #e6a23c;
 }
 
-.markdown-content :deep(pre) {
+.markdown-body :deep(pre) {
   background: #f5f7fa;
   padding: 16px;
   border-radius: 8px;
@@ -264,50 +272,52 @@ onMounted(() => {
   margin: 15px 0;
 }
 
-.markdown-content :deep(pre code) {
+.markdown-body :deep(pre code) {
   background: none;
   padding: 0;
   color: #303133;
 }
 
-.markdown-content :deep(ul),
-.markdown-content :deep(ol) {
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
   padding-left: 24px;
   margin: 10px 0;
 }
 
-.markdown-content :deep(li) {
+.markdown-body :deep(li) {
   margin: 6px 0;
 }
 
-.markdown-content :deep(table) {
+.markdown-body :deep(table) {
   width: 100%;
   border-collapse: collapse;
   margin: 15px 0;
+  background: #ffffff;
 }
 
-.markdown-content :deep(th),
-.markdown-content :deep(td) {
+.markdown-body :deep(th),
+.markdown-body :deep(td) {
   border: 1px solid #e4e7ed;
   padding: 10px 12px;
   text-align: left;
+  background: #ffffff;
 }
 
-.markdown-content :deep(th) {
+.markdown-body :deep(th) {
   background: #f5f7fa;
   font-weight: bold;
 }
 
-.markdown-content :deep(a) {
+.markdown-body :deep(a) {
   color: #409eff;
   text-decoration: none;
 }
 
-.markdown-content :deep(a:hover) {
+.markdown-body :deep(a:hover) {
   text-decoration: underline;
 }
 
-.markdown-content :deep(blockquote) {
+.markdown-body :deep(blockquote) {
   border-left: 4px solid #67c23a;
   padding: 10px 15px;
   margin: 15px 0;
@@ -315,13 +325,24 @@ onMounted(() => {
   color: #606266;
 }
 
-.markdown-content :deep(strong) {
+.markdown-body :deep(strong) {
   color: #303133;
 }
 
-.markdown-content :deep(hr) {
+.markdown-body :deep(hr) {
   border: none;
   border-top: 1px solid #e4e7ed;
   margin: 20px 0;
+}
+
+.markdown-body :deep(img) {
+  max-width: 100%;
+}
+
+.markdown-body :deep(input) {
+  background: #f5f7fa;
+  border: 1px solid #e4e7ed;
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 </style>

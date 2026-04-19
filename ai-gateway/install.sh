@@ -5,13 +5,11 @@
 
 set -e
 
-# 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-# 默认配置
 DEFAULT_PORT=3000
 PROJECT_NAME="ScoreRoute"
 REPO_URL="https://github.com/DING-BAOMING/ScoreRoute.git"
@@ -20,13 +18,12 @@ INSTALL_DIR="${HOME}/scoreroute"
 show_banner() {
     echo -e "${GREEN}"
     echo "╔════════════════════════════════════════════╗"
-    echo "║     ScoreRoute 一键安装脚本 v1.0.0           ║"
+    echo "║     ScoreRoute 一键安装脚本 v1.0.1           ║"
     echo "║     AI Gateway - 智能路由网关               ║"
     echo "╚════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
 
-# 检查端口是否可用
 check_port() {
     local port=$1
     echo -e "${YELLOW}[检查] 检测端口 ${port}...${NC}"
@@ -40,7 +37,6 @@ check_port() {
     return 0
 }
 
-# 检查Docker
 check_docker() {
     echo -e "${YELLOW}[1/7] 检查 Docker 环境...${NC}"
     
@@ -62,20 +58,17 @@ check_docker() {
     echo -e "${GREEN}✓ Docker 环境检查通过${NC}"
 }
 
-# 选择端口
 select_port() {
     echo -e "${YELLOW}[2/7] 选择端口...${NC}"
     
     read -p "请输入端口号 [${DEFAULT_PORT}]: " PORT
     PORT=${PORT:-$DEFAULT_PORT}
     
-    # 验证端口是否为数字
     if ! [[ "$PORT" =~ ^[0-9]+$ ]] || [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; then
         echo -e "${RED}✗ 无效端口号${NC}"
         exit 1
     fi
     
-    # 检查端口是否可用
     if ! check_port $PORT; then
         echo -e "${YELLOW}请选择其他端口或停止占用端口的服务${NC}"
         select_port
@@ -110,45 +103,39 @@ generate_config() {
     ADMIN_PASSWORD=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)
     JWT_SECRET=$(openssl rand -base64 32)
     
-    cat > .env << EOF
-# ScoreRoute Configuration
-# 由 install.sh 自动生成
-
+    cat > .env << ENVEOF
 PORT=${PORT}
 DATABASE_PATH=./data/gateway.db
 LOG_PATH=./logs
 
 ADMIN_PASSWORD=${ADMIN_PASSWORD}
 JWT_SECRET=${JWT_SECRET}
-EOF
+ENVEOF
     
     mkdir -p data logs cache
     echo -e "${GREEN}✓ 配置文件已生成${NC}"
     echo -e "${GREEN}✓ 目录已创建: data/, logs/, cache/${NC}"
 }
 
-# 修改docker-compose端口
 update_docker_compose() {
     echo -e "${YELLOW}[5/7] 配置 Docker 端口...${NC}"
     
-    # 修改docker-compose.yml中的端口
-    if [ "$PORT" != "$DEFAULT_PORT" ]; then
-        sed -i "s/\"${DEFAULT_PORT}:3000\"/\"${PORT}:3000\"/" docker-compose.yml
-        echo -e "${GREEN}✓ 端口已更新为 ${PORT}${NC}"
-    fi
+    sed -i "s/\${PORT:-3000}/${PORT}/" docker-compose.yml
+    sed -i 's/\${PORT:-3000}/3000/' docker-compose.yml
+    echo -e "${GREEN}✓ 端口已配置为 ${PORT}${NC}"
 }
 
 build_and_start() {
     echo -e "${YELLOW}[6/7] 构建并启动 Docker 容器...${NC}"
     
-    echo -e "${YELLOW}正在构建 Docker 镜像...${NC}"
+    echo -e "${YELLOW}正在构建 Docker 镜像 (这可能需要几分钟)...${NC}"
     if ! docker build -t scoreroute-app .; then
         echo -e "${RED}✗ Docker 镜像构建失败${NC}"
         exit 1
     fi
     echo -e "${GREEN}✓ Docker 镜像构建成功${NC}"
     
-    docker rm -f ai-gateway &> /dev/null || true
+    docker ps -a --format '{{.Names}}' | grep -E '^ai-gateway|scoreroute' | xargs -r docker rm -f &> /dev/null || true
     
     echo -e "${YELLOW}正在启动容器...${NC}"
     if ! docker compose up -d; then
@@ -174,8 +161,8 @@ show_complete() {
     echo ""
     echo -e "${YELLOW}常用命令:${NC}"
     echo "  查看状态: docker ps"
-    echo "  查看日志: docker logs -f ai-gateway"
-    echo "  重启服务: docker restart ai-gateway"
+    echo "  查看日志: docker logs -f scoreroute-app"
+    echo "  重启服务: docker restart scoreroute-app"
     echo "  停止服务: docker compose down"
     echo ""
     echo -e "${GREEN}安装目录:${NC} $INSTALL_DIR/ai-gateway"
@@ -184,9 +171,7 @@ show_complete() {
 
 uninstall() {
     echo -e "${YELLOW}正在卸载 ScoreRoute...${NC}"
-    cd "$INSTALL_DIR/ai-gateway" 2>/dev/null || true
-    docker compose down &> /dev/null || true
-    docker rm -f ai-gateway &> /dev/null || true
+    docker ps -a --format '{{.Names}}' | grep -E '^ai-gateway|scoreroute' | xargs -r docker rm -f &> /dev/null || true
     docker rmi scoreroute-app &> /dev/null || true
     rm -rf "$INSTALL_DIR"
     echo -e "${GREEN}✓ 卸载完成${NC}"

@@ -10,7 +10,8 @@ type ExtractedSampleInfo struct {
 	Model        string   `json:"model"`
 	UserTask     string   `json:"user_task"`
 	SystemPrompt string   `json:"system_prompt,omitempty"`
-	ToolCalls    []string `json:"tool_calls,omitempty"`
+	RequestTools      []string `json:"request_tools,omitempty"`
+	ResponseToolCalls []string `json:"response_tool_calls,omitempty"`
 	Completion   string   `json:"completion"`
 	HasError     bool     `json:"has_error"`
 	ErrorMsg     string   `json:"error_msg,omitempty"`
@@ -107,7 +108,7 @@ func extractSampleInfo(requestJSON, responseJSON string) *ExtractedSampleInfo {
 		for _, tc := range toolCalls {
 			if t, ok := tc.(map[string]interface{}); ok {
 				if name, ok := t["name"].(string); ok {
-					info.ToolCalls = append(info.ToolCalls, name)
+					info.RequestTools = append(info.RequestTools, name)
 				}
 			}
 		}
@@ -131,7 +132,7 @@ func extractSampleInfo(requestJSON, responseJSON string) *ExtractedSampleInfo {
 							if c, ok := call.(map[string]interface{}); ok {
 								if fn, ok := c["function"].(map[string]interface{}); ok {
 									if name, ok := fn["name"].(string); ok {
-										info.ToolCalls = append(info.ToolCalls, "response_tool:"+name)
+										info.ResponseToolCalls = append(info.ResponseToolCalls, name)
 									}
 								}
 							}

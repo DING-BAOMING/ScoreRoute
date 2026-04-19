@@ -1,7 +1,7 @@
 <template>
   <el-container class="layout-container">
     <el-aside width="200px" class="aside">
-      <div class="logo">ScoreRoute</div>
+      <div class="logo"><img src="/logo.png" alt="ScoreRoute" style="height: 40px; margin-top: 10px;"></div>
       <el-menu :default-active="activeMenu" router class="menu">
         <el-menu-item index="/">
           <el-icon><House /></el-icon>
@@ -57,6 +57,14 @@
       <el-header class="header">
         <div class="header-title">API网关管理系统</div>
         <div class="header-actions">
+          <el-button type="primary" link @click="openUrl('https://www.scoreroute.com/index.html')">
+            <el-icon><Link /></el-icon>
+            官网
+          </el-button>
+          <el-button type="primary" link @click="openUrl('https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b')">
+            <el-icon><ChatDotRound /></el-icon>
+            飞书群
+          </el-button>
           <el-button type="primary" link @click="handleLogout">
             <el-icon><SwitchButton /></el-icon>
             退出登录
@@ -82,6 +90,10 @@ const authStore = useAuthStore()
 
 const activeMenu = computed(() => route.path)
 
+function openUrl(url) {
+  window.open(url, "_blank")
+}
+
 function handleLogout() {
   ElMessageBox.confirm('确定要退出登录吗？', '提示', {
     confirmButtonText: '确定',
@@ -105,11 +117,9 @@ function handleLogout() {
 
 .logo {
   height: 60px;
-  line-height: 60px;
-  text-align: center;
-  color: #fff;
-  font-size: 18px;
-  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   background: #2b3a4a;
 }
 

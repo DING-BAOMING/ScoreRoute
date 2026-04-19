@@ -133,7 +133,7 @@ func (r *ChannelRepo) GetByFormatAndType(format, modelType string) ([]*model.Cha
 		`SELECT c.id, c.name, c.format, c.base_url, c.api_key, c.enabled, c.call_count, c.rate_limits, c.total_token_limit, c.expires_at, c.total_calls, c.total_tokens, c.created_at, c.updated_at 
 		 FROM channels c
 		 LEFT JOIN models m ON c.id = m.channel_id AND m.enabled = 1 AND m.type = ?
-		 WHERE c.format = ? AND c.enabled = 1 AND m.id IS NOT NULL
+		 WHERE c.format = ? AND c.enabled = 1 AND c.auto_disabled = 0 AND m.id IS NOT NULL
 		 GROUP BY c.id`,
 		modelType, format,
 	)
@@ -190,4 +190,97 @@ func (r *ChannelRepo) IncrementCallCount(id int64) error {
 		id,
 	)
 	return err
+}
+
+func (r *ChannelRepo) SetAutoDisabled(id int64, reason string) error {
+	_, err := DB.Exec(
+		`UPDATE channels SET auto_disabled=1, auto_disabled_at=?, auto_disable_reason=?, enabled=0, updated_at=? WHERE id=?`,
+		time.Now(), reason, time.Now(), id,
+	)
+	return err
+}
+
+func (r *ChannelRepo) ClearAutoDisabled(id int64) error {
+	_, err := DB.Exec(
+		`UPDATE channels SET auto_disabled=0, auto_disabled_at=NULL, auto_disable_reason=NULL, enabled=1, updated_at=? WHERE id=?`,
+		time.Now(), id,
+	)
+	return err
+}
+
+func (r *ChannelRepo) GetAutoDisabledChannels() ([]*model.Channel, error) {
+	rows, err := DB.Query(
+		`SELECT id, name, format, base_url, api_key, enabled, call_count, rate_limits, total_token_limit, expires_at, total_calls, total_tokens, created_at, updated_at, auto_disabled, auto_disabled_at, auto_disable_reason FROM channels WHERE auto_disabled=1`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var channels []*model.Channel
+	for rows.Next() {
+		ch := &model.Channel{}
+		var expiresAtStr, autoDisabledAtStr sql.NullString
+		var autoDisableReason sql.NullString
+		err := rows.Scan(&ch.ID, &ch.Name, &ch.Format, &ch.BaseURL, &ch.APIKey, &ch.Enabled, &ch.CallCount, &ch.RateLimits, &ch.TotalTokenLimit, &expiresAtStr, &ch.TotalCalls, &ch.TotalTokens, &ch.CreatedAt, &ch.UpdatedAt, &ch.AutoDisabled, &autoDisabledAtStr, &autoDisableReason)
+		if err != nil {
+			continue
+		}
+		if expiresAtStr.Valid {
+			if t, err := time.Parse("2006-01-02 15:04:05", expiresAtStr.String); err == nil {
+				ch.ExpiresAt = &t
+			}
+		}
+		if autoDisabledAtStr.Valid {
+			if t, err := time.Parse("2006-01-02 15:04:05", autoDisabledAtStr.String); err == nil {
+				ch.AutoDisabledAt = &t
+			}
+		}
+		channels = append(channels, ch)
+	}
+	return channels, nil
+}
+
+func (r *ChannelRepo) ListAll() ([]*model.Channel, error) {
+	rows, err := DB.Query(
+		`SELECT id, name, format, base_url, api_key, enabled, call_count, rate_limits, total_token_limit, expires_at, total_calls, total_tokens, created_at, updated_at, auto_disabled, auto_disabled_at, auto_disable_reason FROM channels ORDER BY id`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var channels []*model.Channel
+	for rows.Next() {
+		c := &model.Channel{}
+		var expiresAtStr, autoDisabledAtStr sql.NullString
+		var autoDisableReason sql.NullString
+		if err := rows.Scan(&c.ID, &c.Name, &c.Format, &c.BaseURL, &c.APIKey, &c.Enabled, &c.CallCount, &c.RateLimits, &c.TotalTokenLimit, &expiresAtStr, &c.TotalCalls, &c.TotalTokens, &c.CreatedAt, &c.UpdatedAt, &c.AutoDisabled, &autoDisabledAtStr, &autoDisableReason); err != nil {
+			continue
+		}
+		if expiresAtStr.Valid && expiresAtStr.String != "" {
+			t, err := time.Parse("2006-01-02 15:04:05", expiresAtStr.String)
+			if err != nil {
+				t, err = time.Parse("2006-01-02T15:04:05Z07:00", expiresAtStr.String)
+			}
+			if err != nil {
+				t, err = time.Parse("2006-01-02", expiresAtStr.String)
+			}
+			if err == nil {
+				c.ExpiresAt = &t
+			}
+		}
+		if autoDisabledAtStr.Valid && autoDisabledAtStr.String != "" {
+			t, err := time.Parse("2006-01-02 15:04:05", autoDisabledAtStr.String)
+			if err == nil {
+				c.AutoDisabledAt = &t
+			}
+		}
+		if autoDisableReason.Valid {
+			c.AutoDisableReason = autoDisableReason.String
+		}
+		channels = append(channels, c)
+	}
+
+	return channels, rows.Err()
 }

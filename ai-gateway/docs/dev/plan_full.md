@@ -7336,3 +7336,200 @@ POST /api/tokens
 4cd6b53 fix: token creation key generation and rate limit status codes
 59b8476 feat: add token rate limiting support
 ```
+
+## 2026-04-19 自动启用/禁用功能
+
+### 功能概述
+
+新增API和模型的自动启用/禁用功能，支持：
+- **Token速率限制**: 达到限制后自动禁用Token及其相关模型
+- **模型速率限制**: 达到限制后自动禁用该模型
+- **渠道速率限制**: 达到限制后自动禁用该渠道
+- **Token总Token限制**: 达到限制后永久禁用Token（不会自动重启用）
+- **自动重启用**: 速率限制窗口过期后自动重新启用
+- **永久禁用**: Token总Token限制触发的禁用需要用户手动启用
+
+### 自动禁用规则
+
+| 限制类型 | 禁用范围 | 自动重启用 |
+|---------|---------|----------|
+| Token速率限制 (calls/tokens) | 仅Token本身 | ✅ 窗口过期后 |
+| Token总Token限制 | 仅Token本身 | ❌ 需手动启用 |
+| 模型速率限制 | 仅该模型 | ✅ 窗口过期后 |
+| 渠道速率限制 | 仅该渠道 | ✅ 窗口过期后 |
+
+### 数据库变更
+
+**tokens表新增字段**:
+```sql
+ALTER TABLE tokens ADD COLUMN auto_disabled INTEGER DEFAULT 0;
+ALTER TABLE tokens ADD COLUMN auto_disabled_at DATETIME;
+ALTER TABLE tokens ADD COLUMN auto_disable_reason TEXT;
+```
+
+**models表新增字段**:
+```sql
+ALTER TABLE models ADD COLUMN auto_disabled INTEGER DEFAULT 0;
+ALTER TABLE models ADD COLUMN auto_disabled_at DATETIME;
+ALTER TABLE models ADD COLUMN auto_disable_reason TEXT;
+```
+
+**channels表新增字段**:
+```sql
+ALTER TABLE channels ADD COLUMN auto_disabled INTEGER DEFAULT 0;
+ALTER TABLE channels ADD COLUMN auto_disabled_at DATETIME;
+ALTER TABLE channels ADD COLUMN auto_disable_reason TEXT;
+```
+
+### 禁用原因常量
+
+```go
+const (
+    ReasonTokenRateLimit   = "token_rate_limit_exceeded"
+    ReasonModelRateLimit   = "model_rate_limit_exceeded"
+    ReasonTokenTotalLimit  = "token_total_token_limit_exceeded"
+    ReasonChannelRateLimit = "channel_rate_limit_exceeded"
+)
+```
+
+### 新增文件
+
+- `internal/service/dispatcher_autodisable.go`: 自动禁用逻辑
+- `internal/service/scheduler.go`: 自动重启用调度器
+
+### 修改文件
+
+- `internal/service/dispatcher.go`: 使用新的`checkAndDisable*`函数
+- `internal/service/channel.go`: 添加`ListAll()`方法
+- `internal/repository/channel.go`: 添加`ListAll()`，修复auto_disabled检查
+- `internal/repository/model_repo.go`: 所有模型查询添加`m.auto_disabled = 0`
+- `internal/repository/token.go`: 修复NULL处理
+- `internal/handler/proxy.go`: 添加`AutoDisabled`检查
+- `cmd/server/main.go`: 添加调度器启动
+
+### 工作流程
+
+1. **请求进入**: Proxy Handler验证Token
+2. **速率限制检查**: `checkAndDisableTokenRateLimit`检查Token速率限制
+3. **模型选择**: Dispatcher选择模型（自动跳过auto_disabled的模型）
+4. **模型速率限制检查**: `checkAndDisableModelRateLimit`检查模型速率限制
+5. **渠道速率限制检查**: `checkAndDisableChannelRateLimit`检查渠道速率限制
+6. **禁用触发**: 当限制超限时，调用相应的`SetAutoDisabled`方法
+7. **自动重启用**: 调度器每分钟运行，检查并重启用已过期的禁用项
+
+### API行为
+
+当Token被自动禁用时:
+- API返回: `{"error": {"message": "API key is auto-disabled: token_rate_limit_exceeded"}}`
+- HTTP状态码: `403 Forbidden`
+
+当Token被永久禁用时（总Token限制）:
+- API返回: `{"error": {"message": "token total token limit exceeded: 1000/100 - permanently disabled"}}`
+- HTTP状态码: `403 Forbidden`
+- 不会自动重启用，需要用户手动启用
+
+### 调度器
+
+- **启动时间**: 服务器启动时
+- **运行间隔**: 每1分钟
+- **处理内容**:
+  1. 检查所有自动禁用的Token，验证是否可重启用
+  2. 检查所有自动禁用的模型，验证是否可重启用
+  3. 检查所有自动禁用的渠道，验证是否可重启用
+
+### 重启用条件
+
+**Token**:
+- `auto_disabled = 1`
+- `auto_disable_reason != "token_total_token_limit_exceeded"`
+- 速率限制窗口已过期
+
+**模型**:
+- `auto_disabled = 1`
+- `auto_disable_reason != "model_total_token_limit_exceeded"`
+- 速率限制窗口已过期
+
+**渠道**:
+- `auto_disabled = 1`
+- 速率限制窗口已过期
+
+### 测试结果
+
+| 测试 | 结果 |
+|------|------|
+| Token速率限制 (3/分钟) | ✅ 第4个请求触发限制，Token被禁用 |
+| 自动禁用消息 | ✅ "token rate limit exceeded: 3/3 per minute - auto-disabled" |
+| 1分钟后自动重启用 | ✅ Token在窗口过期后被重新启用 |
+| Token总Token限制永久禁用 | ✅ 达到限制后Token永久禁用 |
+| 永久禁用不自动重启用 | ✅ `token_total_token_limit_exceeded`不触发重启用 |
+| API在重启用后正常工作 | ✅ 返回正常响应 |
+
+## 2024-04-19 更新日志
+
+### 本次修改
+1. **MiniMax API连通性测试**: Token Plan Key `sk-cp-b_AQ0cgiHiXPwqwCYW2E0MPyhdSqg7QL7PWS6hRegW0x0m-aVYmKz28kGUYCW5f2bSMtVw9mIaW7tp8AC0aDZRyrQf7B9BQybARhkBJq_WW04IKz4TRYhzI` 测试通过
+2. **自定义时间窗口支持**: `getWindowDuration` 函数支持自定义小时数（如 "5hour"）
+3. **提供商专用测试模型**: `TestCredentials` 根据 base_url 自动选择正确的测试模型
+4. **MiniMax渠道速率限制**: 更新为 1500次/5小时，15000次/周
+
+### API连通性测试结果
+```bash
+# MiniMax API 测试
+curl -X POST "https://www.minimaxi.com/v1/chat/completions" \
+  -H "Authorization: Bearer <TOKEN>" \
+  -d '{"model":"MiniMax-M2.5","messages":[{"role":"user","content":"Hi"}],"max_tokens":10}'
+# 结果: 200 OK, 正常工作
+```
+
+### 修复的问题
+1. **自定义时间窗口解析**: 原 `getWindowDuration` 只支持固定值（minute, hour, day等），不支持 "5hour" 格式
+   - 修复: 添加 `strings.HasSuffix` 和 `strconv.Atoi` 支持任意数字+单位格式
+
+2. **提供商测试模型**: `TestCredentials` 原来使用 `__test_model__` 导致 MiniMax 返回 500
+   - 修复: 根据 base_url 智能选择测试模型
+     - minimax → MiniMax-M2.5
+     - zhipu/bigmodel → glm-4
+     - nvapi/nvidia → meta/llama-3.1-405b-instruct
+     - 其他 → gpt-3.5-turbo
+
+### 渠道配置 (最新)
+| ID | 名称 | Base URL | Format | 速率限制 | 状态 |
+|----|------|----------|--------|----------|------|
+| 20 | MiniMax-Production | https://www.minimaxi.com/v1 | openai | 1500/5hour, 15000/week | ✅ |
+| 10 | baoming | https://integrate.api.nvidia.com/v1 | openai | 40/minute | ✅ |
+| 2 | JDBook | https://integrate.api.nvidia.com/v1 | openai | 40/minute | ✅ |
+| 3 | baoming_ai | https://integrate.api.nvidia.com/v1 | openai | 40/minute | ✅ |
+
+### 模型配置 (最新)
+| ID | 名称 | 渠道 | 状态 |
+|----|------|------|------|
+| 85 | MiniMax-M2.5 | MiniMax-Production | ✅ |
+| 86 | MiniMax-M2.7 | MiniMax-Production | ✅ |
+| 87 | MiniMax-M2.1 | MiniMax-Production | ✅ |
+
+### 系统健康检查
+- 渠道总数: 6
+- 模型总数: 31
+- Token总数: 30
+- 自动禁用项目: 1 (Test10MToken - 永久禁用，总量超限)
+
+### 评分排名 (当前)
+1. MiniMax-M2.5 (MiniMax-Production): 79.5分
+2. minimaxai/minimax-m2.5 (baoming): 75.1分
+3. MiniMax-M2.7 (MiniMax-Production): 75.0分
+
+### 测试验证
+- ✅ 10次API请求测试通过
+- ✅ 模型评分实时更新
+- ✅ 路由正确选择最高分模型
+- ✅ 日志正确记录
+
+### 文件修改
+- `internal/service/dispatcher_utils.go`: 添加 strconv 导入，支持自定义时间窗口
+- `internal/service/channel.go`: TestCredentials 使用提供商专用测试模型
+
+### Git提交
+```
+ded0c1f fix: support custom hour/minute/day windows in rate limits (e.g., 5hour)
+2e740aa fix: use provider-specific test models in TestCredentials
+```

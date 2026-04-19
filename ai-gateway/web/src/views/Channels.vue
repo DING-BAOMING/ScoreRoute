@@ -275,8 +275,7 @@ async function testChannel(row) {
   row.testing = true
   try {
     const res = await channelAPI.testCredentials({
-      base_url: row.base_url,
-      api_key: row.api_key
+      channel_id: row.id,
     })
     if (res.code === 0) {
       ElMessage.success('连接成功')
@@ -297,8 +296,6 @@ function showDialog(type, row = null) {
       id: row.id,
       name: row.name,
       format: row.format,
-      base_url: row.base_url,
-      api_key: row.api_key,
       rate_limits: row.rate_limits || '[]',
       total_token_limit: row.total_token_limit || 0,
       expires_at: row.expires_at
@@ -330,6 +327,7 @@ async function testChannelDialog() {
   testing.value = true
   try {
     const res = await channelAPI.testCredentials({
+      channel_id: row.id,
       base_url: form.base_url,
       api_key: form.api_key
     })

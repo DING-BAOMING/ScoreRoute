@@ -61,7 +61,16 @@ func (s *ChannelService) GetByFormatAndType(format, modelType string) ([]*model.
 func (s *ChannelService) TestCredentials(baseURL, apiKey string) (bool, error) {
 	url := strings.TrimSuffix(baseURL, "/") + "/chat/completions"
 
-	testBody := `{"model":"__test_model__","messages":[{"role":"user","content":"test"}],"max_tokens":1}`
+	testModel := "gpt-3.5-turbo"
+	if strings.Contains(baseURL, "minimax") {
+		testModel = "MiniMax-M2.5"
+	} else if strings.Contains(baseURL, "zhipu") || strings.Contains(baseURL, "bigmodel") {
+		testModel = "glm-4"
+	} else if strings.Contains(baseURL, "nvapi") || strings.Contains(baseURL, "nvidia") {
+		testModel = "meta/llama-3.1-405b-instruct"
+	}
+
+	testBody := fmt.Sprintf(`{"model":"%s","messages":[{"role":"user","content":"test"}],"max_tokens":1}`, testModel)
 	req, err := http.NewRequest("POST", url, strings.NewReader(testBody))
 	if err != nil {
 		return false, fmt.Errorf("failed to create request: %w", err)
@@ -127,4 +136,8 @@ func (s *ChannelService) FetchAvailableModels(channelID int64) ([]string, error)
 	}
 
 	return models, nil
+}
+
+func (s *ChannelService) ListAll() ([]*model.Channel, error) {
+	return s.repo.ListAll()
 }

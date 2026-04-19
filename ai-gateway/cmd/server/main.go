@@ -67,6 +67,9 @@ func main() {
 		}
 	}()
 
+	dispatcher := service.NewDispatcher()
+	dispatcher.StartAutoEnableScheduler()
+
 	r := router.Setup()
 
 	port := cfg.ServerPort

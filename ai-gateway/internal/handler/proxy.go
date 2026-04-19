@@ -53,6 +53,11 @@ func (h *ProxyHandler) Handle(c *gin.Context) {
 		return
 	}
 
+	if token.AutoDisabled == 1 {
+		c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"message": fmt.Sprintf("API key is auto-disabled: %s", token.AutoDisableReason)}})
+		return
+	}
+
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"message": "Failed to read request body"}})
@@ -108,6 +113,11 @@ func (h *ProxyHandler) HandleStream(c *gin.Context) {
 
 	if token.Enabled != 1 {
 		c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"message": "API key is disabled"}})
+		return
+	}
+
+	if token.AutoDisabled == 1 {
+		c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"message": fmt.Sprintf("API key is auto-disabled: %s", token.AutoDisableReason)}})
 		return
 	}
 

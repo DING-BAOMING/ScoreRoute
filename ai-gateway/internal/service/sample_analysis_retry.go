@@ -84,14 +84,27 @@ func (s *SampleAnalysisService) AnalyzeSampleChunked(sample *model.Sample) (*Ana
 			Model:        info.Model,
 			UserTask:     info.UserTask,
 			SystemPrompt: info.SystemPrompt,
-			ToolCalls:    info.ToolCalls,
+			ResponseToolCalls: info.ResponseToolCalls,
+			RequestTools:   info.RequestTools,
 			Completion:   partResponse,
 			HasError:     info.HasError,
 			ErrorMsg:     info.ErrorMsg,
 			ResponseLen:  len(partResponse),
 		}
 
-		prompt := s.buildChunkedPrompt(partInfo, i+1, parts)
+		var requestToolsStr, responseToolsStr, errorStrPart string
+		if len(partInfo.RequestTools) > 0 {
+			requestToolsStr = "Available tools: " + strings.Join(partInfo.RequestTools, ", ")
+		} else {
+			requestToolsStr = "No tools available"
+		}
+		if len(partInfo.ResponseToolCalls) > 0 {
+			responseToolsStr = strings.Join(partInfo.ResponseToolCalls, ", ")
+		} else {
+			responseToolsStr = "No tools called"
+		}
+		errorStrPart = ""
+		prompt := s.buildChunkedPrompt(partInfo, requestToolsStr, responseToolsStr, errorStrPart, i+1, parts)
 
 		config, err := s.configRepo.GetEnabled()
 		if err != nil || config == nil {

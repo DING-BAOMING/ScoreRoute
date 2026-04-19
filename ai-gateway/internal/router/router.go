@@ -14,10 +14,17 @@ func Setup() *gin.Engine {
 
 	r.Static("/assets", "./web/dist/assets")
 	r.StaticFile("/favicon.ico", "./web/dist/favicon.ico")
-	r.StaticFile("/docs/开发计划.md", "./docs/开发计划.md")
-	r.GET("/api/docs", func(c *gin.Context) {
-		c.File("./docs/开发计划.md")
-	})
+	r.StaticFile("/logo.png", "./web/dist/logo.png")
+	r.StaticFile("/docs/README.md", "./docs/README.md")
+	r.StaticFile("/docs/getting-started.md", "./docs/getting-started.md")
+	r.StaticFile("/docs/guide.md", "./docs/guide.md")
+	r.StaticFile("/docs/api.md", "./docs/api.md")
+	r.StaticFile("/docs/faq.md", "./docs/faq.md")
+	r.StaticFile("/docs/changelog.md", "./docs/changelog.md")
+	r.StaticFile("/docs/dev/setup.md", "./docs/dev/setup.md")
+	r.StaticFile("/docs/dev/architecture.md", "./docs/dev/architecture.md")
+	r.StaticFile("/docs/dev/plan.md", "./docs/dev/plan.md")
+	r.StaticFile("/docs/dev/plan_full.md", "./docs/dev/plan_full.md")
 	r.LoadHTMLGlob("./web/dist/index.html")
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(200, "index.html", nil)

@@ -3,10 +3,9 @@ version: '3.8'
 services:
   app:
     build: .
-    container_name: ai-gateway
     restart: always
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:3000"
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -18,8 +17,8 @@ services:
       - DATABASE_PATH=/app/data/gateway.db
       - LOG_PATH=/app/logs
     networks:
-      - ai-gateway-network
+      - scoreroute-network
 
 networks:
-  ai-gateway-network:
+  scoreroute-network:
     driver: bridge

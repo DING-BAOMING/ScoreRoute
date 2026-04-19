@@ -56,22 +56,20 @@ jobs:
 
       - name: Prepare release files
         run: |
+          set -x
           mkdir -p release
-          cp ai-gateway/scoreroute-${{ steps.get_version.outputs.VERSION }}-linux-amd64 release/scoreroute
+          ls -la ai-gateway/
+          cp ai-gateway/scoreroute-${{ steps.get_version.outputs.VERSION }}-linux-amd64 release/scoreroute || exit 1
           cp -r ai-gateway/web/dist release/
           cp ai-gateway/docker-compose.yml release/
           cp ai-gateway/.env.example release/
-          cp -r ai-gateway/docs release/ 2>/dev/null || true
+          ls -la release/
 
       - name: Create SHA256 checksums
         run: |
           cd release
           sha256sum scoreroute > scoreroute_SHA256.txt
-          for f in *; do
-            if [ "$f" != "scoreroute_SHA256.txt" ]; then
-              sha256sum "$f" >> scoreroute_SHA256.txt
-            fi
-          done
+          sha256sum -c scoreroute_SHA256.txt
 
       - name: Create Docker image
         uses: docker/build-push-action@v6
@@ -102,16 +100,5 @@ jobs:
             ## ScoreRoute v${{ steps.get_version.outputs.VERSION }}
 
             AI Gateway and intelligent routing system based on multi-dimensional model scoring.
-
-            ### Downloads
-            - scoreroute (Linux AMD64 binary)
-            - scoreroute.tar (Docker image)
-            - SHA256 checksums
-
-            ### Installation
-            See [DEPLOY.md](https://github.com/DING-BAOMING/ScoreRoute/blob/main/ai-gateway/DEPLOY.md)
-
-            ### What's Changed
-            See [CHANGELOG](https://github.com/DING-BAOMING/ScoreRoute/blob/main/ai-gateway/CHANGELOG.md)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

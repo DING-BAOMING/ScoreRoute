@@ -81,15 +81,15 @@ func (s *SampleAnalysisService) AnalyzeSampleChunked(sample *model.Sample) (*Ana
 
 		partResponse := info.Completion[start:end]
 		partInfo := &ExtractedSampleInfo{
-			Model:        info.Model,
-			UserTask:     info.UserTask,
-			SystemPrompt: info.SystemPrompt,
+			Model:             info.Model,
+			UserTask:          info.UserTask,
+			SystemPrompt:      info.SystemPrompt,
 			ResponseToolCalls: info.ResponseToolCalls,
-			RequestTools:   info.RequestTools,
-			Completion:   partResponse,
-			HasError:     info.HasError,
-			ErrorMsg:     info.ErrorMsg,
-			ResponseLen:  len(partResponse),
+			RequestTools:      info.RequestTools,
+			Completion:        partResponse,
+			HasError:          info.HasError,
+			ErrorMsg:          info.ErrorMsg,
+			ResponseLen:       len(partResponse),
 		}
 
 		var requestToolsStr, responseToolsStr, errorStrPart string

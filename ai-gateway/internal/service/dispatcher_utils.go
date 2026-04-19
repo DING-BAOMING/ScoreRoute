@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -103,6 +104,24 @@ func getWindowDuration(window string) time.Duration {
 	case "year":
 		return 365 * 24 * time.Hour
 	default:
+		if strings.HasSuffix(window, "hour") {
+			hours := strings.TrimSuffix(window, "hour")
+			if h, err := strconv.Atoi(hours); err == nil && h > 0 {
+				return time.Duration(h) * time.Hour
+			}
+		}
+		if strings.HasSuffix(window, "minute") {
+			minutes := strings.TrimSuffix(window, "minute")
+			if m, err := strconv.Atoi(minutes); err == nil && m > 0 {
+				return time.Duration(m) * time.Minute
+			}
+		}
+		if strings.HasSuffix(window, "day") {
+			days := strings.TrimSuffix(window, "day")
+			if d, err := strconv.Atoi(days); err == nil && d > 0 {
+				return time.Duration(d) * 24 * time.Hour
+			}
+		}
 		return 0
 	}
 }

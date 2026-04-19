@@ -26,6 +26,52 @@ func InitDB(dbPath string) error {
 		return fmt.Errorf("failed to create tables: %w", err)
 	}
 
+
+	// Migration: Add auto_disabled columns to models, tokens, and channels
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('models') WHERE name='auto_disabled'")
+	var modelsAutoDisabledCount int
+	if err := row.Scan(&modelsAutoDisabledCount); err != nil {
+		log.Printf("Warning: failed to check auto_disabled column in models: %v", err)
+	}
+	if modelsAutoDisabledCount == 0 {
+		log.Println("Adding auto_disabled columns to models table...")
+		DB.Exec(`ALTER TABLE models ADD COLUMN auto_disabled INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE models ADD COLUMN auto_disabled_at DATETIME`)
+		DB.Exec(`ALTER TABLE models ADD COLUMN auto_disable_reason TEXT`)
+		log.Println("Models auto_disabled columns added")
+	} else {
+		log.Println("Models table already has auto_disabled column, skipping")
+	}
+
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('tokens') WHERE name='auto_disabled'")
+	var tokensAutoDisabledCount int
+	if err := row.Scan(&tokensAutoDisabledCount); err != nil {
+		log.Printf("Warning: failed to check auto_disabled column in tokens: %v", err)
+	}
+	if tokensAutoDisabledCount == 0 {
+		log.Println("Adding auto_disabled columns to tokens table...")
+		DB.Exec(`ALTER TABLE tokens ADD COLUMN auto_disabled INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE tokens ADD COLUMN auto_disabled_at DATETIME`)
+		DB.Exec(`ALTER TABLE tokens ADD COLUMN auto_disable_reason TEXT`)
+		log.Println("Tokens auto_disabled columns added")
+	} else {
+		log.Println("Tokens table already has auto_disabled column, skipping")
+	}
+
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('channels') WHERE name='auto_disabled'")
+	var channelsAutoDisabledCount int
+	if err := row.Scan(&channelsAutoDisabledCount); err != nil {
+		log.Printf("Warning: failed to check auto_disabled column in channels: %v", err)
+	}
+	if channelsAutoDisabledCount == 0 {
+		log.Println("Adding auto_disabled columns to channels table...")
+		DB.Exec(`ALTER TABLE channels ADD COLUMN auto_disabled INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE channels ADD COLUMN auto_disabled_at DATETIME`)
+		DB.Exec(`ALTER TABLE channels ADD COLUMN auto_disable_reason TEXT`)
+		log.Println("Channels auto_disabled columns added")
+	} else {
+		log.Println("Channels table already has auto_disabled column, skipping")
+	}
 	return nil
 }
 
@@ -174,6 +220,52 @@ func createTables() error {
 		return fmt.Errorf("failed to migrate: %w", err)
 	}
 
+
+	// Migration: Add auto_disabled columns to models, tokens, and channels
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('models') WHERE name='auto_disabled'")
+	var modelsAutoDisabledCount int
+	if err := row.Scan(&modelsAutoDisabledCount); err != nil {
+		log.Printf("Warning: failed to check auto_disabled column in models: %v", err)
+	}
+	if modelsAutoDisabledCount == 0 {
+		log.Println("Adding auto_disabled columns to models table...")
+		DB.Exec(`ALTER TABLE models ADD COLUMN auto_disabled INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE models ADD COLUMN auto_disabled_at DATETIME`)
+		DB.Exec(`ALTER TABLE models ADD COLUMN auto_disable_reason TEXT`)
+		log.Println("Models auto_disabled columns added")
+	} else {
+		log.Println("Models table already has auto_disabled column, skipping")
+	}
+
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('tokens') WHERE name='auto_disabled'")
+	var tokensAutoDisabledCount int
+	if err := row.Scan(&tokensAutoDisabledCount); err != nil {
+		log.Printf("Warning: failed to check auto_disabled column in tokens: %v", err)
+	}
+	if tokensAutoDisabledCount == 0 {
+		log.Println("Adding auto_disabled columns to tokens table...")
+		DB.Exec(`ALTER TABLE tokens ADD COLUMN auto_disabled INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE tokens ADD COLUMN auto_disabled_at DATETIME`)
+		DB.Exec(`ALTER TABLE tokens ADD COLUMN auto_disable_reason TEXT`)
+		log.Println("Tokens auto_disabled columns added")
+	} else {
+		log.Println("Tokens table already has auto_disabled column, skipping")
+	}
+
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('channels') WHERE name='auto_disabled'")
+	var channelsAutoDisabledCount int
+	if err := row.Scan(&channelsAutoDisabledCount); err != nil {
+		log.Printf("Warning: failed to check auto_disabled column in channels: %v", err)
+	}
+	if channelsAutoDisabledCount == 0 {
+		log.Println("Adding auto_disabled columns to channels table...")
+		DB.Exec(`ALTER TABLE channels ADD COLUMN auto_disabled INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE channels ADD COLUMN auto_disabled_at DATETIME`)
+		DB.Exec(`ALTER TABLE channels ADD COLUMN auto_disable_reason TEXT`)
+		log.Println("Channels auto_disabled columns added")
+	} else {
+		log.Println("Channels table already has auto_disabled column, skipping")
+	}
 	return nil
 }
 
@@ -415,5 +507,51 @@ func migrateTables() error {
 		log.Println("Token rate limit usage table already exists, skipping")
 	}
 
+
+	// Migration: Add auto_disabled columns to models, tokens, and channels
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('models') WHERE name='auto_disabled'")
+	var modelsAutoDisabledCount int
+	if err := row.Scan(&modelsAutoDisabledCount); err != nil {
+		log.Printf("Warning: failed to check auto_disabled column in models: %v", err)
+	}
+	if modelsAutoDisabledCount == 0 {
+		log.Println("Adding auto_disabled columns to models table...")
+		DB.Exec(`ALTER TABLE models ADD COLUMN auto_disabled INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE models ADD COLUMN auto_disabled_at DATETIME`)
+		DB.Exec(`ALTER TABLE models ADD COLUMN auto_disable_reason TEXT`)
+		log.Println("Models auto_disabled columns added")
+	} else {
+		log.Println("Models table already has auto_disabled column, skipping")
+	}
+
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('tokens') WHERE name='auto_disabled'")
+	var tokensAutoDisabledCount int
+	if err := row.Scan(&tokensAutoDisabledCount); err != nil {
+		log.Printf("Warning: failed to check auto_disabled column in tokens: %v", err)
+	}
+	if tokensAutoDisabledCount == 0 {
+		log.Println("Adding auto_disabled columns to tokens table...")
+		DB.Exec(`ALTER TABLE tokens ADD COLUMN auto_disabled INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE tokens ADD COLUMN auto_disabled_at DATETIME`)
+		DB.Exec(`ALTER TABLE tokens ADD COLUMN auto_disable_reason TEXT`)
+		log.Println("Tokens auto_disabled columns added")
+	} else {
+		log.Println("Tokens table already has auto_disabled column, skipping")
+	}
+
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('channels') WHERE name='auto_disabled'")
+	var channelsAutoDisabledCount int
+	if err := row.Scan(&channelsAutoDisabledCount); err != nil {
+		log.Printf("Warning: failed to check auto_disabled column in channels: %v", err)
+	}
+	if channelsAutoDisabledCount == 0 {
+		log.Println("Adding auto_disabled columns to channels table...")
+		DB.Exec(`ALTER TABLE channels ADD COLUMN auto_disabled INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE channels ADD COLUMN auto_disabled_at DATETIME`)
+		DB.Exec(`ALTER TABLE channels ADD COLUMN auto_disable_reason TEXT`)
+		log.Println("Channels auto_disabled columns added")
+	} else {
+		log.Println("Channels table already has auto_disabled column, skipping")
+	}
 	return nil
 }

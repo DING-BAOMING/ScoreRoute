@@ -7,6 +7,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 
 COPY . ./
+RUN rm -rf .git
 
 RUN GOTOOLCHAIN=auto go get modernc.org/sqlite@v1.28.0 && \
     GOTOOLCHAIN=auto go get github.com/spf13/viper@v1.18.2 && \
@@ -17,7 +18,7 @@ RUN GOTOOLCHAIN=auto go get modernc.org/sqlite@v1.28.0 && \
 
 RUN GOTOOLCHAIN=auto go mod download
 
-RUN CGO_ENABLED=1 GOOS=linux go build -ldflags "-s -w" -o server ./cmd/server
+RUN CGO_ENABLED=1 GOOS=linux GOTOOLCHAIN=auto go build -ldflags "-s -w" -o server ./cmd/server
 
 RUN mkdir -p web/dist && \
     cp -r /app/web/dist ./web/ || true

@@ -356,11 +356,11 @@ func (d *Dispatcher) selectModelAndChannel(token *model.Token, req map[string]in
 		return nil, nil, fmt.Errorf("channel not found for model")
 	}
 
-	if err := d.checkRateLimit(selectedChannel, 0); err != nil {
+	if err := d.checkAndDisableChannelRateLimit(selectedChannel, 0); err != nil {
 		return nil, nil, fmt.Errorf("channel rate limit exceeded: %w", err)
 	}
 
-	if err := d.checkModelRateLimit(modelItem, 0); err != nil {
+	if err := d.checkAndDisableModelRateLimit(modelItem, 0); err != nil {
 		return nil, nil, fmt.Errorf("model rate limit exceeded: %w", err)
 	}
 
@@ -378,7 +378,7 @@ func (d *Dispatcher) DispatchStream(token *model.Token, requestBody []byte) ([]b
 func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte) (*StreamResponse, int, error) {
 	startTime := time.Now()
 
-	if err := d.checkTokenRateLimit(token); err != nil {
+	if err := d.checkAndDisableTokenRateLimit(token); err != nil {
 		return nil, 0, fmt.Errorf("token rate limit: %w", err)
 	}
 
@@ -426,12 +426,12 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 			continue
 		}
 
-		if err := d.checkRateLimit(selectedChannel, 0); err != nil {
+		if err := d.checkAndDisableChannelRateLimit(selectedChannel, 0); err != nil {
 			lastErr = fmt.Errorf("channel rate limit exceeded: %w", err)
 			continue
 		}
 
-		if err := d.checkModelRateLimit(modelItem, 0); err != nil {
+		if err := d.checkAndDisableModelRateLimit(modelItem, 0); err != nil {
 			lastErr = fmt.Errorf("model rate limit exceeded: %w", err)
 			continue
 		}
@@ -600,7 +600,7 @@ func (d *Dispatcher) extractModelKeyFromResponse(body []byte) string {
 func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStream bool) ([]byte, int, error) {
 	startTime := time.Now()
 
-	if err := d.checkTokenRateLimit(token); err != nil {
+	if err := d.checkAndDisableTokenRateLimit(token); err != nil {
 		return nil, 0, fmt.Errorf("token rate limit: %w", err)
 	}
 
@@ -648,12 +648,12 @@ func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStrea
 			continue
 		}
 
-		if err := d.checkRateLimit(selectedChannel, 0); err != nil {
+		if err := d.checkAndDisableChannelRateLimit(selectedChannel, 0); err != nil {
 			lastErr = fmt.Errorf("channel rate limit exceeded: %w", err)
 			continue
 		}
 
-		if err := d.checkModelRateLimit(modelItem, 0); err != nil {
+		if err := d.checkAndDisableModelRateLimit(modelItem, 0); err != nil {
 			lastErr = fmt.Errorf("model rate limit exceeded: %w", err)
 			continue
 		}

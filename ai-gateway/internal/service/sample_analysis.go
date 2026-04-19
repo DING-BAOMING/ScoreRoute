@@ -41,6 +41,7 @@ type AnalysisPrompt struct {
 }
 
 type AnalysisResult struct {
+	NeedsToolCalling         bool   `json:"needs_tool_calling"`
 	Score                     int    `json:"score"`
 	ToolCallingScore          int    `json:"tool_calling_score"`
 	CompletenessScore         int    `json:"completeness_score"`
@@ -205,6 +206,9 @@ func (s *SampleAnalysisService) parseAnalysisResponse(body []byte) (*AnalysisRes
 }
 
 func (s *SampleAnalysisService) setDefaultScoresIfNeeded(result *AnalysisResult) {
+	if !result.NeedsToolCalling {
+		result.NeedsToolCalling = false
+	}
 	if result.Score == 0 {
 		result.Score = 50
 	}

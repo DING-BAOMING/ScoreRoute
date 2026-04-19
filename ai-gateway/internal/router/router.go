@@ -14,6 +14,7 @@ func Setup() *gin.Engine {
 
 	r.Static("/assets", "./web/dist/assets")
 	r.StaticFile("/favicon.ico", "./web/dist/favicon.ico")
+	r.StaticFile("/logo.png", "./web/dist/logo.png")
 	r.StaticFile("/docs/开发计划.md", "./docs/开发计划.md")
 	r.GET("/api/docs", func(c *gin.Context) {
 		c.File("./docs/开发计划.md")

@@ -26,8 +26,23 @@ show_banner() {
     echo -e "${NC}"
 }
 
+# 检查端口是否可用
+check_port() {
+    local port=$1
+    echo -e "${YELLOW}[检查] 检测端口 ${port}...${NC}"
+    
+    if lsof -Pi :${port} -sTCP:LISTEN -t &> /dev/null; then
+        echo -e "${RED}✗ 端口 ${port} 已被占用${NC}"
+        return 1
+    fi
+    
+    echo -e "${GREEN}✓ 端口 ${port} 可用${NC}"
+    return 0
+}
+
+# 检查Docker
 check_docker() {
-    echo -e "${YELLOW}[1/6] 检查 Docker 环境...${NC}"
+    echo -e "${YELLOW}[1/7] 检查 Docker 环境...${NC}"
     
     if ! command -v docker &> /dev/null; then
         echo -e "${RED}✗ Docker 未安装${NC}"
@@ -47,19 +62,28 @@ check_docker() {
     echo -e "${GREEN}✓ Docker 环境检查通过${NC}"
 }
 
-check_port() {
-    echo -e "${YELLOW}[2/6] 检查端口 ${DEFAULT_PORT}...${NC}"
+# 选择端口
+select_port() {
+    echo -e "${YELLOW}[2/7] 选择端口...${NC}"
     
-    if lsof -Pi :${DEFAULT_PORT} -sTCP:LISTEN -t &> /dev/null; then
-        echo -e "${RED}✗ 端口 ${DEFAULT_PORT} 已被占用${NC}"
+    read -p "请输入端口号 [${DEFAULT_PORT}]: " PORT
+    PORT=${PORT:-$DEFAULT_PORT}
+    
+    # 验证端口是否为数字
+    if ! [[ "$PORT" =~ ^[0-9]+$ ]] || [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; then
+        echo -e "${RED}✗ 无效端口号${NC}"
         exit 1
     fi
     
-    echo -e "${GREEN}✓ 端口 ${DEFAULT_PORT} 可用${NC}"
+    # 检查端口是否可用
+    if ! check_port $PORT; then
+        echo -e "${YELLOW}请选择其他端口或停止占用端口的服务${NC}"
+        select_port
+    fi
 }
 
 setup_directory() {
-    echo -e "${YELLOW}[3/6] 准备安装目录...${NC}"
+    echo -e "${YELLOW}[3/7] 准备安装目录...${NC}"
     
     if [ -d "$INSTALL_DIR" ]; then
         echo -e "${YELLOW}检测到已有安装目录${NC}"
@@ -81,7 +105,7 @@ setup_directory() {
 }
 
 generate_config() {
-    echo -e "${YELLOW}[4/6] 生成安全配置...${NC}"
+    echo -e "${YELLOW}[4/7] 生成安全配置...${NC}"
     
     ADMIN_PASSWORD=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)
     JWT_SECRET=$(openssl rand -base64 32)
@@ -90,7 +114,7 @@ generate_config() {
 # ScoreRoute Configuration
 # 由 install.sh 自动生成
 
-PORT=${DEFAULT_PORT}
+PORT=${PORT}
 DATABASE_PATH=./data/gateway.db
 LOG_PATH=./logs
 
@@ -99,11 +123,23 @@ JWT_SECRET=${JWT_SECRET}
 EOF
     
     mkdir -p data logs cache
-    echo -e "${GREEN}✓ 配置文件和目录已生成${NC}"
+    echo -e "${GREEN}✓ 配置文件已生成${NC}"
+    echo -e "${GREEN}✓ 目录已创建: data/, logs/, cache/${NC}"
+}
+
+# 修改docker-compose端口
+update_docker_compose() {
+    echo -e "${YELLOW}[5/7] 配置 Docker 端口...${NC}"
+    
+    # 修改docker-compose.yml中的端口
+    if [ "$PORT" != "$DEFAULT_PORT" ]; then
+        sed -i "s/\"${DEFAULT_PORT}:3000\"/\"${PORT}:3000\"/" docker-compose.yml
+        echo -e "${GREEN}✓ 端口已更新为 ${PORT}${NC}"
+    fi
 }
 
 build_and_start() {
-    echo -e "${YELLOW}[5/6] 构建并启动 Docker 容器...${NC}"
+    echo -e "${YELLOW}[6/7] 构建并启动 Docker 容器...${NC}"
     
     echo -e "${YELLOW}正在构建 Docker 镜像...${NC}"
     if ! docker build -t scoreroute-app .; then
@@ -130,13 +166,16 @@ show_complete() {
     echo -e "${GREEN}         ScoreRoute 安装完成！${NC}"
     echo -e "${GREEN}════════════════════════════════════════════════${NC}"
     echo ""
-    echo -e "${YELLOW}访问地址:${NC} http://localhost:${DEFAULT_PORT}"
+    echo -e "${YELLOW}访问地址:${NC} http://localhost:${PORT}"
     echo -e "${YELLOW}管理员账号:${NC} admin"
     echo -e "${YELLOW}管理员密码:${NC} ${ADMIN_PASSWORD}"
+    echo ""
+    echo -e "${YELLOW}重要:${NC} 请立即修改默认密码！"
     echo ""
     echo -e "${YELLOW}常用命令:${NC}"
     echo "  查看状态: docker ps"
     echo "  查看日志: docker logs -f ai-gateway"
+    echo "  重启服务: docker restart ai-gateway"
     echo "  停止服务: docker compose down"
     echo ""
     echo -e "${GREEN}安装目录:${NC} $INSTALL_DIR/ai-gateway"
@@ -167,9 +206,10 @@ main() {
             ;;
         *)
             check_docker
-            check_port
+            select_port
             setup_directory
             generate_config
+            update_docker_compose
             build_and_start
             show_complete
             ;;

@@ -128,3 +128,7 @@ func (s *ChannelService) FetchAvailableModels(channelID int64) ([]string, error)
 
 	return models, nil
 }
+
+func (s *ChannelService) ListAll() ([]*model.Channel, error) {
+	return s.repo.ListAll()
+}

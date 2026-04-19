@@ -196,3 +196,7 @@ func (s *ModelService) TestModel(modelID int64) (map[string]interface{}, error) 
 		"response":    result,
 	}, nil
 }
+
+func (s *ModelService) GetAutoDisabledModels() ([]*model.Model, error) {
+	return s.repo.GetAutoDisabledModels()
+}

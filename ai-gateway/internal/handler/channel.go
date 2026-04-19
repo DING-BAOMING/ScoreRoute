@@ -148,8 +148,8 @@ func (h *ChannelHandler) FetchModels(c *gin.Context) {
 func (h *ChannelHandler) TestCredentials(c *gin.Context) {
 	var req struct {
 		ChannelID int64  `json:"channel_id"`
-		BaseURL  string `json:"base_url"`
-		APIKey   string `json:"api_key"`
+		BaseURL   string `json:"base_url"`
+		APIKey    string `json:"api_key"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})

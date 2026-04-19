@@ -41,7 +41,7 @@ type AnalysisPrompt struct {
 }
 
 type AnalysisResult struct {
-	NeedsToolCalling         bool   `json:"needs_tool_calling"`
+	NeedsToolCalling          bool   `json:"needs_tool_calling"`
 	Score                     int    `json:"score"`
 	ToolCallingScore          int    `json:"tool_calling_score"`
 	CompletenessScore         int    `json:"completeness_score"`

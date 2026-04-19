@@ -57,7 +57,7 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p release
-          cp scoreroute-${{ steps.get_version.outputs.VERSION }}-linux-amd64 release/scoreroute
+          cp ai-gateway/scoreroute-${{ steps.get_version.outputs.VERSION }}-linux-amd64 release/scoreroute
           cp -r ai-gateway/web/dist release/
           cp ai-gateway/docker-compose.yml release/
           cp ai-gateway/.env.example release/

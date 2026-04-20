@@ -352,6 +352,8 @@ code {
 }
 
 .rate-limit-rules {
+  max-height: 200px;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 10px;

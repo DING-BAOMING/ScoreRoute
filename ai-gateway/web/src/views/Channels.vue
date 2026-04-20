@@ -25,7 +25,8 @@
             <div v-if="row.rate_limits && row.rate_limits !== '[]'" class="rate-limits">
               <span v-for="(rule, idx) in parseRateLimits(row.rate_limits)" :key="idx" class="rate-limit-tag">
                 <span v-if="rule.type === 'billing'">{{ rule.max_count/100 }}{{ rule.currency }}/{{ rule.window }}</span>
-                <span v-else>{{ rule.max_count }}/{{ rule.window }}</span>
+                <span v-else-if="rule.type === 'calls'">{{ rule.max_count }}次/{{ rule.window }}</span>
+                <span v-else-if="rule.type === 'tokens'">{{ rule.max_count }}Token/{{ rule.window }}</span>
               </span>
             </div>
             <span v-else-if="row.total_token_limit > 0" class="token-limit">
@@ -427,6 +428,9 @@ async function deleteChannel(row) {
   gap: 2px;
 }
 .rate-limit-rules {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 8px;
   width: 100%;
 }
 .rate-limit-rule {

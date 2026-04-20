@@ -6,7 +6,7 @@ services:
     container_name: ai-gateway
     restart: always
     ports:
-      - "\${PORT:-3000}:3000"
+      - "${PORT:-3000}:3000"
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs

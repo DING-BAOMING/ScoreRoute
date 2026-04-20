@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="images/favicon.png?v=1776569877">
+    <title>快速开始 - ScoreRoute</title>
+    <meta name="description" content="ScoreRoute 快速开始指南，支持自定义端口，一行命令即可部署。">
+    <link rel="stylesheet" href="css/style.css?v=1776561986">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="index.html" class="logo"><img src="ScoreRouteLoGo.png?v=1776569877" alt="ScoreRoute" height="32"></a>
+                <div class="nav-links">
+                    <a href="features.html">功能</a>
+                    <a href="tech.html">技术栈</a>
+                    <a href="quickstart.html" class="active">快速开始</a>
+                    <a href="security.html">安全</a>
+                    <a href="faq.html">FAQ</a>
+                    <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" target="_blank">飞书</a>
+                </div>
+                <div class="nav-cta">
+                    <a href="https://github.com/DING-BAOMING/ScoreRoute" class="btn btn-primary" target="_blank">
+                        <i class="fab fa-github"></i> GitHub
+                    </a>
+                </div>
+                <div class="mobile-menu" onclick="toggleMobileNav()">
+                    <i class="fas fa-bars"></i>
+                </div>
+            </nav>
+        </div>
+        <div class="mobile-nav" id="mobileNav">
+            <a href="index.html">首页</a>
+            <a href="features.html">功能</a>
+            <a href="tech.html">技术栈</a>
+            <a href="quickstart.html" class="active">快速开始</a>
+            <a href="security.html">安全</a>
+            <a href="faq.html">FAQ</a>
+            <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" target="_blank">飞书</a>
+            <a href="https://github.com/DING-BAOMING/ScoreRoute" target="_blank">GitHub</a>
+        </div>
+    </header>
+
+    <div class="page-header">
+        <div class="container">
+            <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> 返回首页</a>
+            <h1>快速开始</h1>
+            <p>简单快捷，三步即可部署</p>
+        </div>
+    </div>
+
+    <section class="section">
+        <div class="container">
+            <div class="login-info">
+                <h4><i class="fas fa-key"></i> 登录凭证</h4>
+                <ul>
+                    <li><strong>用户名:</strong> admin</li>
+                    <li><strong>密码:</strong> 一键安装自动生成 / Docker部署请在.env中设置</li>
+                    <li><strong>首次登录:</strong> 请立即修改默认密码！</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="section bg-secondary">
+        <div class="container">
+            <div class="demo-info">
+                <h4><i class="fas fa-play-circle"></i> 在线演示</h4>
+                <ul>
+                    <li><strong>演示地址:</strong> <a href="https://demo.scoreroute.com" target="_blank">https://demo.scoreroute.com</a></li>
+                    <li><strong>用户名:</strong> admin</li>
+                    <li><strong>密码:</strong> Admin</li>
+                    <li class="demo-note"><i class="fas fa-info-circle"></i> 演示环境仅供体验，请勿上传敏感数据</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2>方式一：一键安装（推荐）</h2>
+                <p>自动检测端口，支持自定义端口</p>
+            </div>
+            <div class="code-block">
+                <pre><span class="comment"># 克隆项目</span>
+git clone https://github.com/DING-BAOMING/ScoreRoute.git
+cd ScoreRoute/ai-gateway
+<span class="comment"># 运行安装脚本</span>
+<span class="command">./install.sh</span>
+
+<span class="comment"># 安装过程中会：</span>
+<span class="comment"># 1. 自动检测端口3000是否被占用</span>
+<span class="comment"># 2. 如果被占用，提示输入其他端口</span>
+<span class="comment"># 3. 自动生成随机管理员密码</span>
+<span class="comment"># 4. 构建并启动Docker容器</span>
+
+<span class="comment"># 默认端口: 3000</span>
+<span class="comment"># 可自定义选择其他端口</span></pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" style="background: var(--bg-secondary);">
+        <div class="container">
+            <div class="section-header">
+                <h2>方式二：Docker Compose</h2>
+            </div>
+            <div class="code-block">
+                <pre><span class="comment"># 克隆项目</span>
+git clone https://github.com/DING-BAOMING/ScoreRoute.git
+cd ScoreRoute/ai-gateway
+
+<span class="comment"># 复制配置</span>
+<span class="command">cp .env.example .env</span>
+
+<span class="comment"># 编辑 .env 填入配置</span>
+<span class="command">nano .env</span>
+
+<span class="comment"># 重要配置项：</span>
+<span class="comment"># ADMIN_PASSWORD=your_secure_password</span>
+<span class="comment"># JWT_SECRET=your_jwt_secret</span>
+
+<span class="comment"># 修改端口（如需）</span>
+<span class="comment"># 编辑 docker-compose.yml 中的端口映射：</span>
+<span class="comment"># - "3000:3000" 改为如 "8080:3000"</span>
+
+<span class="comment"># 启动</span>
+<span class="command">docker-compose up -d</span>
+
+<span class="comment"># 查看状态</span>
+<span class="command">docker ps</span>
+
+<span class="comment"># 查看日志</span>
+<span class="command">docker logs -f scoreroute-app</span></pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2>方式三：手动编译</h2>
+            </div>
+            <div class="code-block">
+                <pre><span class="comment"># 环境要求</span>
+<span class="comment"># - Go 1.23+</span>
+<span class="comment"># - Node.js 20+</span>
+<span class="comment"># - GCC (for CGO)</span>
+
+<span class="comment"># 克隆项目</span>
+git clone https://github.com/DING-BAOMING/ScoreRoute.git
+cd ScoreRoute/ai-gateway
+
+<span class="comment"># 配置</span>
+cp .env.example .env
+nano .env
+
+<span class="comment"># 构建前端</span>
+cd web && npm install && npm run build && cd ..
+
+<span class="comment"># 构建后端</span>
+<span class="command">go build -o server ./cmd/server</span>
+
+<span class="comment"># 运行</span>
+<span class="command">./server</span></pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" style="background: var(--bg-secondary);">
+        <div class="container">
+            <div class="section-header">
+                <h2>配置说明</h2>
+            </div>
+            <div class="code-block">
+                <pre><span class="comment"># .env 配置文件示例</span>
+
+<span class="comment"># 服务端口</span>
+PORT=3000
+
+<span class="comment"># 数据库路径</span>
+DATABASE_PATH=./data/gateway.db
+
+<span class="comment"># 日志路径</span>
+LOG_PATH=./logs
+
+<span class="comment"># 管理员密码（请修改为强密码）</span>
+ADMIN_PASSWORD=your_secure_password_here
+
+<span class="comment"># JWT密钥（请使用随机字符串）</span>
+JWT_SECRET=your_jwt_secret_here</pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2>验证部署</h2>
+            </div>
+            <div class="code-block">
+                <pre><span class="comment"># 检查容器状态</span>
+<span class="command">docker ps</span>
+
+<span class="comment"># 访问管理界面</span>
+<span class="command">curl http://localhost:3000</span>
+
+<span class="comment"># 查看日志</span>
+<span class="command">docker logs scoreroute-app --tail 50</span></pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta">
+        <div class="container">
+            <h2>需要帮助？</h2>
+            <p>查看常见问题或联系我们的社区</p>
+            <div class="hero-cta">
+                <a href="faq.html" class="btn btn-primary">
+                    <i class="fas fa-question-circle"></i> 查看FAQ
+                </a>
+                <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" class="btn btn-secondary" target="_blank">
+                    <i class="fas fa-comments"></i> 加入飞书群
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <a href="index.html" class="logo"><img src="ScoreRouteLoGo.png?v=1776569877" alt="ScoreRoute" height="28"></a>
+                    <p>开源的智能AI路由网关，由BOMING开发和维护。</p>
+                </div>
+                <div class="footer-links">
+                    <h5>产品</h5>
+                    <ul>
+                        <li><a href="features.html">功能</a></li>
+                        <li><a href="tech.html">技术栈</a></li>
+                        <li><a href="quickstart.html">快速开始</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h5>资源</h5>
+                    <ul>
+                        <li><a href="https://github.com/DING-BAOMING/ScoreRoute" target="_blank">GitHub</a></li>
+                        <li><a href="faq.html">FAQ</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h5>联系</h5>
+                    <ul>
+                        <li><a href="mailto:Admin@ScoreRoute.com">Admin@ScoreRoute.com</a></li>
+                        <li><a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" target="_blank">飞书群</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span>© 2026 ScoreRoute. BOMING. 保留所有权利.</span>
+                <div class="social-links">
+                    <a href="https://github.com/DING-BAOMING/ScoreRoute" target="_blank"><i class="fab fa-github"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function toggleMobileNav() {
+            document.getElementById('mobileNav').classList.toggle('active');
+        }
+    </script>
+</body>
+</html>

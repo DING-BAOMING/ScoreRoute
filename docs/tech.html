@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="images/favicon.png">
+    <title>技术栈 - ScoreRoute</title>
+    <meta name="description" content="ScoreRoute 技术栈：Go + Vue + SQLite + Docker，现代技术选型，简单易用，性能卓越。">
+    <link rel="stylesheet" href="css/style.css?v=1776521986">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="index.html" class="logo">ScoreRoute
+                </a>
+                <div class="nav-links">
+                    <a href="features.html">功能</a>
+                    <a href="tech.html" class="active">技术栈</a>
+                    <a href="quickstart.html">快速开始</a>
+                    <a href="security.html">安全</a>
+                    <a href="faq.html">FAQ</a>
+                    <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" target="_blank">飞书</a>
+                </div>
+                <div class="nav-cta">
+                    <a href="https://github.com/DING-BAOMING/ScoreRoute" class="btn btn-primary" target="_blank">
+                        <i class="fab fa-github"></i> GitHub
+                    </a>
+                </div>
+                <div class="mobile-menu" onclick="toggleMobileNav()">
+                    <i class="fas fa-bars"></i>
+                </div>
+            </nav>
+        </div>
+        <div class="mobile-nav" id="mobileNav">
+            <a href="index.html">首页</a>
+            <a href="features.html">功能</a>
+            <a href="tech.html" class="active">技术栈</a>
+            <a href="quickstart.html">快速开始</a>
+            <a href="security.html">安全</a>
+            <a href="faq.html">FAQ</a>
+                    <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" target="_blank">飞书</a>
+            <a href="https://github.com/DING-BAOMING/ScoreRoute" target="_blank">GitHub</a>
+        </div>
+    </header>
+
+    <div class="page-header">
+        <div class="container">
+            <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> 返回首页</a>
+            <h1>技术栈</h1>
+            <p>现代化技术选型，简单易用，性能卓越</p>
+        </div>
+    </div>
+
+    <section class="section">
+        <div class="container">
+            <div class="tech-grid">
+                <div class="tech-item">
+                    <div class="tech-icon" style="color: #00ADD8;">
+                        <i class="fab fa-golang"></i>
+                    </div>
+                    <span>Go 1.23</span>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon" style="color: #42b883;">
+                        <i class="fab fa-vuejs"></i>
+                    </div>
+                    <span>Vue 3</span>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon" style="color: #4091F9;">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <span>SQLite</span>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon" style="color: #2496ED;">
+                        <i class="fab fa-docker"></i>
+                    </div>
+                    <span>Docker</span>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon" style="color: #FF6B6B;">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <span>Gin</span>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon" style="color: #FF9900;">
+                        <i class="fas fa-server"></i>
+                    </div>
+                    <span>RESTful API</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" style="background: var(--bg-secondary);">
+        <div class="container">
+            <div class="section-header">
+                <h2>技术优势</h2>
+            </div>
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-rocket"></i></div>
+                    <h3>高性能</h3>
+                    <p>Go语言编写，编译型语言天生高性能。支持高并发连接，轻松应对大流量请求。</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-mobile-alt"></i></div>
+                    <h3>响应式前端</h3>
+                    <p>Vue 3 + Element Plus，现代响应式UI，适配桌面和移动设备。</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-database"></i></div>
+                    <h3>轻量存储</h3>
+                    <p>SQLite数据库，无需额外部署，零配置。数据本地存储，隐私安全。</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-box"></i></div>
+                    <h3>一键部署</h3>
+                    <p>Docker容器化，一键部署。提供install.sh安装脚本，开箱即用。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <a href="index.html" class="logo">ScoreRoute
+                    </a>
+                    <p>开源的智能AI路由网关，由BOMING开发和维护。</p>
+                </div>
+                <div class="footer-links">
+                    <h5>产品</h5>
+                    <ul>
+                        <li><a href="features.html">功能</a></li>
+                        <li><a href="tech.html">技术栈</a></li>
+                        <li><a href="quickstart.html">快速开始</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h5>资源</h5>
+                    <ul>
+                        <li><a href="https://github.com/DING-BAOMING/ScoreRoute" target="_blank">GitHub</a></li>
+                        <li><a href="faq.html">FAQ</a>
+                    <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" target="_blank">飞书</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h5>联系</h5>
+                    <ul>
+                        <li><a href="mailto:Admin@ScoreRoute.com">Admin@ScoreRoute.com</a></li>
+                        <li><a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" target="_blank">飞书群</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span>© 2026 ScoreRoute. BOMING. 保留所有权利.</span>
+                <div class="social-links">
+                    <a href="https://github.com/DING-BAOMING/ScoreRoute" target="_blank"><i class="fab fa-github"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function toggleMobileNav() {
+            document.getElementById('mobileNav').classList.toggle('active');
+        }
+    </script>
+</body>
+</html>

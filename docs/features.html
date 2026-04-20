@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="images/favicon.png?v=1776569877">
+    <title>核心功能 - ScoreRoute</title>
+    <meta name="description" content="ScoreRoute 核心功能详细介绍：多模型路由、负载均衡、故障转移、智能评分、样本分析、API管理。">
+    <link rel="stylesheet" href="css/style.css?v=1776521986">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="index.html" class="logo"><img src="ScoreRouteLoGo.png?v=1776569877" alt="ScoreRoute" height="32"></a>
+                <div class="nav-links">
+                    <a href="features.html" class="active">功能</a>
+                    <a href="tech.html">技术栈</a>
+                    <a href="quickstart.html">快速开始</a>
+                    <a href="security.html">安全</a>
+                    <a href="faq.html">FAQ</a>
+                    <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" target="_blank">飞书</a>
+                </div>
+                <div class="nav-cta">
+                    <a href="https://github.com/DING-BAOMING/ScoreRoute" class="btn btn-primary" target="_blank">
+                        <i class="fab fa-github"></i> GitHub
+                    </a>
+                </div>
+                <div class="mobile-menu" onclick="toggleMobileNav()">
+                    <i class="fas fa-bars"></i>
+                </div>
+            </nav>
+        </div>
+        <div class="mobile-nav" id="mobileNav">
+            <a href="index.html">首页</a>
+            <a href="features.html" class="active">功能</a>
+            <a href="tech.html">技术栈</a>
+            <a href="quickstart.html">快速开始</a>
+            <a href="security.html">安全</a>
+            <a href="faq.html">FAQ</a>
+            <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" target="_blank">飞书</a>
+            <a href="https://github.com/DING-BAOMING/ScoreRoute" target="_blank">GitHub</a>
+        </div>
+    </header>
+
+    <div class="page-header">
+        <div class="container">
+            <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> 返回首页</a>
+            <h1>核心功能</h1>
+            <p>强大的AI网关功能，让你的AI应用更稳定、更高效</p>
+        </div>
+    </div>
+
+    <section class="section">
+        <div class="container">
+            <div class="cards-grid cards-grid-3">
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-network-wired"></i></div>
+                    <h3>多模型路由</h3>
+                    <p>支持GPT、Claude、Gemini、MiniMax等多种AI模型统一接入。通过智能路由算法，自动选择最优模型处理请求。</p>
+                    <p><strong>支持的模型类型：</strong></p>
+                    <ul class="feature-list">
+                        <li>文本模型：GPT系列、GLM系列、MiniMax等</li>
+                        <li>视觉理解：GPT-4V、GLM-4V等</li>
+                        <li>图像生成：DALL-E、CogView等</li>
+                        <li>视频生成：CogVideoX等</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-balance-scale"></i></div>
+                    <h3>负载均衡</h3>
+                    <p>自动分发请求到多个模型实例，提高系统吞吐量。支持连接池管理、请求队列、限流熔断。</p>
+                    <p><strong>支持的路由策略：</strong></p>
+                    <ul class="feature-list">
+                        <li>随机（Random）</li>
+                        <li>轮询（Round Robin）</li>
+                        <li>加权（Weighted）</li>
+                        <li>最小延迟（Least Latency）</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-shield-alt"></i></div>
+                    <h3>故障转移</h3>
+                    <p>模型失败时自动切换，保障服务连续性。支持重试机制、自动跳过不可用模型、健康检查。</p>
+                    <p><strong>SLA高达99.9%</strong></p>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-sync-alt"></i></div>
+                    <h3>轮询调度</h3>
+                    <p>按调用次数升序轮询，均匀分配负载。简单可靠的负载分配策略，适用于所有模型表现相近的场景。</p>
+                    <p>在"模型管理"页面，点击"调度模式"按钮即可切换。</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-brain"></i></div>
+                    <h3>智能调度</h3>
+                    <p>根据综合评分选择最优模型，优先选择表现最好的。评分维度包括：</p>
+                    <ul class="feature-list">
+                        <li><strong>样本评分 (25%)</strong> - 样本分析得出的评分</li>
+                        <li><strong>成功率 (15%)</strong> - 成功请求占总请求的比例</li>
+                        <li><strong>成本评分 (15%)</strong> - 免费模型90分，付费模型70分</li>
+                        <li><strong>用户评分 (15%)</strong> - 用户对模型的1-100评分</li>
+                        <li><strong>延迟分数 (10%)</strong> - 延迟越低分数越高</li>
+                        <li><strong>稳定性 (10%)</strong> - 样本量越多评分越可靠</li>
+                        <li><strong>时间评分 (10%)</strong> - 基于模型过期时间</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-star"></i></div>
+                    <h3>模型评分</h3>
+                    <p>多维度量化模型表现，为路由决策提供数据支撑：</p>
+                    <ul class="feature-list">
+                        <li><strong>成功率 (28%)</strong> - 成功请求占总请求的比例</li>
+                        <li><strong>延迟分数 (21%)</strong> - 基于平均延迟计算</li>
+                        <li><strong>稳定性 (21%)</strong> - 基于样本量计算</li>
+                        <li><strong>用户评分 (15%)</strong> - 用户对模型的1-100评分</li>
+                        <li><strong>样本分析 (15%)</strong> - Agent能力评估</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-flask"></i></div>
+                    <h3>样本分析</h3>
+                    <p>保存和分析API调用样本，特别适用于Agent场景下的模型评估。</p>
+                    <p><strong>样本保存规则：</strong></p>
+                    <ul class="feature-list">
+                        <li>只保存响应Token数 ≥ 500 的请求</li>
+                        <li>每个模型只保存一个最新样本</li>
+                        <li>样本保存7天，到期自动删除</li>
+                        <li>异步保存，不影响API响应速度</li>
+                    </ul>
+                    <p><strong>分析机制：</strong></p>
+                    <ul class="feature-list">
+                        <li>每2小时自动分析最多20个样本</li>
+                        <li>按剩余时间升序（即将过期优先）</li>
+                        <li>分析完成后自动删除样本</li>
+                        <li>分析失败自动重试最多3次</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-balance-scale-right"></i></div>
+                    <h3>附加评分机制</h3>
+                    <p>智能调度的额外奖惩机制，实现模型轮转调用。</p>
+                    <p><strong>惩罚机制：</strong></p>
+                    <ul class="feature-list">
+                        <li>当某个模型被调用时，所有模型都会被扣除一定分数</li>
+                        <li>每次调用 -5分惩罚</li>
+                        <li>防止过度使用单一模型</li>
+                    </ul>
+                    <p><strong>奖励机制：</strong></p>
+                    <ul class="feature-list">
+                        <li>新模型加入时获得+5分奖励</li>
+                        <li>持续24小时</li>
+                        <li>基于时间的线性衰减</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-key"></i></div>
+                    <h3>API Key管理</h3>
+                    <p>安全的Key存储与轮换，支持多个API密钥集中管理。</p>
+                    <ul class="feature-list">
+                        <li>加密存储、最小权限</li>
+                        <li>支持重新生成Key</li>
+                        <li>Token Key仅显示一次</li>
+                        <li>可绑定特定格式和模型</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">Agent能力评估维度</h2>
+            <div class="cards-grid cards-grid-3">
+                <div class="card">
+                    <h3>工具调用 (30%)</h3>
+                    <p>是否正确识别并调用工具，参数是否正确</p>
+                </div>
+                <div class="card">
+                    <h3>完整性 (25%)</h3>
+                    <p>是否完整回复用户请求，无遗漏</p>
+                </div>
+                <div class="card">
+                    <h3>上下文理解 (20%)</h3>
+                    <p>是否正确理解对话上下文</p>
+                </div>
+                <div class="card">
+                    <h3>错误处理 (15%)</h3>
+                    <p>错误处理和模糊请求处理能力</p>
+                </div>
+                <div class="card">
+                    <h3>回复质量 (10%)</h3>
+                    <p>回复的清晰度和格式</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">渠道与模型管理</h2>
+            <div class="cards-grid cards-grid-2">
+                <div class="card">
+                    <h3>渠道管理</h3>
+                    <p>渠道是对接不同AI服务商的配置：</p>
+                    <ul class="feature-list">
+                        <li><strong>API地址</strong> - AI服务商提供的API端点</li>
+                        <li><strong>API Key</strong> - 渠道的身份凭证</li>
+                        <li><strong>格式</strong> - OpenAI/Anthropic/Azure/Google/智谱Zhipu</li>
+                    </ul>
+                    <p><strong>可设置限制：</strong></p>
+                    <ul class="feature-list">
+                        <li>总Token限制 - 渠道可用Token总数上限</li>
+                        <li>API有效期 - 渠道API密钥的过期时间</li>
+                        <li>调用频率限制 - 次数/Token数（每分钟/小时/天/周/月/年）</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>模型管理</h3>
+                    <p>模型是具体可调用的AI模型，关联到渠道：</p>
+                    <ul class="feature-list">
+                        <li>每个模型必须属于一个渠道</li>
+                        <li>模型类型: Chat/Embedding/Image/Video</li>
+                        <li>支持批量添加模型</li>
+                        <li>可从API自动获取可用模型列表</li>
+                    </ul>
+                    <p><strong>可设置限制：</strong></p>
+                    <ul class="feature-list">
+                        <li>总Token限制、模型有效期</li>
+                        <li>调用频率限制（次数/Token数）</li>
+                        <li>每Token费用、货币单位(CNY/USD)</li>
+                        <li>汇率设置（USD兑换CNY）</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta">
+        <div class="container">
+            <h2>想了解更多？</h2>
+            <p>查看快速开始文档，开始使用 ScoreRoute</p>
+            <div class="hero-cta">
+                <a href="quickstart.html" class="btn btn-primary">
+                    <i class="fas fa-rocket"></i> 快速开始
+                </a>
+                <a href="security.html" class="btn btn-secondary">
+                    了解安全特性
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <a href="index.html" class="logo"><img src="ScoreRouteLoGo.png?v=1776569877" alt="ScoreRoute" height="28"></a>
+                    <p>开源的智能AI路由网关，由BOMING开发和维护。</p>
+                </div>
+                <div class="footer-links">
+                    <h5>产品</h5>
+                    <ul>
+                        <li><a href="features.html">功能</a></li>
+                        <li><a href="tech.html">技术栈</a></li>
+                        <li><a href="quickstart.html">快速开始</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h5>资源</h5>
+                    <ul>
+                        <li><a href="https://github.com/DING-BAOMING/ScoreRoute" target="_blank">GitHub</a></li>
+                        <li><a href="faq.html">FAQ</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h5>联系</h5>
+                    <ul>
+                        <li><a href="mailto:Admin@ScoreRoute.com">Admin@ScoreRoute.com</a></li>
+                        <li><a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" target="_blank">飞书群</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span>© 2026 ScoreRoute. BOMING. 保留所有权利.</span>
+                <div class="social-links">
+                    <a href="https://github.com/DING-BAOMING/ScoreRoute" target="_blank"><i class="fab fa-github"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function toggleMobileNav() {
+            document.getElementById('mobileNav').classList.toggle('active');
+        }
+    </script>
+</body>
+</html>

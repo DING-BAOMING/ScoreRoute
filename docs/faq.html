@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="images/favicon.png">
+    <title>常见问题 - ScoreRoute</title>
+    <meta name="description" content="ScoreRoute 常见问题解答。">
+    <link rel="stylesheet" href="css/style.css?v=1776521986">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="index.html" class="logo">ScoreRoute
+                </a>
+                <div class="nav-links">
+                    <a href="features.html">功能</a>
+                    <a href="tech.html">技术栈</a>
+                    <a href="quickstart.html">快速开始</a>
+                    <a href="security.html">安全</a>
+                    <a href="faq.html" class="active">FAQ</a>
+                    <a href="https://github.com/DING-BAOMING/ScoreRoute" target="_blank">GitHub</a>
+                </div>
+                <div class="nav-cta">
+                    <a href="https://github.com/DING-BAOMING/ScoreRoute" class="btn btn-primary" target="_blank">
+                        <i class="fab fa-github"></i> GitHub
+                    </a>
+                </div>
+                <div class="mobile-menu" onclick="toggleMobileNav()">
+                    <i class="fas fa-bars"></i>
+                </div>
+            </nav>
+        </div>
+        <div class="mobile-nav" id="mobileNav">
+            <a href="index.html">首页</a>
+            <a href="features.html">功能</a>
+            <a href="tech.html">技术栈</a>
+            <a href="quickstart.html">快速开始</a>
+            <a href="security.html">安全</a>
+            <a href="faq.html" class="active">FAQ</a>
+            <a href="https://github.com/DING-BAOMING/ScoreRoute" target="_blank">GitHub</a>
+        </div>
+    </header>
+
+    <div class="page-header">
+        <div class="container">
+            <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> 返回首页</a>
+            <h1>常见问题</h1>
+            <p>遇到问题？这里可能有答案</p>
+        </div>
+    </div>
+
+    <section class="section">
+        <div class="container">
+            <div class="faq-list">
+                <div class="faq-item">
+                    <h4>ScoreRoute 是什么？</h4>
+                    <p>ScoreRoute 是一个开源的AI网关项目，支持多模型路由、负载均衡、故障转移和智能评分功能。通过统一的接口接入多个AI模型，智能分发请求，提高系统可用性和性能。</p>
+                </div>
+                <div class="faq-item">
+                    <h4>支持哪些AI模型？</h4>
+                    <p>支持所有OpenAI兼容的API，包括GPT-4、GPT-3.5、Claude、Gemini、国产模型（通义千问、文心一言等）。只需配置相应的API Key即可使用。</p>
+                </div>
+                <div class="faq-item">
+                    <h4>如何部署？</h4>
+                    <p>支持多种部署方式：1) 使用 install.sh 一键安装（推荐）；2) Docker Compose；3) 手动编译。详见快速开始页面。</p>
+                </div>
+                <div class="faq-item">
+                    <h4>数据安全吗？</h4>
+                    <p>所有数据存储在本地SQLite数据库，不会上传到任何第三方服务。API密钥加密存储，开源透明可审计。详见安全与隐私页面。</p>
+                </div>
+                <div class="faq-item">
+                    <h4>开源免费吗？</h4>
+                    <p>是的，基于MIT协议开源，可以免费商用，无需付费。</p>
+                </div>
+                <div class="faq-item">
+                    <h4>需要什么配置？</h4>
+                    <p>最低配置：1核CPU、1GB内存、5GB磁盘空间。推荐配置：2核CPU、2GB内存、10GB磁盘空间。</p>
+                </div>
+                <div class="faq-item">
+                    <h4>如何更新版本？</h4>
+                    <p>拉取最新代码，重新构建Docker镜像：git pull && docker build -t scoreroute-app . && docker-compose up -d</p>
+                </div>
+                <div class="faq-item">
+                    <h4>如何获取帮助？</h4>
+                    <p>可以通过GitHub Issues提问，或加入飞书群联系开发者。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta">
+        <div class="container">
+            <h2>还有其他问题？</h2>
+            <p>欢迎通过以下方式联系我们</p>
+            <div class="hero-cta">
+                <a href="https://github.com/DING-BAOMING/ScoreRoute/issues" class="btn btn-primary" target="_blank">
+                    <i class="fab fa-github"></i> GitHub Issues
+                </a>
+                <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" class="btn btn-secondary" target="_blank">
+                    <i class="fab fa-discord"></i> 飞书群
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <a href="index.html" class="logo">ScoreRoute
+                    </a>
+                    <p>开源的智能AI路由网关，由BOMING开发和维护。</p>
+                </div>
+                <div class="footer-links">
+                    <h5>产品</h5>
+                    <ul>
+                        <li><a href="features.html">功能</a></li>
+                        <li><a href="tech.html">技术栈</a></li>
+                        <li><a href="quickstart.html">快速开始</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h5>资源</h5>
+                    <ul>
+                        <li><a href="https://github.com/DING-BAOMING/ScoreRoute" target="_blank">GitHub</a></li>
+                        <li><a href="faq.html">FAQ</a>
+                    <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" target="_blank">飞书</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h5>联系</h5>
+                    <ul>
+                        <li><a href="mailto:Admin@ScoreRoute.com">Admin@ScoreRoute.com</a></li>
+                        <li><a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" target="_blank">飞书群</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span>© 2026 ScoreRoute. BOMING. 保留所有权利.</span>
+                <div class="social-links">
+                    <a href="https://github.com/DING-BAOMING/ScoreRoute" target="_blank"><i class="fab fa-github"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function toggleMobileNav() {
+            document.getElementById('mobileNav').classList.toggle('active');
+        }
+    </script>
+</body>
+</html>

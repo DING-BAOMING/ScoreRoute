@@ -36,93 +36,100 @@
         </template>
       </el-alert>
       
-      <el-table :data="displayList" v-loading="loading" stripe>
-        <el-table-column prop="rank" label="排名" width="80">
-          <template #default="{ row }">
-            <span v-if="row.rank <= 3" :class="'rank rank-' + row.rank">{{ row.rank }}</span>
-            <span v-else>{{ row.rank }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="模型" min-width="250">
-          <template #default="{ row }">
-            <div class="model-name">{{ row.channel_name }}/{{ row.format }}/{{ row.type }}/{{ row.model_name }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="成功率" width="130" sortable prop="success_rate_percent">
-          <template #default="{ row }">
-            <span :class="row.success_rate >= 95 ? 'rating-high' : row.success_rate >= 80 ? 'rating-mid' : 'rating-low'">
-              {{ row.success_rate_percent.toFixed(0) }}/{{ row.success_weighted.toFixed(1) }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="延迟分数" width="130" sortable prop="latency_score_percent">
-          <template #default="{ row }">
-            <span :class="row.latency_score_percent >= 70 ? 'rating-high' : row.latency_score_percent >= 40 ? 'rating-mid' : 'rating-low'">
-              {{ row.latency_score_percent.toFixed(0) }}/{{ row.latency_weighted.toFixed(1) }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="稳定性" width="130" sortable prop="reliability_score_percent">
-          <template #default="{ row }">
-            <span :class="row.reliability_score_percent >= 70 ? 'rating-high' : row.reliability_score_percent >= 40 ? 'rating-mid' : 'rating-low'">
-              {{ row.reliability_score_percent.toFixed(0) }}/{{ row.reliability_weighted.toFixed(1) }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="用户评分" width="130" sortable prop="user_rating">
-          <template #default="{ row }">
-            <span :class="row.user_rating >= 70 ? 'rating-high' : row.user_rating >= 40 ? 'rating-mid' : 'rating-low'">
-              {{ row.user_rating }}/{{ row.user_rating_weighted.toFixed(1) }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="样本评分" width="130" sortable prop="sample_rating">
-          <template #default="{ row }">
-            <span v-if="row.sample_rating > 0" :class="row.sample_rating >= 70 ? 'rating-high' : row.sample_rating >= 40 ? 'rating-mid' : 'rating-low'">
-              {{ row.sample_rating }}/{{ row.sample_rating_weighted.toFixed(1) }}
-            </span>
-            <span v-else class="rating-none">-/-</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="成本评分" width="130" sortable prop="cost_rating">
-          <template #default="{ row }">
-            <span :class="row.cost_rating >= 70 ? 'rating-high' : row.cost_rating >= 40 ? 'rating-mid' : 'rating-low'">
-              {{ row.cost_rating.toFixed(0) }}/{{ row.cost_rating_weighted.toFixed(1) }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="时效评分" width="130" sortable prop="time_rating">
-          <template #default="{ row }">
-            <span :class="row.time_rating >= 70 ? 'rating-high' : row.time_rating >= 40 ? 'rating-mid' : 'rating-low'">
-              {{ row.time_rating.toFixed(0) }}/{{ row.time_rating_weighted.toFixed(1) }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="额外评分" width="100">
-          <template #default="{ row }">
-            <span v-if="row.extra_penalty || row.extra_reward" class="extra-rating">
-              <span v-if="row.extra_penalty" class="penalty">{{ row.extra_penalty }}</span>
-              <span v-if="row.extra_reward" class="reward">{{ row.extra_reward > 0 ? '+' : '' }}{{ row.extra_reward }}</span>
-            </span>
-            <span v-else class="rating-none">0</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="综合评分" width="120" sortable prop="score">
-          <template #default="{ row }">
-            <el-tag :type="getScoreType(row.score)" size="large">
-              {{ row.score.toFixed(1) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="详情" width="150">
-          <template #default="{ row }">
-            <div class="detail-info">
-              <span>调用: {{ formatNumber(row.total_calls) }}</span>
-              <span>Token: {{ formatNumber(row.total_tokens) }}</span>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div v-for="(group, key) in groupedModels" :key="key" class="model-group">
+        <div class="group-header">
+          <span class="group-title">{{ formatGroupName(key) }}</span>
+          <span class="group-count">{{ group.length }} 个模型</span>
+        </div>
+        
+        <el-table :data="group" v-loading="loading" stripe>
+          <el-table-column prop="rank" label="排名" width="80">
+            <template #default="{ row }">
+              <span v-if="row.rank <= 3" :class="'rank rank-' + row.rank">{{ row.rank }}</span>
+              <span v-else>{{ row.rank }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="模型" min-width="250">
+            <template #default="{ row }">
+              <div class="model-name">{{ row.channel_name }}/{{ row.format }}/{{ row.type }}/{{ row.model_name }}</div>
+            </template>
+          </el-table-column>
+          <el-table-column label="成功率" width="130" sortable prop="success_rate_percent">
+            <template #default="{ row }">
+              <span :class="row.success_rate >= 95 ? 'rating-high' : row.success_rate >= 80 ? 'rating-mid' : 'rating-low'">
+                {{ row.success_rate_percent.toFixed(0) }}/{{ row.success_weighted.toFixed(1) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="延迟分数" width="130" sortable prop="latency_score_percent">
+            <template #default="{ row }">
+              <span :class="row.latency_score_percent >= 70 ? 'rating-high' : row.latency_score_percent >= 40 ? 'rating-mid' : 'rating-low'">
+                {{ row.latency_score_percent.toFixed(0) }}/{{ row.latency_weighted.toFixed(1) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="稳定性" width="130" sortable prop="reliability_score_percent">
+            <template #default="{ row }">
+              <span :class="row.reliability_score_percent >= 70 ? 'rating-high' : row.reliability_score_percent >= 40 ? 'rating-mid' : 'rating-low'">
+                {{ row.reliability_score_percent.toFixed(0) }}/{{ row.reliability_weighted.toFixed(1) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="用户评分" width="130" sortable prop="user_rating">
+            <template #default="{ row }">
+              <span :class="row.user_rating >= 70 ? 'rating-high' : row.user_rating >= 40 ? 'rating-mid' : 'rating-low'">
+                {{ row.user_rating }}/{{ row.user_rating_weighted.toFixed(1) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="样本评分" width="130" sortable prop="sample_rating">
+            <template #default="{ row }">
+              <span v-if="row.sample_rating > 0" :class="row.sample_rating >= 70 ? 'rating-high' : row.sample_rating >= 40 ? 'rating-mid' : 'rating-low'">
+                {{ row.sample_rating }}/{{ row.sample_rating_weighted.toFixed(1) }}
+              </span>
+              <span v-else class="rating-none">-/-</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="成本评分" width="130" sortable prop="cost_rating">
+            <template #default="{ row }">
+              <span :class="row.cost_rating >= 70 ? 'rating-high' : row.cost_rating >= 40 ? 'rating-mid' : 'rating-low'">
+                {{ row.cost_rating.toFixed(0) }}/{{ row.cost_rating_weighted.toFixed(1) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="时效评分" width="130" sortable prop="time_rating">
+            <template #default="{ row }">
+              <span :class="row.time_rating >= 70 ? 'rating-high' : row.time_rating >= 40 ? 'rating-mid' : 'rating-low'">
+                {{ row.time_rating.toFixed(0) }}/{{ row.time_rating_weighted.toFixed(1) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="额外评分" width="100">
+            <template #default="{ row }">
+              <span v-if="row.extra_penalty || row.extra_reward" class="extra-rating">
+                <span v-if="row.extra_penalty" class="penalty">{{ row.extra_penalty }}</span>
+                <span v-if="row.extra_reward" class="reward">{{ row.extra_reward > 0 ? '+' : '' }}{{ row.extra_reward }}</span>
+              </span>
+              <span v-else class="rating-none">0</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="综合评分" width="120" sortable prop="score">
+            <template #default="{ row }">
+              <el-tag :type="getScoreType(row.score)" size="large">
+                {{ row.score.toFixed(1) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="详情" width="150">
+            <template #default="{ row }">
+              <div class="detail-info">
+                <span>调用: {{ formatNumber(row.total_calls) }}</span>
+                <span>Token: {{ formatNumber(row.total_tokens) }}</span>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
     </el-card>
 
     <el-dialog v-model="showWeightDialog" title="评分权重设置" width="700px">
@@ -288,6 +295,7 @@ async function loadData() {
           time_rating_weighted: timeRatingWeighted,
           extra_penalty: sc.penalty || 0,
           extra_reward: sc.reward || 0,
+          type: sc.model_type,
           total_calls: stats ? stats.total_calls : 0,
           total_tokens: stats ? stats.total_tokens : 0
         }
@@ -300,129 +308,38 @@ async function loadData() {
   }
 }
 
-function getUserRatingForModel(modelName) {
-  if (!modelName) return 50
-  const normalized = normalizeModelName(modelName)
-  return userRatings.value[normalized.toLowerCase()] || 50
-}
-
-function getSampleRatingForModel(modelKey) {
-  if (!modelKey) return 0
-  const rating = sampleRatings.value[modelKey.toLowerCase()]
-  return rating || 0
-}
-
-function getCostRatingForModel(modelKey) {
-  const rating = costTimeRatings.value[modelKey.toLowerCase()]
-  return rating ? rating.cost_rating : 50
-}
-
-function getTimeRatingForModel(modelKey) {
-  const rating = costTimeRatings.value[modelKey.toLowerCase()]
-  return rating ? rating.time_rating : 50
-}
-
-function normalizeModelName(name) {
-  const lower = name.toLowerCase()
-  
-  if (lower.includes('minimaxai/') || lower.includes('minimax-') || lower === 'minimax') {
-    return normalizeMinimaxModel(name)
+function formatGroupName(key) {
+  const typeNames = {
+    'chat': '文本',
+    'embedding': '嵌入',
+    'completions': '补全',
+    'images': '图像',
+    'audio': '音频',
+    'video': '视频'
   }
-  
-  const vendorPrefixes = ['google/', 'qwen/', 'z-ai/', 'anthropic/', 'openai/', 'meta/', 'mistral/', 'cohere/', 'azure/', 'aws/', 'alibaba/', 'baidu/', 'tencent/']
-  let normalized = lower
-  for (const prefix of vendorPrefixes) {
-    if (normalized.includes(prefix)) {
-      normalized = normalized.replace(prefix, '')
-      break
+  const parts = key.split('_')
+  if (parts.length >= 2) {
+    const format = parts[0].toUpperCase()
+    const type = typeNames[parts[1]] || parts[1]
+    return `${format}-${type}`
+  }
+  return key || '未知'
+}
+const groupedModels = computed(() => {
+  const groups = {}
+  modelStats.value.forEach(model => {
+    const format = model.format || 'unknown'
+    const type = model.type || 'unknown'
+    const key = `${format}_${type}`
+    if (!groups[key]) {
+      groups[key] = []
     }
-  }
-  return normalized
-}
-
-function normalizeMinimaxModel(name) {
-  const lower = name.toLowerCase()
-  if (lower.includes('minimaxai/')) {
-    let n = name.toLowerCase().replace('minimaxai/', '')
-    n = n.replace('minimax-', '').replace('minimax', '')
-    if (n.startsWith('m') && n.length > 1 && n[1] >= '0' && n[1] <= '9') {
-      n = n.substring(1)
-    }
-    return 'minimax-' + n
-  }
-  if (lower.includes('minimax-') || lower.includes('minimax')) {
-    let n = name.toLowerCase().replace('minimax-', '').replace('minimax', '')
-    if (n.startsWith('m') && n.length > 1 && n[1] >= '0' && n[1] <= '9') {
-      n = n.substring(1)
-    }
-    return 'minimax-' + n
-  }
-  return lower
-}
-
-function normalizeModelKeyForExtra(channelName, format, modelType, modelName) {
-  return `${channelName}_${format}_${modelType}_${modelName}`.toLowerCase()
-}
-
-function calculateScore(stat, userRating, sampleRating, extraPenalty = 0, extraReward = 0, costRating = 50, timeRating = 50) {
-  const { score } = calculateScoreDetailed(stat, userRating, sampleRating, extraPenalty, extraReward, costRating, timeRating)
-  return score
-}
-
-function calculateScoreDetailed(stat, userRating, sampleRating, extraPenalty = 0, extraReward = 0, costRating = 50, timeRating = 50) {
-  const w = weights.value
-  const successWeight = w.success_weight
-  const latencyWeight = w.latency_weight
-  const reliabilityWeight = w.reliability_weight
-  const userRatingWeight = w.user_rating_weight
-  const sampleRatingWeight = w.sample_rating_weight
-  const costRatingWeight = w.cost_rating_weight
-  const timeRatingWeight = w.time_rating_weight
-
-  const successRatePercent = stat.success_rate
-
-  const maxLatencyThreshold = 30000
-  const latencyScorePercent = Math.max(0, 1 - (stat.avg_latency / maxLatencyThreshold)) * 100
-
-  let reliabilityScorePercent = 85
-  if (stat.total_calls >= 30) {
-    reliabilityScorePercent = 100
-  } else if (stat.total_calls >= 10) {
-    reliabilityScorePercent = 80 + (stat.total_calls - 10) / 20 * 20
-  } else if (stat.total_calls >= 5) {
-    reliabilityScorePercent = 50 + (stat.total_calls - 5) / 5 * 30
-  } else if (stat.total_calls > 0) {
-    reliabilityScorePercent = 50
-  }
-
-  const userRatingPercent = userRating
-  const sampleRatingPercent = sampleRating
-  const costRatingPercent = costRating
-  const timeRatingPercent = timeRating
-
-  const successWeighted = successRatePercent * successWeight
-  const latencyWeighted = latencyScorePercent * latencyWeight
-  const reliabilityWeighted = reliabilityScorePercent * reliabilityWeight
-  const userRatingWeighted = userRatingPercent * userRatingWeight
-  const sampleRatingWeighted = sampleRatingPercent * sampleRatingWeight
-  const costRatingWeighted = costRatingPercent * costRatingWeight
-  const timeRatingWeighted = timeRatingPercent * timeRatingWeight
-
-  const baseScore = successWeighted + latencyWeighted + reliabilityWeighted + userRatingWeighted + sampleRatingWeighted + costRatingWeighted + timeRatingWeighted
-
-  const score = baseScore + extraPenalty + extraReward
-  
-  return { 
-    score, 
-    successRatePercent, latencyScorePercent, reliabilityScorePercent,
-    userRatingPercent, sampleRatingPercent, costRatingPercent, timeRatingPercent,
-    successWeighted, latencyWeighted, reliabilityWeighted,
-    userRatingWeighted, sampleRatingWeighted, costRatingWeighted, timeRatingWeighted
-  }
-}
-
-const displayList = computed(() => {
-  return modelStats.value
+    groups[key].push(model)
+  })
+  Object.keys(groups).forEach(key => {
+    groups[key].sort((a, b) => b.score - a.score)
+  })
+  return groups
 })
 
 const totalWeight = computed(() => {
@@ -461,12 +378,6 @@ async function saveWeights() {
   }
 }
 
-function getSuccessRateColor(rate) {
-  if (rate >= 95) return '#67c23a'
-  if (rate >= 80) return '#e6a23c'
-  return '#f56c6c'
-}
-
 function getScoreType(score) {
   if (score >= 80) return 'success'
   if (score >= 60) return 'warning'
@@ -486,6 +397,34 @@ function formatNumber(num) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.model-group {
+  margin-bottom: 30px;
+}
+
+.model-group:last-child {
+  margin-bottom: 0;
+}
+
+.group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px 8px 0 0;
+  color: white;
+}
+
+.group-title {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.group-count {
+  font-size: 13px;
+  opacity: 0.9;
 }
 
 .rank {
@@ -514,12 +453,6 @@ function formatNumber(num) {
 .model-name {
   font-family: monospace;
   font-size: 13px;
-}
-
-.user-rating-badge {
-  font-size: 11px;
-  color: #409eff;
-  margin-top: 2px;
 }
 
 .detail-info {

@@ -72,7 +72,7 @@
             :total="total"
             :current-page="page"
             :page-size="pageSize"
-            @current-change="loadSamples"
+            @current-change="(p) => { page.value = p; loadSamples() }"
           />
         </el-card>
       </el-tab-pane>

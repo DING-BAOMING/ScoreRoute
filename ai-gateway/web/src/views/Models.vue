@@ -93,7 +93,7 @@
         :total="total"
         :current-page="page"
         :page-size="pageSize"
-        @current-change="loadData"
+        @current-change="(p) => { page.value = p; loadData() }"
       />
     </el-card>
 

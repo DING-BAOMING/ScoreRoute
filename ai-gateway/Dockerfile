@@ -1,6 +1,6 @@
 FROM alpine:3.19
 
-RUN apk add --no-cache go git musl-dev gcc libc-dev bash nodejs npm
+RUN apk add --no-cache go git musl-dev gcc libc-dev bash nodejs npm wget
 
 WORKDIR /app
 
@@ -36,5 +36,8 @@ ENV TIKTOKEN_CACHE_DIR=/app/cache
 ENV GIN_MODE=release
 
 EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=5s \
+  CMD wget -q -O- http://localhost:3000/health || exit 1
 
 CMD ["./server"]

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="images/favicon.png">
+    <title>安全与隐私 - ScoreRoute</title>
+    <meta name="description" content="ScoreRoute 安全特性：本地数据存储、API Key加密、开源透明。">
+    <link rel="stylesheet" href="css/style.css?v=1776521986">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="index.html" class="logo">ScoreRoute
+                </a>
+                <div class="nav-links">
+                    <a href="features.html">功能</a>
+                    <a href="tech.html">技术栈</a>
+                    <a href="quickstart.html">快速开始</a>
+                    <a href="security.html" class="active">安全</a>
+                    <a href="faq.html">FAQ</a>
+                    <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" target="_blank">飞书</a>
+                </div>
+                <div class="nav-cta">
+                    <a href="https://github.com/DING-BAOMING/ScoreRoute" class="btn btn-primary" target="_blank">
+                        <i class="fab fa-github"></i> GitHub
+                    </a>
+                </div>
+                <div class="mobile-menu" onclick="toggleMobileNav()">
+                    <i class="fas fa-bars"></i>
+                </div>
+            </nav>
+        </div>
+        <div class="mobile-nav" id="mobileNav">
+            <a href="index.html">首页</a>
+            <a href="features.html">功能</a>
+            <a href="tech.html">技术栈</a>
+            <a href="quickstart.html">快速开始</a>
+            <a href="security.html" class="active">安全</a>
+            <a href="faq.html">FAQ</a>
+                    <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" target="_blank">飞书</a>
+            <a href="https://github.com/DING-BAOMING/ScoreRoute" target="_blank">GitHub</a>
+        </div>
+    </header>
+
+    <div class="page-header">
+        <div class="container">
+            <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> 返回首页</a>
+            <h1>安全与隐私</h1>
+            <p>本地优先，开源透明，你的数据你做主</p>
+        </div>
+    </div>
+
+    <section class="section">
+        <div class="container">
+            <div class="security-list">
+                <div class="security-item">
+                    <i class="fas fa-check-circle"></i>
+                    <div>
+                        <h4>本地数据存储</h4>
+                        <p>所有数据存储在本地SQLite数据库，不依赖第三方云服务。数据库文件保存在本地文件系统，完全可控。</p>
+                    </div>
+                </div>
+                <div class="security-item">
+                    <i class="fas fa-check-circle"></i>
+                    <div>
+                        <h4>API Key安全</h4>
+                        <p>API密钥加密存储，支持密钥轮换。遵循最小权限原则，确保密钥安全。</p>
+                    </div>
+                </div>
+                <div class="security-item">
+                    <i class="fas fa-check-circle"></i>
+                    <div>
+                        <h4>开源透明</h4>
+                        <p>基于MIT协议开源，代码公开可审计。无隐藏后门，无数据收集。</p>
+                    </div>
+                </div>
+                <div class="security-item">
+                    <i class="fas fa-check-circle"></i>
+                    <div>
+                        <h4>JWT认证</h4>
+                        <p>使用JWT进行用户认证，Token有过期时间。支持自定义过期时间。</p>
+                    </div>
+                </div>
+                <div class="security-item">
+                    <i class="fas fa-check-circle"></i>
+                    <div>
+                        <h4>请求日志</h4>
+                        <p>完整的请求日志记录，便于审计和问题排查。敏感信息脱敏处理。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" style="background: var(--bg-secondary);">
+        <div class="container">
+            <div class="section-header">
+                <h2>安全建议</h2>
+            </div>
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-key"></i></div>
+                    <h3>强密码</h3>
+                    <p>使用强密码作为管理员密码，包含大小写字母、数字和特殊字符。定期更换密码。</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-lock"></i></div>
+                    <h3>JWT密钥</h3>
+                    <p>使用随机生成的JWT密钥，不要使用默认值。在生产环境中定期轮换。</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-network-wired"></i></div>
+                    <h3>网络隔离</h3>
+                    <p>在生产环境中，将ScoreRoute部署在内网，并使用Nginx反向代理加HTTPS。</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fas fa-database"></i></div>
+                    <h3>数据备份</h3>
+                    <p>定期备份数据库文件和配置文件。数据库位于 ./data/gateway.db。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <a href="index.html" class="logo">ScoreRoute
+                    </a>
+                    <p>开源的智能AI路由网关，由BOMING开发和维护。</p>
+                </div>
+                <div class="footer-links">
+                    <h5>产品</h5>
+                    <ul>
+                        <li><a href="features.html">功能</a></li>
+                        <li><a href="tech.html">技术栈</a></li>
+                        <li><a href="quickstart.html">快速开始</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h5>资源</h5>
+                    <ul>
+                        <li><a href="https://github.com/DING-BAOMING/ScoreRoute" target="_blank">GitHub</a></li>
+                        <li><a href="faq.html">FAQ</a>
+                    <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" target="_blank">飞书</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h5>联系</h5>
+                    <ul>
+                        <li><a href="mailto:Admin@ScoreRoute.com">Admin@ScoreRoute.com</a></li>
+                        <li><a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=82bq51e8-fbd2-4c36-97d9-4e9f575c3d1b" target="_blank">飞书群</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span>© 2026 ScoreRoute. BOMING. 保留所有权利.</span>
+                <div class="social-links">
+                    <a href="https://github.com/DING-BAOMING/ScoreRoute" target="_blank"><i class="fab fa-github"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function toggleMobileNav() {
+            document.getElementById('mobileNav').classList.toggle('active');
+        }
+    </script>
+</body>
+</html>

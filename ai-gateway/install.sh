@@ -121,7 +121,6 @@ update_docker_compose() {
     echo -e "${YELLOW}[5/7] 配置 Docker 端口...${NC}"
     
     sed -i "s/\${PORT:-3000}/${PORT}/" docker-compose.yml
-    sed -i 's/\${PORT:-3000}/3000/' docker-compose.yml
     echo -e "${GREEN}✓ 端口已配置为 ${PORT}${NC}"
 }
 

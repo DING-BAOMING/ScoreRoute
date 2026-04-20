@@ -128,6 +128,7 @@
               </el-select>
               <el-input-number v-model="rule.max_count" :min="1" style="width: 120px" />
               <span v-if="rule.type === 'billing'" style="width: 60px; text-align: center">元/</span>
+              <span v-else-if="rule.type === 'tokens'" style="width: 60px; text-align: center">Token/</span>
               <span v-else style="width: 60px; text-align: center">次/</span>
               <el-select v-model="rule.window" style="width: 100px">
                 <el-option label="分钟" value="minute" />

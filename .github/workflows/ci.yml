@@ -21,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       go_changed: ${{ steps.filter.outputs.go_changed }}
+      shell_changed: ${{ steps.filter.outputs.shell_changed }}
+      frontend_changed: ${{ steps.filter.outputs.frontend_changed }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -32,6 +34,13 @@ jobs:
               - 'ai-gateway/go.mod'
               - 'ai-gateway/go.sum'
               - '.github/workflows/ci.yml'
+            shell_changed:
+              - 'ai-gateway/*.sh'
+              - 'ai-gateway/docker-compose.yml'
+              - 'ai-gateway/Dockerfile'
+            frontend_changed:
+              - 'ai-gateway/web/**'
+              - '!ai-gateway/web/node_modules/**'
 
   lint:
     runs-on: ubuntu-latest
@@ -54,6 +63,21 @@ jobs:
             exit 1
           fi
           echo "All files are properly formatted."
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    needs: changed
+    if: needs.changed.outputs.shell_changed == 'true'
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run shellcheck
+        run: |
+          if command -v shellcheck &> /dev/null; then
+            shellcheck ai-gateway/*.sh || exit 1
+          else
+            echo "shellcheck not installed, skipping"
+          fi
 
   test:
     runs-on: ubuntu-latest
@@ -121,7 +145,7 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     needs: changed
-    if: needs.changed.outputs.go_changed == 'true'
+    if: needs.changed.outputs.frontend_changed == 'true'
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4

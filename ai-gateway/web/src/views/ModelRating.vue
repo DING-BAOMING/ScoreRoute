@@ -574,13 +574,37 @@ const groupedModels = computed(() => {
   return groups
 })
 
+// Helper function to normalize model base name for grouping
+function normalizeBaseModelName(modelName) {
+  if (!modelName) return 'unknown'
+  let n = modelName.toLowerCase()
+  
+  // Remove provider prefixes
+  const prefixes = ['minimaxai/', 'z-ai/', 'qwen/', 'meta/', 'mistralai/', 'microsoft/', 'anthropic/', 'cohere/', 'google/', 'openai/', 'azure/', 'aws/', 'alibaba/', 'baidu/', 'tencent/']
+  for (const prefix of prefixes) {
+    if (n.startsWith(prefix)) {
+      n = n.substring(prefix.length)
+      break
+    }
+  }
+  
+  // Handle minimax variations: mini-max -> minimax
+  if (n.startsWith('mini-max')) {
+    n = 'minimax' + n.substring(8)
+  }
+  
+  // If still has '/', take the last part
+  if (n.includes('/')) {
+    n = n.split('/').pop()
+  }
+  
+  return n
+}
+
 const modelGroupedModels = computed(() => {
   const groups = {}
   modelStats.value.forEach(model => {
-    let modelBaseName = model.model_name || 'unknown'
-    if (modelBaseName.includes('/')) {
-      modelBaseName = modelBaseName.split('/')[1] || modelBaseName
-    }
+    const modelBaseName = normalizeBaseModelName(model.model_name)
     if (!groups[modelBaseName]) {
       groups[modelBaseName] = []
     }

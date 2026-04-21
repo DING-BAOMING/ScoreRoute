@@ -71,18 +71,45 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 - **问题**: minimaxai/minimax-m2.7 和 MiniMax-M2.7 被当作不同模型
 - **修复**: 改进了normalizeModelName函数:
   - 去除常见提供商前缀 (minimaxai/, z-ai/, qwen/等)
+  - 处理 mini-max -> minimax 等变体
   - 确保不同格式的同一模型被正确归一化
-- **文件**: web/src/views/Tokens.vue
+- **文件**: 
+  - internal/service/dispatcher_utils.go (normalizeModelNameForPrefix函数)
+  - internal/service/dispatcher.go (使用标准化)
 
-## 测试验证 (2026-04-21)
+## 测试验证 (2026-04-21) - 10次请求测试结果
 
-### 10次请求测试结果
 | 组合 | 结果 | 说明 |
 |------|------|------|
-| Smart + auto | ✅ 10/10成功 | 选择最高分模型 |
-| Smart + 固定模型 | ⚠️ 部分失败 | 上游API问题(529)，但前缀匹配正常 |
-| Polling + auto | ✅ 10/10成功 | 轮询选择低call_count模型 |
-| Polling + 固定模型 | ✅ 8/10成功 | 轮询正常，上游偶发故障 |
+| Smart + __AUTO__ | ✅ 10/10成功 | 正确选择最高分模型 |
+| Smart + minimax-m2.5 | ✅ 10/10成功 | 正确匹配并调度 |
+| Polling + __AUTO__ | ✅ 10/10成功 | 正确轮询低call_count模型 |
+| Polling + minimax-m2.5 | ✅ 8/10成功 | 上游504/529错误,调度器fallback正常 |
+
+### Demo-1 API测试
+- Token: sk-c0c45ba8-2657-4d12-be5c-912c88857739
+- 测试: 5/5 成功请求
+- 状态: ✅ 正常工作
+
+## Git 状态
+- **main分支**: 23 commits ahead of origin/main
+- **已推送分支**:
+  - fix/filter-and-dispatch
+  - fix/model-normalization
+  - sync-docs-0421
+  - fix/model-name-normalization
+
+### GitHub PR 链接
+由于main分支有保护规则,需要通过PR合并:
+- https://github.com/DING-BAOMING/ScoreRoute/pull/new/fix/filter-and-dispatch
+- https://github.com/DING-BAOMING/ScoreRoute/pull/new/fix/model-normalization
+- https://github.com/DING-BAOMING/ScoreRoute/pull/new/sync-docs-0421
+- https://github.com/DING-BAOMING/ScoreRoute/pull/new/fix/model-name-normalization
+
+## 服务状态
+- 健康检查: ✅ 正常
+- Docker镜像: 77b9f983d9bb
+- 当前调度模式: polling
 
 ## 模型评分页面使用说明
 
@@ -100,40 +127,4 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 ### 模型名称归一化
 - 前缀如 "minimaxai/", "z-ai/" 等会被自动去除
 - minimaxai/minimax-m2.7 和 MiniMax-M2.7 会被归一化为同一模型
-
-## 文件修改记录
-
-### 2026-04-21 修改
-
-| 文件 | 修改内容 |
-|------|----------|
-| web/src/views/ModelRating.vue | 恢复筛选功能 |
-| web/src/views/Tokens.vue | 改进模型名称标准化 |
-| internal/service/dispatcher.go | 修复auto模式dispatch逻辑 |
-| .session_state.md | 更新状态 |
-
-## Git 提交记录
-- 18 commits ahead of origin/main
-- 最新commit: 9c82159 - fix: improve model name normalization in Tokens.vue
-
-### GitHub PR
-- fix/filter-and-dispatch: 筛选功能 + auto dispatch修复
-- fix/model-normalization: 模型名称标准化
-
-## 开发指南
-
-### 添加新功能流程
-1. 先读取 session_state.md 了解当前状态
-2. 修改代码，一次只改一个文件
-3. 本地构建测试: `go build ./cmd/server`
-4. Docker构建部署: `sudo docker build -t ai-gateway-app:latest . && sudo docker-compose up -d`
-5. 测试验证
-6. 更新 session_state.md
-7. Git提交
-
-### 注意事项
-- 每次最多修改一个文件
-- 修改后必须测试
-- 更新文档和session_state
-- 提交前检查 git status
-- 模型评分是动态变化的，根据实际性能计算
+- mini-max-m2.5 会被归一化为 minimax-m2.5

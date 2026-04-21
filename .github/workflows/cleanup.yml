@@ -1,0 +1,40 @@
+name: Cleanup Stale Branches
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Get merged branches
+        run: |
+          git fetch --prune origin
+          for branch in $(git branch -r --merged origin/main | grep -v 'origin/main$' | grep -v 'origin/HEAD$' | sed 's|origin/||'); do
+            echo "Deleting merged branch: $branch"
+            git push origin --delete "$branch" 2>/dev/null || true
+          done
+          
+      - name: Find stale branches
+        run: |
+          git fetch --prune origin
+          now=$(date +%s)
+          for branch in $(git branch -r | grep -v 'origin/main$' | grep -v 'origin/HEAD$'); do
+            branch_name=${branch#origin/}
+            # Check last commit date
+            last_commit=$(git log -1 --format=%ct "$branch" 2>/dev/null || echo 0)
+            days_old=$(( (now - last_commit) / 86400 ))
+            if [ "$days_old" -gt 90 ]; then
+              echo "Stale branch (>90 days): $branch_name"
+              git push origin --delete "$branch_name" 2>/dev/null || true
+            fi
+          done

@@ -206,11 +206,34 @@ onMounted(() => {
 
 function normalizeModelName(modelName) {
   if (!modelName) return ''
-  if (modelName.includes('/')) {
-    const parts = modelName.split('/')
-    return parts[parts.length - 1] || modelName
+  let n = modelName.toLowerCase()
+  
+  // Strip common provider prefixes
+  const prefixes = ['minimaxai/', 'z-ai/', 'qwen/', 'meta/', 'mistralai/', 'microsoft/', 'anthropic/', 'cohere/', 'google/', 'openai/', 'azure/', 'aws/', 'alibaba/', 'baidu/', 'tencent/']
+  for (const prefix of prefixes) {
+    if (n.startsWith(prefix)) {
+      n = n.substring(prefix.length)
+      break
+    }
   }
-  return modelName
+  
+  // Handle minimax variations: minimaxai/minimax-m2.7 -> minimax-m2.7
+  if (n.startsWith('minimax-') || n.startsWith('minimax')) {
+    n = n.replace(/^minimax-?/, 'minimax-')
+  }
+  
+  // If contains '/', take the last part
+  if (n.includes('/')) {
+    const parts = n.split('/')
+    n = parts[parts.length - 1]
+  }
+  
+  // Capitalize first letter for display
+  if (n.length > 0) {
+    n = n.charAt(0).toUpperCase() + n.substring(1)
+  }
+  
+  return n
 }
 
 async function loadModels() {

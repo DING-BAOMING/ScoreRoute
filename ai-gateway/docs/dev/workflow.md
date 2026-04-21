@@ -226,3 +226,24 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 
 ### 资源清理
 - 缓存目录已清理
+
+## 系统检查 (2026-04-21 15:30)
+
+### P0问题状态
+| # | 问题 | 状态 |
+|---|------|------|
+| P0-1 | install.sh密码语法 | ✅ 正确 |
+| P0-2 | docker-compose PORT | ✅ 已修复 |
+| P0-3 | Docs.vue渲染 | ✅ 已修复 |
+
+### 实时性验证
+- API调用后日志记录正常
+- call_logs表正确记录每次调用
+
+### 资源清理
+- 清理缓存文件 9b5ad71b2ce5302211f9c61530b329a4922fc6a4 (1.6MB)
+
+### 系统状态
+- Health: healthy
+- Docker: 运行中 (scoreroute-v260, ai-gateway-app-1)
+- Go fmt/vet: 全部通过

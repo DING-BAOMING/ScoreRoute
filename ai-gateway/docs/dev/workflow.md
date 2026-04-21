@@ -182,3 +182,29 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
   - 后端 `/docs/*` 正确返回markdown内容 ✅
   - JS包包含 marked 和 DOMPurify ✅
   - 需浏览器环境进一步调试
+
+## API测试验证 (2026-04-21)
+
+### 全流程测试结果
+| 测试项 | 结果 |
+|--------|------|
+| Login | ✅ 正常 |
+| Health Check | ✅ healthy |
+| Channels List | ✅ 6个渠道 |
+| Models List | ✅ 35个模型 |
+| Tokens List | ✅ 64个Token |
+
+### 实时性验证
+- API调用后 call_count 从60增加到109
+- 评分系统正常工作
+
+### 调度测试
+| 组合 | 结果 | 说明 |
+|------|------|------|
+| Polling + __AUTO__ | 7/10 | 上游API慢 |
+| Polling + qwen3.5 | 10/10 | 固定模型稳定 |
+| Smart + minimax-m2.5 | 部分成功 | 上游API响应慢(3分钟+) |
+
+### 已知问题
+1. NVIDIA baoming API响应慢(3分钟+)
+2. Smart模式本身正常，但上游API慢导致超时

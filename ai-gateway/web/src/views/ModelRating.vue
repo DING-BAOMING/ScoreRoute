@@ -36,100 +36,200 @@
         </template>
       </el-alert>
       
-      <div v-for="(group, key) in groupedModels" :key="key" class="model-group">
-        <div class="group-header">
-          <span class="group-title">{{ formatGroupName(key) }}</span>
-          <span class="group-count">{{ group.length }} 个模型</span>
-        </div>
-        
-        <el-table :data="group" v-loading="loading" stripe>
-          <el-table-column prop="rank" label="排名" width="80">
-            <template #default="{ row }">
-              <span v-if="row.rank <= 3" :class="'rank rank-' + row.rank">{{ row.rank }}</span>
-              <span v-else>{{ row.rank }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="模型" min-width="250">
-            <template #default="{ row }">
-              <div class="model-name">{{ row.channel_name }}/{{ row.format }}/{{ row.type }}/{{ row.model_name }}</div>
-            </template>
-          </el-table-column>
-          <el-table-column label="成功率" width="130" sortable prop="success_rate_percent">
-            <template #default="{ row }">
-              <span :class="row.success_rate >= 95 ? 'rating-high' : row.success_rate >= 80 ? 'rating-mid' : 'rating-low'">
-                {{ row.success_rate_percent.toFixed(0) }}/{{ row.success_weighted.toFixed(1) }}
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column label="延迟分数" width="130" sortable prop="latency_score_percent">
-            <template #default="{ row }">
-              <span :class="row.latency_score_percent >= 70 ? 'rating-high' : row.latency_score_percent >= 40 ? 'rating-mid' : 'rating-low'">
-                {{ row.latency_score_percent.toFixed(0) }}/{{ row.latency_weighted.toFixed(1) }}
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column label="稳定性" width="130" sortable prop="reliability_score_percent">
-            <template #default="{ row }">
-              <span :class="row.reliability_score_percent >= 70 ? 'rating-high' : row.reliability_score_percent >= 40 ? 'rating-mid' : 'rating-low'">
-                {{ row.reliability_score_percent.toFixed(0) }}/{{ row.reliability_weighted.toFixed(1) }}
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column label="用户评分" width="130" sortable prop="user_rating">
-            <template #default="{ row }">
-              <span :class="row.user_rating >= 70 ? 'rating-high' : row.user_rating >= 40 ? 'rating-mid' : 'rating-low'">
-                {{ row.user_rating }}/{{ row.user_rating_weighted.toFixed(1) }}
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column label="样本评分" width="130" sortable prop="sample_rating">
-            <template #default="{ row }">
-              <span v-if="row.sample_rating > 0" :class="row.sample_rating >= 70 ? 'rating-high' : row.sample_rating >= 40 ? 'rating-mid' : 'rating-low'">
-                {{ row.sample_rating }}/{{ row.sample_rating_weighted.toFixed(1) }}
-              </span>
-              <span v-else class="rating-none">-/-</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="成本评分" width="130" sortable prop="cost_rating">
-            <template #default="{ row }">
-              <span :class="row.cost_rating >= 70 ? 'rating-high' : row.cost_rating >= 40 ? 'rating-mid' : 'rating-low'">
-                {{ row.cost_rating.toFixed(0) }}/{{ row.cost_rating_weighted.toFixed(1) }}
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column label="时效评分" width="130" sortable prop="time_rating">
-            <template #default="{ row }">
-              <span :class="row.time_rating >= 70 ? 'rating-high' : row.time_rating >= 40 ? 'rating-mid' : 'rating-low'">
-                {{ row.time_rating.toFixed(0) }}/{{ row.time_rating_weighted.toFixed(1) }}
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column label="额外评分" width="100">
-            <template #default="{ row }">
-              <span v-if="row.extra_penalty || row.extra_reward" class="extra-rating">
-                <span v-if="row.extra_penalty" class="penalty">{{ row.extra_penalty }}</span>
-                <span v-if="row.extra_reward" class="reward">{{ row.extra_reward > 0 ? '+' : '' }}{{ row.extra_reward }}</span>
-              </span>
-              <span v-else class="rating-none">0</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="综合评分" width="120" sortable prop="score">
-            <template #default="{ row }">
-              <el-tag :type="getScoreType(row.score)" size="large">
-                {{ row.score.toFixed(1) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="详情" width="150">
-            <template #default="{ row }">
-              <div class="detail-info">
-                <span>调用: {{ formatNumber(row.total_calls) }}</span>
-                <span>Token: {{ formatNumber(row.total_tokens) }}</span>
-              </div>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
+      <el-tabs v-model="activeTab" style="margin-bottom: 20px">
+        <el-tab-pane label="按格式类型" name="format">
+          <div v-for="(group, key) in groupedModels" :key="key" class="model-group">
+            <div class="group-header">
+              <span class="group-title">{{ formatGroupName(key) }}</span>
+              <span class="group-count">{{ group.length }} 个模型</span>
+            </div>
+            
+            <el-table :data="group" v-loading="loading" stripe>
+              <el-table-column prop="rank" label="排名" width="80">
+                <template #default="{ row }">
+                  <span v-if="row.rank <= 3" :class="'rank rank-' + row.rank">{{ row.rank }}</span>
+                  <span v-else>{{ row.rank }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="模型" min-width="250">
+                <template #default="{ row }">
+                  <div class="model-name">{{ row.channel_name }}/{{ row.format }}/{{ row.type }}/{{ row.model_name }}</div>
+                </template>
+              </el-table-column>
+              <el-table-column label="成功率" width="130" sortable prop="success_rate_percent">
+                <template #default="{ row }">
+                  <span :class="row.success_rate >= 95 ? 'rating-high' : row.success_rate >= 80 ? 'rating-mid' : 'rating-low'">
+                    {{ row.success_rate_percent.toFixed(0) }}/{{ row.success_weighted.toFixed(1) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="延迟分数" width="130" sortable prop="latency_score_percent">
+                <template #default="{ row }">
+                  <span :class="row.latency_score_percent >= 70 ? 'rating-high' : row.latency_score_percent >= 40 ? 'rating-mid' : 'rating-low'">
+                    {{ row.latency_score_percent.toFixed(0) }}/{{ row.latency_weighted.toFixed(1) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="稳定性" width="130" sortable prop="reliability_score_percent">
+                <template #default="{ row }">
+                  <span :class="row.reliability_score_percent >= 70 ? 'rating-high' : row.reliability_score_percent >= 40 ? 'rating-mid' : 'rating-low'">
+                    {{ row.reliability_score_percent.toFixed(0) }}/{{ row.reliability_weighted.toFixed(1) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="用户评分" width="130" sortable prop="user_rating">
+                <template #default="{ row }">
+                  <span :class="row.user_rating >= 70 ? 'rating-high' : row.user_rating >= 40 ? 'rating-mid' : 'rating-low'">
+                    {{ row.user_rating }}/{{ row.user_rating_weighted.toFixed(1) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="样本评分" width="130" sortable prop="sample_rating">
+                <template #default="{ row }">
+                  <span v-if="row.sample_rating > 0" :class="row.sample_rating >= 70 ? 'rating-high' : row.sample_rating >= 40 ? 'rating-mid' : 'rating-low'">
+                    {{ row.sample_rating }}/{{ row.sample_rating_weighted.toFixed(1) }}
+                  </span>
+                  <span v-else class="rating-none">-/-</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="成本评分" width="130" sortable prop="cost_rating">
+                <template #default="{ row }">
+                  <span :class="row.cost_rating >= 70 ? 'rating-high' : row.cost_rating >= 40 ? 'rating-mid' : 'rating-low'">
+                    {{ row.cost_rating.toFixed(0) }}/{{ row.cost_rating_weighted.toFixed(1) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="时效评分" width="130" sortable prop="time_rating">
+                <template #default="{ row }">
+                  <span :class="row.time_rating >= 70 ? 'rating-high' : row.time_rating >= 40 ? 'rating-mid' : 'rating-low'">
+                    {{ row.time_rating.toFixed(0) }}/{{ row.time_rating_weighted.toFixed(1) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="额外评分" width="100">
+                <template #default="{ row }">
+                  <span v-if="row.extra_penalty || row.extra_reward" class="extra-rating">
+                    <span v-if="row.extra_penalty" class="penalty">{{ row.extra_penalty }}</span>
+                    <span v-if="row.extra_reward" class="reward">{{ row.extra_reward > 0 ? '+' : '' }}{{ row.extra_reward }}</span>
+                  </span>
+                  <span v-else class="rating-none">0</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="综合评分" width="120" sortable prop="score">
+                <template #default="{ row }">
+                  <el-tag :type="getScoreType(row.score)" size="large">
+                    {{ row.score.toFixed(1) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="详情" width="150">
+                <template #default="{ row }">
+                  <div class="detail-info">
+                    <span>调用: {{ formatNumber(row.total_calls) }}</span>
+                    <span>Token: {{ formatNumber(row.total_tokens) }}</span>
+                  </div>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-tab-pane>
+        <el-tab-pane label="按模型" name="model">
+          <div v-for="(group, key) in modelGroupedModels" :key="key" class="model-group">
+            <div class="group-header">
+              <span class="group-title">{{ key }}</span>
+              <span class="group-count">{{ group.length }} 个渠道</span>
+            </div>
+            
+            <el-table :data="group" v-loading="loading" stripe>
+              <el-table-column prop="rank" label="排名" width="80">
+                <template #default="{ row }">
+                  <span v-if="row.rank <= 3" :class="'rank rank-' + row.rank">{{ row.rank }}</span>
+                  <span v-else>{{ row.rank }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="渠道" min-width="150">
+                <template #default="{ row }">
+                  <div class="model-name">{{ row.channel_name }}</div>
+                </template>
+              </el-table-column>
+              <el-table-column label="成功率" width="130" sortable prop="success_rate_percent">
+                <template #default="{ row }">
+                  <span :class="row.success_rate >= 95 ? 'rating-high' : row.success_rate >= 80 ? 'rating-mid' : 'rating-low'">
+                    {{ row.success_rate_percent.toFixed(0) }}/{{ row.success_weighted.toFixed(1) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="延迟分数" width="130" sortable prop="latency_score_percent">
+                <template #default="{ row }">
+                  <span :class="row.latency_score_percent >= 70 ? 'rating-high' : row.latency_score_percent >= 40 ? 'rating-mid' : 'rating-low'">
+                    {{ row.latency_score_percent.toFixed(0) }}/{{ row.latency_weighted.toFixed(1) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="稳定性" width="130" sortable prop="reliability_score_percent">
+                <template #default="{ row }">
+                  <span :class="row.reliability_score_percent >= 70 ? 'rating-high' : row.reliability_score_percent >= 40 ? 'rating-mid' : 'rating-low'">
+                    {{ row.reliability_score_percent.toFixed(0) }}/{{ row.reliability_weighted.toFixed(1) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="用户评分" width="130" sortable prop="user_rating">
+                <template #default="{ row }">
+                  <span :class="row.user_rating >= 70 ? 'rating-high' : row.user_rating >= 40 ? 'rating-mid' : 'rating-low'">
+                    {{ row.user_rating }}/{{ row.user_rating_weighted.toFixed(1) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="样本评分" width="130" sortable prop="sample_rating">
+                <template #default="{ row }">
+                  <span v-if="row.sample_rating > 0" :class="row.sample_rating >= 70 ? 'rating-high' : row.sample_rating >= 40 ? 'rating-mid' : 'rating-low'">
+                    {{ row.sample_rating }}/{{ row.sample_rating_weighted.toFixed(1) }}
+                  </span>
+                  <span v-else class="rating-none">-/-</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="成本评分" width="130" sortable prop="cost_rating">
+                <template #default="{ row }">
+                  <span :class="row.cost_rating >= 70 ? 'rating-high' : row.cost_rating >= 40 ? 'rating-mid' : 'rating-low'">
+                    {{ row.cost_rating.toFixed(0) }}/{{ row.cost_rating_weighted.toFixed(1) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="时效评分" width="130" sortable prop="time_rating">
+                <template #default="{ row }">
+                  <span :class="row.time_rating >= 70 ? 'rating-high' : row.time_rating >= 40 ? 'rating-mid' : 'rating-low'">
+                    {{ row.time_rating.toFixed(0) }}/{{ row.time_rating_weighted.toFixed(1) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="额外评分" width="100">
+                <template #default="{ row }">
+                  <span v-if="row.extra_penalty || row.extra_reward" class="extra-rating">
+                    <span v-if="row.extra_penalty" class="penalty">{{ row.extra_penalty }}</span>
+                    <span v-if="row.extra_reward" class="reward">{{ row.extra_reward > 0 ? '+' : '' }}{{ row.extra_reward }}</span>
+                  </span>
+                  <span v-else class="rating-none">0</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="综合评分" width="120" sortable prop="score">
+                <template #default="{ row }">
+                  <el-tag :type="getScoreType(row.score)" size="large">
+                    {{ row.score.toFixed(1) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="详情" width="150">
+                <template #default="{ row }">
+                  <div class="detail-info">
+                    <span>调用: {{ formatNumber(row.total_calls) }}</span>
+                    <span>Token: {{ formatNumber(row.total_tokens) }}</span>
+                  </div>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
     </el-card>
 
     <el-dialog v-model="showWeightDialog" title="评分权重设置" width="700px">
@@ -181,6 +281,7 @@ import { ElMessage } from 'element-plus'
 import { logAPI, userRatingAPI, sampleAnalysisAPI, extraRatingAPI, modelRatingAPI } from '../api'
 
 const loading = ref(false)
+const activeTab = ref('format')
 const savingWeights = ref(false)
 const showWeightDialog = ref(false)
 const modelStats = ref([])
@@ -335,6 +436,24 @@ const groupedModels = computed(() => {
       groups[key] = []
     }
     groups[key].push(model)
+  })
+  Object.keys(groups).forEach(key => {
+    groups[key].sort((a, b) => b.score - a.score)
+  })
+  return groups
+})
+
+const modelGroupedModels = computed(() => {
+  const groups = {}
+  modelStats.value.forEach(model => {
+    let modelBaseName = model.model_name || 'unknown'
+    if (modelBaseName.includes('/')) {
+      modelBaseName = modelBaseName.split('/')[1] || modelBaseName
+    }
+    if (!groups[modelBaseName]) {
+      groups[modelBaseName] = []
+    }
+    groups[modelBaseName].push(model)
   })
   Object.keys(groups).forEach(key => {
     groups[key].sort((a, b) => b.score - a.score)

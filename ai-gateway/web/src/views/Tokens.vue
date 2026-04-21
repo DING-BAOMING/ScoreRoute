@@ -165,7 +165,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { tokenAPI, modelAPI } from '../api'
+import { tokenAPI, modelAPI, modelRatingAPI } from '../api'
 
 const loading = ref(false)
 const list = ref([])
@@ -204,14 +204,57 @@ onMounted(() => {
   loadModels()
 })
 
+function normalizeModelName(modelName) {
+  if (!modelName) return ''
+  if (modelName.startsWith('minimaxai/')) {
+    return modelName.substring(10)
+  }
+  if (modelName.startsWith('qwen/')) {
+    return modelName.substring(5)
+  }
+  if (modelName.startsWith('mistralai/')) {
+    return modelName.substring(11)
+  }
+  if (modelName.startsWith('z-ai/')) {
+    return modelName.substring(5)
+  }
+  if (modelName.startsWith('microsoft/')) {
+    return modelName.substring(10)
+  }
+  if (modelName.includes('/')) {
+    return modelName.split('/')[1] || modelName
+  }
+  return modelName
+}
+
 async function loadModels() {
   try {
-    const res = await modelAPI.list({ page: 1, page_size: 100 })
-    if (res.code === 0) {
-      models.value = res.data?.items || []
+    const res = await modelRatingAPI.getAllScores()
+    if (res.code === 0 && Array.isArray(res.data)) {
+      const uniqueModels = new Map()
+      res.data.forEach(item => {
+        const baseName = normalizeModelName(item.model_name)
+        if (baseName && !uniqueModels.has(baseName)) {
+          uniqueModels.set(baseName, {
+            id: baseName,
+            name: baseName,
+            channel_name: item.channel_name,
+            score: item.score
+          })
+        }
+      })
+      models.value = Array.from(uniqueModels.values()).sort((a, b) => b.score - a.score)
     }
   } catch (e) {
     console.error('加载模型失败', e)
+    try {
+      const fallback = await modelAPI.list({ page: 1, page_size: 100 })
+      if (fallback.code === 0) {
+        models.value = fallback.data?.items || []
+      }
+    } catch (e2) {
+      console.error('备用加载也失败', e2)
+    }
   }
 }
 

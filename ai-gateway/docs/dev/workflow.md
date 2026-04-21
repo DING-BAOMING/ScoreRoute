@@ -128,3 +128,31 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 - 前缀如 "minimaxai/", "z-ai/" 等会被自动去除
 - minimaxai/minimax-m2.7 和 MiniMax-M2.7 会被归一化为同一模型
 - mini-max-m2.5 会被归一化为 minimax-m2.5
+
+## 评分系统详解 (2026-04-21)
+
+### 评分规则
+
+| 评分项 | 权重 | 计算公式 |
+|--------|------|----------|
+| 成功率 | 15% | successCalls/totalCalls*100 |
+| 延迟分数 | 10% | max(0, 1-avgLatency/30000)*100 |
+| 稳定性 | 10% | 基于样本量: >=30次=100分 |
+| 用户评分 | 15% | 默认85，来自user_ratings表 |
+| 样本评分 | 25% | 默认85，来自sample_ratings表 |
+| 成本评分 | 15% | 免费=90，定期=100 |
+| 时效评分 | 10% | 接近过期=100 |
+| 惩罚/奖励 | 加分项 | 来自extra_ratings表 |
+
+### 实时更新机制
+每次API调用后:
+1. 日志保存到call_logs表
+2. 调度器调用CalculateAllScores()
+3. GetModelStatsMap()聚合调用统计
+4. 分数实时重新计算
+
+### 测试验证 (2026-04-21)
+- Smart + __AUTO__: ✅ 10/10
+- Smart + minimax-m2.5: ✅ 10/10
+- Polling + __AUTO__: ✅ 10/10
+- Polling + minimax-m2.5: ✅ 10/10

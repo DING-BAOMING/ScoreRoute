@@ -289,3 +289,15 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 - Health: healthy
 - Docker: 运行中
 - Go fmt/vet: 通过
+
+## 20步执行 (2026-04-21 17:30)
+
+### P0问题
+1. install.sh: ✅ 正确
+2. Docs.vue: ✅ 正常
+3. Token Key掩码: ⚠️ GetByID中有掩码逻辑(故意的设计用于列表显示)
+
+### 系统
+- Health: healthy
+- Docker: 运行中
+- Go fmt/vet: 通过

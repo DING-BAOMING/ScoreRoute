@@ -301,3 +301,23 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 - Health: healthy
 - Docker: 运行中
 - Go fmt/vet: 通过
+
+## 20步执行 (2026-04-21 修复)
+
+### P0问题修复
+| # | 问题 | 修复 | 状态 |
+|---|------|------|------|
+| P0-1 | install.sh语法 | ✅ 代码正确 | 已验证 |
+| P0-2 | Docs.vue渲染 | ✅ 已修复 | 已验证 |
+| P0-3 | Token Key掩码 | ✅ GetByKey不再掩码 | **已修复** |
+
+### 关键修复: P0-3 Token Key掩码
+- **文件**: internal/repository/token.go
+- **问题**: GetByKey和GetByID中错误地对Key进行掩码
+- **修复**: 移除GetByKey和GetByID中的掩码逻辑，仅在List中保留掩码
+- **验证**: API调用成功 `minimaxai/minimax-m2.7`
+
+### 系统
+- Health: healthy
+- Docker: 运行中
+- Go vet: 通过

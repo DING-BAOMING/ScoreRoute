@@ -468,12 +468,28 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 
 	modelName, _ := req["model"].(string)
 
-	useSmartRetry := modelName == "auto" || modelName == "AUTO" || modelName == "__AUTO__" || modelName == "Auto" || modelName == "POLL_ALL"
+	useSmartDispatch := modelName == "AUTO" || modelName == "__AUTO__" || modelName == "POLL_ALL"
+	useAutoSelect := modelName == "auto" || modelName == "Auto"
 
 	var rankedModels []*model.Model
 	var err error
 
-	if useSmartRetry {
+	if useAutoSelect {
+		config, _ := d.systemConfigRepo.Get()
+		dispatchMode := "polling"
+		if config != nil {
+			dispatchMode = config.DispatchMode
+		}
+		if dispatchMode == "smart" {
+			rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
+		} else {
+			selectedModel, err := d.modelService.GetNextModelGlobal(token.Format, token.Type)
+			if err != nil || selectedModel == nil {
+				return nil, 0, err
+			}
+			rankedModels = []*model.Model{selectedModel}
+		}
+	} else if useSmartDispatch {
 		rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
 		if err != nil {
 			return nil, 0, err
@@ -713,12 +729,28 @@ func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStrea
 
 	modelName, _ := req["model"].(string)
 
-	useSmartRetry := modelName == "auto" || modelName == "AUTO" || modelName == "__AUTO__" || modelName == "Auto" || modelName == "POLL_ALL"
+	useSmartDispatch := modelName == "AUTO" || modelName == "__AUTO__" || modelName == "POLL_ALL"
+	useAutoSelect := modelName == "auto" || modelName == "Auto"
 
 	var rankedModels []*model.Model
 	var err error
 
-	if useSmartRetry {
+	if useAutoSelect {
+		config, _ := d.systemConfigRepo.Get()
+		dispatchMode := "polling"
+		if config != nil {
+			dispatchMode = config.DispatchMode
+		}
+		if dispatchMode == "smart" {
+			rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
+		} else {
+			selectedModel, err := d.modelService.GetNextModelGlobal(token.Format, token.Type)
+			if err != nil || selectedModel == nil {
+				return nil, 0, err
+			}
+			rankedModels = []*model.Model{selectedModel}
+		}
+	} else if useSmartDispatch {
 		rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
 		if err != nil {
 			return nil, 0, err

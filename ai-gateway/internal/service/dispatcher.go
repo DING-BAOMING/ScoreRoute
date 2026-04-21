@@ -484,9 +484,20 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 			return nil, 0, err
 		}
 		if singleModel == nil {
-			prefixModels, err := d.modelService.GetByNamePrefix(modelName)
+			normalizedName := modelName
+			if strings.Contains(modelName, "/") {
+				parts := strings.Split(modelName, "/")
+				normalizedName = parts[len(parts)-1]
+			}
+			prefixModels, err := d.modelService.GetByNamePrefix(normalizedName)
 			if err != nil {
 				return nil, 0, err
+			}
+			if len(prefixModels) == 0 {
+				prefixModels2, err2 := d.modelService.GetByNamePrefix(modelName)
+				if err2 == nil && len(prefixModels2) > 0 {
+					prefixModels = prefixModels2
+				}
 			}
 			if len(prefixModels) == 0 {
 				return nil, 0, fmt.Errorf("model not found: %s", modelName)
@@ -718,9 +729,20 @@ func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStrea
 			return nil, 0, err
 		}
 		if singleModel == nil {
-			prefixModels, err := d.modelService.GetByNamePrefix(modelName)
+			normalizedName := modelName
+			if strings.Contains(modelName, "/") {
+				parts := strings.Split(modelName, "/")
+				normalizedName = parts[len(parts)-1]
+			}
+			prefixModels, err := d.modelService.GetByNamePrefix(normalizedName)
 			if err != nil {
 				return nil, 0, err
+			}
+			if len(prefixModels) == 0 {
+				prefixModels2, err2 := d.modelService.GetByNamePrefix(modelName)
+				if err2 == nil && len(prefixModels2) > 0 {
+					prefixModels = prefixModels2
+				}
 			}
 			if len(prefixModels) == 0 {
 				return nil, 0, fmt.Errorf("model not found: %s", modelName)

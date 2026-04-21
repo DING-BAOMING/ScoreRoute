@@ -206,23 +206,9 @@ onMounted(() => {
 
 function normalizeModelName(modelName) {
   if (!modelName) return ''
-  if (modelName.startsWith('minimaxai/')) {
-    return modelName.substring(10)
-  }
-  if (modelName.startsWith('qwen/')) {
-    return modelName.substring(5)
-  }
-  if (modelName.startsWith('mistralai/')) {
-    return modelName.substring(11)
-  }
-  if (modelName.startsWith('z-ai/')) {
-    return modelName.substring(5)
-  }
-  if (modelName.startsWith('microsoft/')) {
-    return modelName.substring(10)
-  }
   if (modelName.includes('/')) {
-    return modelName.split('/')[1] || modelName
+    const parts = modelName.split('/')
+    return parts[parts.length - 1] || modelName
   }
   return modelName
 }
@@ -234,10 +220,12 @@ async function loadModels() {
       const uniqueModels = new Map()
       res.data.forEach(item => {
         const baseName = normalizeModelName(item.model_name)
-        if (baseName && !uniqueModels.has(baseName)) {
-          uniqueModels.set(baseName, {
-            id: baseName,
-            name: baseName,
+        const normalizedName = baseName.charAt(0).toUpperCase() + baseName.substring(1)
+        if (baseName && !uniqueModels.has(normalizedName)) {
+          uniqueModels.set(normalizedName, {
+            id: item.model_key,
+            name: normalizedName,
+            originalName: item.model_name,
             channel_name: item.channel_name,
             score: item.score
           })

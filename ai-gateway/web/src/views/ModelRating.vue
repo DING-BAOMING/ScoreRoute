@@ -37,7 +37,7 @@
       </el-alert>
       
       <el-tabs v-model="activeTab" style="margin-bottom: 20px">
-        <el-tab-pane label="按格式类型" name="format">
+        <el-tab-pane label="格式类型" name="format">
           <div class="filter-bar">
             <el-select v-model="filterFormat" placeholder="筛选格式" clearable style="width: 150px" @change="filterChanged">
               <el-option v-for="fmt in formatOptions" :key="fmt" :label="fmt.toUpperCase()" :value="fmt" />
@@ -145,7 +145,7 @@
             </el-table>
           </div>
         </el-tab-pane>
-        <el-tab-pane label="按模型" name="model">
+        <el-tab-pane label="模型" name="model">
           <div class="filter-bar">
             <el-select v-model="filterModel" placeholder="筛选模型" clearable filterable style="width: 250px" @change="filterChanged">
               <el-option v-for="m in modelOptions" :key="m" :label="m" :value="m" />

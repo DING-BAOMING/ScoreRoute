@@ -41,6 +41,5 @@ server
 AGENT_LOG.md
 .agent/
 .session_state.md
-docs/dev/workflow.md
 AGENTS.md
 CLAUDE.md

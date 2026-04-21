@@ -25,6 +25,7 @@ func Setup() *gin.Engine {
 	r.StaticFile("/docs/dev/architecture.md", "./docs/dev/architecture.md")
 	r.StaticFile("/docs/dev/plan.md", "./docs/dev/plan.md")
 	r.StaticFile("/docs/dev/plan_full.md", "./docs/dev/plan_full.md")
+	r.StaticFile("/docs/dev/workflow.md", "./docs/dev/workflow.md")
 	r.LoadHTMLGlob("./web/dist/index.html")
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(200, "index.html", nil)

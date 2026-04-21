@@ -43,7 +43,7 @@
       </div>
     </div>
 
-    <div class="docs-main" :class="{ 'has-content': docContent }">
+    <div class="docs-main" :class="{ 'has-content': htmlContent }">
       <div v-if="loading" class="loading">
         <el-icon class="is-loading"><Loading /></el-icon>
         <span>加载中...</span>
@@ -54,9 +54,7 @@
         <el-button @click="loadDoc('/docs/README.md')">返回首页</el-button>
       </div>
       
-      <div v-else-if="docContent" class="doc-content">
-        <pre class="markdown-content">{{ docContent }}</pre>
-      </div>
+      <div v-else-if="htmlContent" class="markdown-body" v-html="htmlContent"></div>
       
       <div v-else class="welcome">
         <h1>ScoreRoute 文档中心</h1>
@@ -68,7 +66,13 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { marked } from 'marked'
 import { Search, Loading } from '@element-plus/icons-vue'
+
+marked.setOptions({
+  breaks: true,
+  gfm: true
+})
 
 const userDocs = [
   { name: '快速开始', path: '/docs/getting-started.md' },
@@ -86,7 +90,7 @@ const devDocs = [
 ]
 
 const currentDoc = ref('')
-const docContent = ref('')
+const htmlContent = ref('')
 const loading = ref(false)
 const error = ref('')
 const searchQuery = ref('')
@@ -101,11 +105,47 @@ const filteredDevDocs = computed(() => {
   return devDocs.filter(d => d.name.includes(searchQuery.value))
 })
 
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  }
+  return text.replace(/[&<>"']/g, m => map[m])
+}
+
+function renderMarkdown(text) {
+  let html = text
+  
+  html = escapeHtml(html)
+  
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>')
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>')
+  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>')
+  html = html.replace(/^\* (.+)$/gm, '<li>$1</li>')
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>')
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>')
+  html = html.replace(/^---$/gm, '<hr>')
+  html = html.replace(/\n\n/g, '</p><p>')
+  html = '<p>' + html + '</p>'
+  html = html.replace(/<p><(h[123]|pre|hr|li)/g, '<$1')
+  html = html.replace(/<\/(h[123]|pre|li)><\/p>/g, '</$1>')
+  html = html.replace(/<p><\/p>/g, '')
+  
+  return html
+}
+
 const loadDoc = async (path) => {
   loading.value = true
   error.value = ''
   currentDoc.value = path
-  docContent.value = ''
+  htmlContent.value = ''
   
   try {
     const response = await fetch(path)
@@ -113,10 +153,10 @@ const loadDoc = async (path) => {
       throw new Error('HTTP ' + response.status)
     }
     const text = await response.text()
-    docContent.value = text
+    htmlContent.value = renderMarkdown(text)
   } catch (e) {
     error.value = e.message
-    docContent.value = ''
+    htmlContent.value = ''
   }
   
   loading.value = false
@@ -221,20 +261,88 @@ onMounted(() => {
   background: #ffffff;
 }
 
-.doc-content {
+.markdown-body {
   max-width: 900px;
   margin: 0 auto;
+  line-height: 1.8;
+  color: #303133;
   background: #ffffff;
 }
 
-.markdown-content {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  font-size: 15px;
-  line-height: 1.8;
-  color: #24292e;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+.markdown-body :deep(h1) {
+  font-size: 28px;
+  color: #303133;
+  border-bottom: 2px solid #409eff;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
   background: #ffffff;
+}
+
+.markdown-body :deep(h2) {
+  font-size: 22px;
+  color: #303133;
+  margin-top: 30px;
+  margin-bottom: 15px;
+  border-left: 4px solid #409eff;
+  padding-left: 12px;
+  background: #ffffff;
+}
+
+.markdown-body :deep(h3) {
+  font-size: 18px;
+  color: #606266;
+  margin-top: 20px;
+  margin-bottom: 10px;
+  background: #ffffff;
+}
+
+.markdown-body :deep(p) {
+  margin: 12px 0;
+  color: #606266;
+  background: #ffffff;
+}
+
+.markdown-body :deep(code) {
+  background: #f5f7fa;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: Monaco, Consolas, monospace;
+  font-size: 14px;
+  color: #e6a23c;
+}
+
+.markdown-body :deep(pre) {
+  background: #f5f7fa;
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 15px 0;
+}
+
+.markdown-body :deep(pre code) {
+  background: none;
+  padding: 0;
+  color: #303133;
+}
+
+.markdown-body :deep(li) {
+  margin: 6px 0;
+  list-style-type: disc;
+}
+
+.markdown-body :deep(a) {
+  color: #409eff;
+  text-decoration: none;
+}
+
+.markdown-body :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.markdown-body :deep(hr) {
+  border: none;
+  border-top: 1px solid #e4e7ed;
+  margin: 20px 0;
 }
 
 .welcome h1 {

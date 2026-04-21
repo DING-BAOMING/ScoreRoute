@@ -182,3 +182,25 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
   - 后端 `/docs/*` 正确返回markdown内容 ✅
   - JS包包含 marked 和 DOMPurify ✅
   - 需浏览器环境进一步调试
+
+## 修复记录 (2026-04-21)
+
+### 1. docker-compose.yml 端口修复
+- **问题**: PORT环境变量硬编码为3000，忽略外部传入
+- **修复**: `PORT=3000` → `PORT=${PORT:-3000}`
+- **文件**: docker-compose.yml
+
+### 2. Docs.vue 文档渲染重建
+- **问题**: marked/DOMPurify导致空白页面
+- **修复**: 简化为纯文本显示Markdown
+- **文件**: web/src/views/Docs.vue
+
+### 3. 测试结果
+| 组合 | 结果 |
+|------|------|
+| Polling + __AUTO__ | 7/10 成功 |
+| Polling + qwen3.5 | 10/10 成功 |
+
+### 4. API Key
+- Demo-1: sk-fe382af1-ee1a-4103-b0c2-c0e0dc2c3142
+- 管理员: admin / dbm52100

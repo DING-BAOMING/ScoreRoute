@@ -25,7 +25,8 @@
             <div v-if="row.rate_limits && row.rate_limits !== '[]'" class="rate-limits">
               <span v-for="(rule, idx) in parseRateLimits(row.rate_limits)" :key="idx" class="rate-limit-tag">
                 <span v-if="rule.type === 'billing'">{{ rule.max_count/100 }}{{ rule.currency }}/{{ rule.window }}</span>
-                <span v-else>{{ rule.max_count }}/{{ rule.window }}</span>
+                <span v-else-if="rule.type === 'calls'">{{ rule.max_count }}次/{{ rule.window }}</span>
+                <span v-else-if="rule.type === 'tokens'">{{ rule.max_count }}Token/{{ rule.window }}</span>
               </span>
             </div>
             <span v-else-if="row.total_token_limit > 0" class="token-limit">
@@ -127,6 +128,7 @@
               </el-select>
               <el-input-number v-model="rule.max_count" :min="1" style="width: 120px" />
               <span v-if="rule.type === 'billing'" style="width: 60px; text-align: center">元/</span>
+              <span v-else-if="rule.type === 'tokens'" style="width: 60px; text-align: center">Token/</span>
               <span v-else style="width: 60px; text-align: center">次/</span>
               <el-select v-model="rule.window" style="width: 100px">
                 <el-option label="分钟" value="minute" />
@@ -427,6 +429,9 @@ async function deleteChannel(row) {
   gap: 2px;
 }
 .rate-limit-rules {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 8px;
   width: 100%;
 }
 .rate-limit-rule {

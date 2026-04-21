@@ -406,7 +406,7 @@ func (d *Dispatcher) selectModelAndChannel(token *model.Token, req map[string]in
 			return nil, nil, fmt.Errorf("failed to get model: %w", err)
 		}
 		if modelItem == nil {
-			prefixModels, err := d.modelService.GetByNamePrefix(modelName)
+			prefixModels, err := d.modelService.GetByNamePrefix(normalizeModelNameForPrefix(modelName))
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to get models by prefix: %w", err)
 			}
@@ -505,12 +505,12 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 				parts := strings.Split(modelName, "/")
 				normalizedName = parts[len(parts)-1]
 			}
-			prefixModels, err := d.modelService.GetByNamePrefix(normalizedName)
+			prefixModels, err := d.modelService.GetByNamePrefix(normalizeModelNameForPrefix(normalizedName))
 			if err != nil {
 				return nil, 0, err
 			}
 			if len(prefixModels) == 0 {
-				prefixModels2, err2 := d.modelService.GetByNamePrefix(modelName)
+				prefixModels2, err2 := d.modelService.GetByNamePrefix(normalizeModelNameForPrefix(modelName))
 				if err2 == nil && len(prefixModels2) > 0 {
 					prefixModels = prefixModels2
 				}
@@ -766,12 +766,12 @@ func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStrea
 				parts := strings.Split(modelName, "/")
 				normalizedName = parts[len(parts)-1]
 			}
-			prefixModels, err := d.modelService.GetByNamePrefix(normalizedName)
+			prefixModels, err := d.modelService.GetByNamePrefix(normalizeModelNameForPrefix(normalizedName))
 			if err != nil {
 				return nil, 0, err
 			}
 			if len(prefixModels) == 0 {
-				prefixModels2, err2 := d.modelService.GetByNamePrefix(modelName)
+				prefixModels2, err2 := d.modelService.GetByNamePrefix(normalizeModelNameForPrefix(modelName))
 				if err2 == nil && len(prefixModels2) > 0 {
 					prefixModels = prefixModels2
 				}

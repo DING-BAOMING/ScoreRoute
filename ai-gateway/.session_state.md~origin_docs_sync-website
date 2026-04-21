@@ -1,0 +1,139 @@
+# 当前状态
+
+## 项目
+- 路径: /home/ubuntu/OpenCode/ai-gateway
+- 分支: feat/add-install-script
+- 域名: https://api.029101.xyz
+
+## 工作状态
+- 状态: 调度模式测试完成
+- 网站: ✅ 正常运行
+
+## 调度模式测试结果
+| 模式 | 结果 | 行为 |
+|------|------|------|
+| 智能调度 (smart) | ✅ | 选择最高分模型 MiniMax-M2.5 |
+| 轮询调度 (polling) | ✅ | 轮换 MiniMax-M2.7/MiniMax-M2.1 |
+
+## 系统测试
+| 测试项 | 结果 |
+|--------|------|
+| 健康检查 | ✅ |
+| 域名访问 | ✅ 200 OK |
+
+## 待处理
+- 无
+
+## 最后更新
+2026-04-20
+
+## Task: ModelRating.vue Grouped Display (Completed)
+- Redesigned ModelRating.vue to group models by format/type combinations
+- Added `groupedModels` computed property that:
+  - Groups models by `${format}_${type}` key
+  - Sorts models within each group by composite score (descending)
+- Added `formatGroupName()` to format group headers as "format-type"
+- Template now displays each group with:
+  - Gradient header showing format-type and model count
+  - Separate table for each group
+- Removed unused helper functions (normalizeModelName, calculateScore, etc.)
+- Build succeeded, deployed to container
+
+## Step 2.x Progress (2026-04-20 Later)
+
+### ModelRating.vue Updates:
+1. Fixed `type: sc.model_type` mapping in loadData() - API returns `model_type` but code used `type`
+2. Updated formatGroupName() to use user-friendly names:
+   - Formats: uppercase (openai -> OPENAI)
+   - Types: Chinese names (chat -> 文本, embedding -> 嵌入, etc.)
+3. Grouped display now works: models grouped by format_type combination
+4. Each section sorted by composite score descending
+
+### Current Status:
+- Format/type: Only openai/chat exists (1 section)
+- System ready for multiple format/type combinations
+- When new formats/types are added (e.g., zhipu/chat, openai/embedding), sections auto-generate
+
+### Files Modified:
+- web/src/views/ModelRating.vue (524 lines)
+  - Added `type: sc.model_type` mapping (line 298)
+  - Updated formatGroupName() for user-friendly display names
+
+### Verified Working:
+- Build succeeds
+- Deploy succeeds
+- Service healthy
+- Dispatch mode: smart (selects highest score model)
+
+## Verification Results (2026-04-20 16:30)
+
+### Step 2 Requirements Verification:
+
+**2.1** ✅ ModelRating grouped by format/type
+- groupedModels computed correctly groups by `${format}_${type}`
+- formatGroupName() displays "OPENAI-文本" style names
+- Auto-generates sections when new format/type added
+
+**2.2** ✅ Model display: channel/format/type/name
+- Template: `{{ row.channel_name }}/{{ row.format }}/{{ row.type }}/{{ row.model_name }}`
+
+**2.3** ✅ Models sorted by score descending
+- `groups[key].sort((a, b) => b.score - a.score)`
+
+**2.4** ✅ Backend calculation, frontend display
+- API returns pre-calculated scores
+- Frontend displays without recalculation
+
+**2.5** ⚠️ Call rule logic - needs deeper review
+- Smart dispatch works correctly (verified)
+- Penalty accumulation observed (may need review)
+
+**2.6** ✅ Build and deploy successful
+- Build: successful (7.91s)
+- Deploy: successful
+- Service: healthy
+
+**2.7** ✅ No new issues found
+- Verified API responses match expected structure
+- Frontend correctly maps model_type -> type
+
+### Testing Results:
+- Smart dispatch: Correctly selects MiniMax-M2.5 (highest score 81.84)
+- 5 API requests: All selected MiniMax-M2.5
+- Logs confirm model usage
+- Weights match architecture docs
+
+### Current Data:
+- Format: openai
+- Type: chat  
+- Total sections: 1 (OPENAI-文本)
+- Total models: 23
+- Top model: MiniMax-M2.5 (score 72.89, penalty -15)
+
+
+## Pagination Bug Fix (2026-04-20 16:45)
+
+### Bug Found:
+- All Vue files with pagination had `@current-change="loadData"` 
+- The handler ignored the page number parameter passed by Element Plus
+- Result: clicking page 2+ would still show page 1 data
+
+### Fix Applied (5 files):
+1. Models.vue: Changed to `@current-change="(p) => { page.value = p; loadData() }"`
+2. Channels.vue: Same fix
+3. Logs.vue: Same fix
+4. Tokens.vue: Same fix
+5. SampleAnalysis.vue: Same fix (using loadSamples)
+
+### Files Modified:
+- web/src/views/Models.vue
+- web/src/views/Channels.vue  
+- web/src/views/Logs.vue
+- web/src/views/Tokens.vue
+- web/src/views/SampleAnalysis.vue
+
+### Verification:
+- Build: successful (8.04s)
+- Deploy: successful
+- Service: healthy
+

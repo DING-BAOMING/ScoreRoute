@@ -42,15 +42,36 @@ func AuthMiddleware() gin.HandlerFunc {
 
 func CORSMiddleware() gin.HandlerFunc {
 	allowedOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
-	if allowedOrigins == "" {
-		allowedOrigins = "*"
-	}
 
 	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", allowedOrigins)
+		origin := c.Request.Header.Get("Origin")
+		
+		// If allowedOrigins is set and not "*", validate the origin
+		if allowedOrigins != "" && allowedOrigins != "*" {
+			// Check if origin matches allowed list (comma-separated)
+			allowedList := strings.Split(allowedOrigins, ",")
+			originAllowed := false
+			for _, allowed := range allowedList {
+				if strings.TrimSpace(allowed) == origin {
+					originAllowed = true
+					break
+				}
+			}
+			if originAllowed {
+				c.Header("Access-Control-Allow-Origin", origin)
+			}
+		} else if allowedOrigins == "*" {
+			// Only set Allow-Origin to * if explicitly configured
+			c.Header("Access-Control-Allow-Origin", "*")
+		} else if origin != "" {
+			// For production without CORS config, don't set Allow-Origin
+			// This prevents credential leakage to arbitrary origins
+		}
+		
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		c.Header("Access-Control-Max-Age", "86400")
+		c.Header("Access-Control-Allow-Credentials", "true")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)

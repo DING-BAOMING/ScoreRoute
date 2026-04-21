@@ -38,7 +38,19 @@
       
       <el-tabs v-model="activeTab" style="margin-bottom: 20px">
         <el-tab-pane label="按格式类型" name="format">
-          <div v-for="(group, key) in groupedModels" :key="key" class="model-group">
+          <div class="filter-bar">
+            <el-select v-model="filterFormat" placeholder="筛选格式" clearable style="width: 150px" @change="filterChanged">
+              <el-option v-for="fmt in formatOptions" :key="fmt" :label="fmt.toUpperCase()" :value="fmt" />
+            </el-select>
+            <el-select v-model="filterType" placeholder="筛选类型" clearable style="width: 150px" @change="filterChanged">
+              <el-option v-for="t in typeOptions" :key="t" :label="getTypeName(t)" :value="t" />
+            </el-select>
+            <el-select v-model="filterFormatType" placeholder="格式+类型" clearable style="width: 200px" @change="filterChanged">
+              <el-option v-for="ft in formatTypeOptions" :key="ft" :label="formatGroupName(ft)" :value="ft" />
+            </el-select>
+            <el-button @click="clearFilters">清除筛选</el-button>
+          </div>
+          <div v-for="(group, key) in filteredFormatTypeGroups" :key="key" class="model-group">
             <div class="group-header">
               <span class="group-title">{{ formatGroupName(key) }}</span>
               <span class="group-count">{{ group.length }} 个模型</span>
@@ -134,7 +146,13 @@
           </div>
         </el-tab-pane>
         <el-tab-pane label="按模型" name="model">
-          <div v-for="(group, key) in modelGroupedModels" :key="key" class="model-group">
+          <div class="filter-bar">
+            <el-select v-model="filterModel" placeholder="筛选模型" clearable filterable style="width: 250px" @change="filterChanged">
+              <el-option v-for="m in modelOptions" :key="m" :label="m" :value="m" />
+            </el-select>
+            <el-button @click="clearFilters">清除筛选</el-button>
+          </div>
+          <div v-for="(group, key) in filteredModelGroups" :key="key" class="model-group">
             <div class="group-header">
               <span class="group-title">{{ key }}</span>
               <span class="group-count">{{ group.length }} 个渠道</span>
@@ -301,6 +319,11 @@ const weights = ref({
 })
 const weightsForm = ref({...weights.value})
 
+const filterFormat = ref('')
+const filterType = ref('')
+const filterFormatType = ref('')
+const filterModel = ref('')
+
 let refreshInterval = null
 
 onMounted(() => {
@@ -315,6 +338,27 @@ onUnmounted(() => {
     clearInterval(refreshInterval)
   }
 })
+
+function getTypeName(type) {
+  const names = { 'chat': '文本', 'embedding': '嵌入', 'completions': '补全', 'images': '图像', 'audio': '音频', 'video': '视频' }
+  return names[type] || type
+}
+
+function normalizeModelName(name) {
+  if (!name) return 'unknown'
+  let n = name.toLowerCase()
+  const prefixes = ['minimaxai/', 'z-ai/', 'qwen/', 'meta/', 'mistralai/', 'microsoft/', 'anthropic/', 'cohere/', 'google/', 'openai/']
+  for (const prefix of prefixes) {
+    if (n.startsWith(prefix)) {
+      n = n.substring(prefix.length)
+      break
+    }
+  }
+  if (n.startsWith('z/')) {
+    n = n.substring(2)
+  }
+  return n || name
+}
 
 async function loadData() {
   loading.value = true
@@ -426,6 +470,93 @@ function formatGroupName(key) {
   }
   return key || '未知'
 }
+const formatOptions = computed(() => {
+  const formats = new Set()
+  modelStats.value.forEach(m => formats.add(m.format))
+  return Array.from(formats).sort()
+})
+
+const typeOptions = computed(() => {
+  const types = new Set()
+  modelStats.value.forEach(m => types.add(m.type))
+  return Array.from(types).sort()
+})
+
+const formatTypeOptions = computed(() => {
+  const combos = new Set()
+  modelStats.value.forEach(m => combos.add(`${m.format}_${m.type}`))
+  return Array.from(combos).sort()
+})
+
+const modelOptions = computed(() => {
+  const models = new Set()
+  modelStats.value.forEach(m => {
+    models.add(normalizeModelName(m.model_name))
+  })
+  return Array.from(models).sort()
+})
+
+const filteredFormatTypeGroups = computed(() => {
+  let filtered = modelStats.value
+  
+  if (filterFormat.value) {
+    filtered = filtered.filter(m => m.format === filterFormat.value)
+  }
+  if (filterType.value) {
+    filtered = filtered.filter(m => m.type === filterType.value)
+  }
+  if (filterFormatType.value) {
+    const [fmt, type] = filterFormatType.value.split('_')
+    filtered = filtered.filter(m => m.format === fmt && m.type === type)
+  }
+  
+  const groups = {}
+  filtered.forEach(model => {
+    const key = `${model.format}_${model.type}`
+    if (!groups[key]) groups[key] = []
+    groups[key].push(model)
+  })
+  
+  Object.keys(groups).forEach(key => {
+    groups[key].sort((a, b) => b.score - a.score)
+  })
+  
+  return groups
+})
+
+const filteredModelGroups = computed(() => {
+  let filtered = modelStats.value
+  
+  if (filterModel.value) {
+    const normalizedFilter = normalizeModelName(filterModel.value)
+    filtered = filtered.filter(m => normalizeModelName(m.model_name) === normalizedFilter)
+  }
+  
+  const groups = {}
+  filtered.forEach(model => {
+    const baseName = normalizeModelName(model.model_name)
+    if (!groups[baseName]) groups[baseName] = []
+    groups[baseName].push(model)
+  })
+  
+  Object.keys(groups).forEach(key => {
+    groups[key].sort((a, b) => b.score - a.score)
+  })
+  
+  return groups
+})
+
+function filterChanged() {
+  // Filters are reactive, computed properties handle the filtering
+}
+
+function clearFilters() {
+  filterFormat.value = ''
+  filterType.value = ''
+  filterFormatType.value = ''
+  filterModel.value = ''
+}
+
 const groupedModels = computed(() => {
   const groups = {}
   modelStats.value.forEach(model => {
@@ -524,6 +655,16 @@ function formatNumber(num) {
 
 .model-group:last-child {
   margin-bottom: 0;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 10px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  flex-wrap: wrap;
 }
 
 .group-header {

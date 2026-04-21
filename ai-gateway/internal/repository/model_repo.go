@@ -364,15 +364,15 @@ func (r *ModelRepo) GetByNamePrefix(prefix string) ([]*model.Model, error) {
 			continue
 		}
 		m.ExpiresAt = parseExpiresAt(expiresAtStr)
-		
+
 		modelNameLower := strings.ToLower(m.Name)
 		channelNameLower := strings.ToLower(m.ChannelName)
-		
+
 		if strings.HasPrefix(modelNameLower, prefixLower) {
 			models = append(models, m)
 			continue
 		}
-		
+
 		if strings.Contains(modelNameLower, "/") {
 			parts := strings.Split(modelNameLower, "/")
 			lastPart := parts[len(parts)-1]
@@ -381,8 +381,8 @@ func (r *ModelRepo) GetByNamePrefix(prefix string) ([]*model.Model, error) {
 				continue
 			}
 		}
-		
-		if strings.HasPrefix(channelNameLower + "/" + modelNameLower, prefixLower) {
+
+		if strings.HasPrefix(channelNameLower+"/"+modelNameLower, prefixLower) {
 			models = append(models, m)
 			continue
 		}

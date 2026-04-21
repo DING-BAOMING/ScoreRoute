@@ -185,7 +185,7 @@ func loadRatings() {
 // Handles variations like "mini-max-m2.5" -> "minimax-m2.5"
 func normalizeModelNameForPrefix(modelName string) string {
 	modelName = strings.ToLower(strings.TrimSpace(modelName))
-	
+
 	// Remove provider prefixes
 	providerPrefixes := []string{"minimaxai/", "z-ai/", "qwen/", "meta/", "mistralai/", "microsoft/", "anthropic/", "cohere/", "google/", "openai/", "azure/", "aws/", "alibaba/", "baidu/", "tencent/"}
 	for _, prefix := range providerPrefixes {
@@ -194,11 +194,11 @@ func normalizeModelNameForPrefix(modelName string) string {
 			break
 		}
 	}
-	
+
 	// Handle minimax variations: mini-max -> minimax
 	if strings.HasPrefix(modelName, "mini-max") {
 		modelName = "minimax" + modelName[8:] // "mini-max" (8 chars) -> "minimax"
 	}
-	
+
 	return modelName
 }

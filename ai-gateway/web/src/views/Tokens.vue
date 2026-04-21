@@ -120,7 +120,8 @@
                 <el-option label="Token数" value="tokens" />
               </el-select>
               <el-input-number v-model="rule.max_count" :min="1" style="width: 120px" />
-              <span style="width: 60px; text-align: center">次/</span>
+              <span v-if="rule.type === 'tokens'" style="width: 60px; text-align: center">Token/</span>
+              <span v-else style="width: 60px; text-align: center">次/</span>
               <el-select v-model="rule.window" style="width: 100px">
                 <el-option label="分钟" value="minute" />
                 <el-option label="小时" value="hour" />
@@ -352,6 +353,8 @@ code {
 }
 
 .rate-limit-rules {
+  max-height: 200px;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 10px;

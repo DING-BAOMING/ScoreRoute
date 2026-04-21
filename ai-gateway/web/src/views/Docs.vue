@@ -108,7 +108,9 @@ const loadDoc = async (path) => {
     const response = await fetch(path)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const text = await response.text()
-    renderedContent.value = marked(text)
+    // Use marked.parse for better compatibility with v18+
+    const result = marked.parse(text)
+    renderedContent.value = typeof result === 'string' ? result : ''
   } catch (e) {
     error.value = e.message
     renderedContent.value = ''

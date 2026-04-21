@@ -208,3 +208,21 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 ### 已知问题
 1. NVIDIA baoming API响应慢(3分钟+)
 2. Smart模式本身正常，但上游API慢导致超时
+
+## 修复记录 (2026-04-21 15:00)
+
+### 已修复的P0问题
+
+| # | 问题 | 修复 | 状态 |
+|---|------|------|------|
+| P0-1 | install.sh密码语法 | 代码正确，shellcheck通过 | ✅ |
+| P0-2 | docker-compose PORT硬编码 | `PORT=${PORT:-3000}` | ✅ 已修复 |
+| P0-3 | Docs.vue文档空白 | 简化为纯文本显示 | ✅ 已修复 |
+
+### 系统状态
+- Health: healthy
+- Docker: 运行中
+- 模型数: 33个启用
+
+### 资源清理
+- 缓存目录已清理

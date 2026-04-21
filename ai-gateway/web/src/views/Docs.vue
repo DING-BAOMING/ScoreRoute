@@ -43,7 +43,7 @@
       </div>
     </div>
 
-    <div class="docs-main" :class="{ 'has-content': renderedContent }">
+    <div class="docs-main" :class="{ 'has-content': docContent }">
       <div v-if="loading" class="loading">
         <el-icon class="is-loading"><Loading /></el-icon>
         <span>加载中...</span>
@@ -54,7 +54,9 @@
         <el-button @click="loadDoc('/docs/README.md')">返回首页</el-button>
       </div>
       
-      <div v-else-if="renderedContent" class="markdown-body" v-html="renderedContent"></div>
+      <div v-else-if="docContent" class="doc-content">
+        <pre class="markdown-content">{{ docContent }}</pre>
+      </div>
       
       <div v-else class="welcome">
         <h1>ScoreRoute 文档中心</h1>
@@ -66,8 +68,6 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
 import { Search, Loading } from '@element-plus/icons-vue'
 
 const userDocs = [
@@ -86,7 +86,7 @@ const devDocs = [
 ]
 
 const currentDoc = ref('')
-const renderedContent = ref('')
+const docContent = ref('')
 const loading = ref(false)
 const error = ref('')
 const searchQuery = ref('')
@@ -105,19 +105,20 @@ const loadDoc = async (path) => {
   loading.value = true
   error.value = ''
   currentDoc.value = path
+  docContent.value = ''
+  
   try {
     const response = await fetch(path)
-    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    if (!response.ok) {
+      throw new Error('HTTP ' + response.status)
+    }
     const text = await response.text()
-    // Use marked.parse for better compatibility with v18+
-    const result = marked.parse(text)
-    // Use DOMPurify to sanitize HTML and prevent XSS
-    const clean = DOMPurify.sanitize(typeof result === 'string' ? result : '', { USE_PROFILES: { html: true } })
-    renderedContent.value = clean
+    docContent.value = text
   } catch (e) {
     error.value = e.message
-    renderedContent.value = ''
+    docContent.value = ''
   }
+  
   loading.value = false
 }
 
@@ -220,135 +221,29 @@ onMounted(() => {
   background: #ffffff;
 }
 
-.markdown-body {
+.doc-content {
   max-width: 900px;
   margin: 0 auto;
-  line-height: 1.8;
-  color: #303133;
   background: #ffffff;
 }
 
-.markdown-body :deep(h1) {
+.markdown-content {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.8;
+  color: #24292e;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  background: #ffffff;
+}
+
+.welcome h1 {
   font-size: 28px;
   color: #303133;
-  border-bottom: 2px solid #409eff;
-  padding-bottom: 12px;
-  margin-bottom: 20px;
-  background: #ffffff;
 }
 
-.markdown-body :deep(h2) {
-  font-size: 22px;
-  color: #303133;
-  margin-top: 30px;
-  margin-bottom: 15px;
-  border-left: 4px solid #409eff;
-  padding-left: 12px;
-  background: #ffffff;
-}
-
-.markdown-body :deep(h3) {
-  font-size: 18px;
-  color: #606266;
-  margin-top: 20px;
-  margin-bottom: 10px;
-  background: #ffffff;
-}
-
-.markdown-body :deep(p) {
-  margin: 12px 0;
-  color: #606266;
-  background: #ffffff;
-}
-
-.markdown-body :deep(code) {
-  background: #f5f7fa;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: Monaco, Consolas, monospace;
-  font-size: 14px;
-  color: #e6a23c;
-}
-
-.markdown-body :deep(pre) {
-  background: #f5f7fa;
-  padding: 16px;
-  border-radius: 8px;
-  overflow-x: auto;
-  margin: 15px 0;
-}
-
-.markdown-body :deep(pre code) {
-  background: none;
-  padding: 0;
-  color: #303133;
-}
-
-.markdown-body :deep(ul),
-.markdown-body :deep(ol) {
-  padding-left: 24px;
-  margin: 10px 0;
-}
-
-.markdown-body :deep(li) {
-  margin: 6px 0;
-}
-
-.markdown-body :deep(table) {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 15px 0;
-  background: #ffffff;
-}
-
-.markdown-body :deep(th),
-.markdown-body :deep(td) {
-  border: 1px solid #e4e7ed;
-  padding: 10px 12px;
-  text-align: left;
-  background: #ffffff;
-}
-
-.markdown-body :deep(th) {
-  background: #f5f7fa;
-  font-weight: bold;
-}
-
-.markdown-body :deep(a) {
-  color: #409eff;
-  text-decoration: none;
-}
-
-.markdown-body :deep(a:hover) {
-  text-decoration: underline;
-}
-
-.markdown-body :deep(blockquote) {
-  border-left: 4px solid #67c23a;
-  padding: 10px 15px;
-  margin: 15px 0;
-  background: #f0f9eb;
-  color: #606266;
-}
-
-.markdown-body :deep(strong) {
-  color: #303133;
-}
-
-.markdown-body :deep(hr) {
-  border: none;
-  border-top: 1px solid #e4e7ed;
-  margin: 20px 0;
-}
-
-.markdown-body :deep(img) {
-  max-width: 100%;
-}
-
-.markdown-body :deep(input) {
-  background: #f5f7fa;
-  border: 1px solid #e4e7ed;
-  padding: 4px 8px;
-  border-radius: 4px;
+.welcome p {
+  color: #909399;
+  margin-top: 10px;
 }
 </style>

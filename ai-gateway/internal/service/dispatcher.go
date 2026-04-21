@@ -292,6 +292,75 @@ func (d *Dispatcher) calculateCompositeScore(m *model.Model, weights *modelRatin
 //   - req: 解析后的请求体
 //
 // 返回: modelItem, selectedChannel, error
+
+func (d *Dispatcher) selectBestFromPrefixModels(prefixModels []*model.Model, format, modelType string) (*model.Model, error) {
+	if len(prefixModels) == 0 {
+		return nil, nil
+	}
+	if len(prefixModels) == 1 {
+		d.modelRepo.IncrementCallCount(prefixModels[0].ID)
+		d.modelRepo.IncrementChannelCallCount(prefixModels[0].ChannelID)
+		return prefixModels[0], nil
+	}
+
+	config, err := d.systemConfigRepo.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	dispatchMode := "polling"
+	if config != nil && config.DispatchMode != "" {
+		dispatchMode = config.DispatchMode
+	}
+
+	if dispatchMode == "smart" {
+		modelRatingSvc := NewModelRatingService()
+		allScores, err := modelRatingSvc.CalculateAllScores()
+		if err != nil {
+			log.Printf("[selectBestFromPrefixModels] failed to calculate scores: %v", err)
+			return prefixModels[0], nil
+		}
+
+		scoreMap := make(map[string]float64)
+		for _, sc := range allScores {
+			key := sc.ChannelName + "/" + sc.ModelName
+			scoreMap[key] = sc.Score
+		}
+
+		var bestModel *model.Model
+		var bestScore float64 = -1
+		for _, m := range prefixModels {
+			key := m.ChannelName + "/" + m.Name
+			if score, ok := scoreMap[key]; ok {
+				if score > bestScore {
+					bestScore = score
+					bestModel = m
+				}
+			}
+		}
+		if bestModel == nil {
+			bestModel = prefixModels[0]
+		}
+		d.modelRepo.IncrementCallCount(bestModel.ID)
+		d.modelRepo.IncrementChannelCallCount(bestModel.ChannelID)
+		return bestModel, nil
+	}
+
+	var bestModel *model.Model
+	var bestCallCount int = -1
+	for _, m := range prefixModels {
+		if bestCallCount < 0 || m.CallCount < bestCallCount {
+			bestCallCount = m.CallCount
+			bestModel = m
+		}
+	}
+	if bestModel != nil {
+		d.modelRepo.IncrementCallCount(bestModel.ID)
+		d.modelRepo.IncrementChannelCallCount(bestModel.ChannelID)
+	}
+	return bestModel, nil
+}
+
 func (d *Dispatcher) selectModelAndChannel(token *model.Token, req map[string]interface{}) (*model.Model, *model.Channel, error) {
 	var modelItem *model.Model
 	var err error
@@ -337,7 +406,17 @@ func (d *Dispatcher) selectModelAndChannel(token *model.Token, req map[string]in
 			return nil, nil, fmt.Errorf("failed to get model: %w", err)
 		}
 		if modelItem == nil {
-			return nil, nil, fmt.Errorf("model not found: %s", modelName)
+			prefixModels, err := d.modelService.GetByNamePrefix(normalizeModelNameForPrefix(modelName))
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to get models by prefix: %w", err)
+			}
+			if len(prefixModels) == 0 {
+				return nil, nil, fmt.Errorf("model not found: %s", modelName)
+			}
+			modelItem, err = d.selectBestFromPrefixModels(prefixModels, token.Format, token.Type)
+			if err != nil || modelItem == nil {
+				return nil, nil, fmt.Errorf("no available models for prefix: %s", modelName)
+			}
 		}
 	}
 
@@ -389,12 +468,28 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 
 	modelName, _ := req["model"].(string)
 
-	useSmartRetry := modelName == "auto" || modelName == "AUTO" || modelName == "__AUTO__" || modelName == "Auto" || modelName == "POLL_ALL"
+	useSmartDispatch := modelName == "AUTO" || modelName == "__AUTO__" || modelName == "POLL_ALL"
+	useAutoSelect := modelName == "auto" || modelName == "Auto"
 
 	var rankedModels []*model.Model
 	var err error
 
-	if useSmartRetry {
+	if useAutoSelect {
+		config, _ := d.systemConfigRepo.Get()
+		dispatchMode := "polling"
+		if config != nil {
+			dispatchMode = config.DispatchMode
+		}
+		if dispatchMode == "smart" {
+			rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
+		} else {
+			selectedModel, err := d.modelService.GetNextModelGlobal(token.Format, token.Type)
+			if err != nil || selectedModel == nil {
+				return nil, 0, err
+			}
+			rankedModels = []*model.Model{selectedModel}
+		}
+	} else if useSmartDispatch {
 		rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
 		if err != nil {
 			return nil, 0, err
@@ -405,9 +500,32 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 			return nil, 0, err
 		}
 		if singleModel == nil {
-			return nil, 0, fmt.Errorf("model not found: %s", modelName)
+			normalizedName := modelName
+			if strings.Contains(modelName, "/") {
+				parts := strings.Split(modelName, "/")
+				normalizedName = parts[len(parts)-1]
+			}
+			prefixModels, err := d.modelService.GetByNamePrefix(normalizeModelNameForPrefix(normalizedName))
+			if err != nil {
+				return nil, 0, err
+			}
+			if len(prefixModels) == 0 {
+				prefixModels2, err2 := d.modelService.GetByNamePrefix(normalizeModelNameForPrefix(modelName))
+				if err2 == nil && len(prefixModels2) > 0 {
+					prefixModels = prefixModels2
+				}
+			}
+			if len(prefixModels) == 0 {
+				return nil, 0, fmt.Errorf("model not found: %s", modelName)
+			}
+			bestModel, err := d.selectBestFromPrefixModels(prefixModels, token.Format, token.Type)
+			if err != nil || bestModel == nil {
+				return nil, 0, fmt.Errorf("no available models for prefix: %s", modelName)
+			}
+			rankedModels = []*model.Model{bestModel}
+		} else {
+			rankedModels = []*model.Model{singleModel}
 		}
-		rankedModels = []*model.Model{singleModel}
 	} else {
 		rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
 		if err != nil {
@@ -611,12 +729,28 @@ func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStrea
 
 	modelName, _ := req["model"].(string)
 
-	useSmartRetry := modelName == "auto" || modelName == "AUTO" || modelName == "__AUTO__" || modelName == "Auto" || modelName == "POLL_ALL"
+	useSmartDispatch := modelName == "AUTO" || modelName == "__AUTO__" || modelName == "POLL_ALL"
+	useAutoSelect := modelName == "auto" || modelName == "Auto"
 
 	var rankedModels []*model.Model
 	var err error
 
-	if useSmartRetry {
+	if useAutoSelect {
+		config, _ := d.systemConfigRepo.Get()
+		dispatchMode := "polling"
+		if config != nil {
+			dispatchMode = config.DispatchMode
+		}
+		if dispatchMode == "smart" {
+			rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
+		} else {
+			selectedModel, err := d.modelService.GetNextModelGlobal(token.Format, token.Type)
+			if err != nil || selectedModel == nil {
+				return nil, 0, err
+			}
+			rankedModels = []*model.Model{selectedModel}
+		}
+	} else if useSmartDispatch {
 		rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
 		if err != nil {
 			return nil, 0, err
@@ -627,9 +761,32 @@ func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStrea
 			return nil, 0, err
 		}
 		if singleModel == nil {
-			return nil, 0, fmt.Errorf("model not found: %s", modelName)
+			normalizedName := modelName
+			if strings.Contains(modelName, "/") {
+				parts := strings.Split(modelName, "/")
+				normalizedName = parts[len(parts)-1]
+			}
+			prefixModels, err := d.modelService.GetByNamePrefix(normalizeModelNameForPrefix(normalizedName))
+			if err != nil {
+				return nil, 0, err
+			}
+			if len(prefixModels) == 0 {
+				prefixModels2, err2 := d.modelService.GetByNamePrefix(normalizeModelNameForPrefix(modelName))
+				if err2 == nil && len(prefixModels2) > 0 {
+					prefixModels = prefixModels2
+				}
+			}
+			if len(prefixModels) == 0 {
+				return nil, 0, fmt.Errorf("model not found: %s", modelName)
+			}
+			bestModel, err := d.selectBestFromPrefixModels(prefixModels, token.Format, token.Type)
+			if err != nil || bestModel == nil {
+				return nil, 0, fmt.Errorf("no available models for prefix: %s", modelName)
+			}
+			rankedModels = []*model.Model{bestModel}
+		} else {
+			rankedModels = []*model.Model{singleModel}
 		}
-		rankedModels = []*model.Model{singleModel}
 	} else {
 		rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
 		if err != nil {

@@ -343,6 +343,58 @@ func (r *ModelRepo) GetByName(name string) (*model.Model, error) {
 	return model, nil
 }
 
+func (r *ModelRepo) GetByNamePrefix(prefix string) ([]*model.Model, error) {
+	rows, err := DB.Query(
+		`SELECT m.id, m.channel_id, m.name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
+		 FROM models m LEFT JOIN channels c ON m.channel_id = c.id
+		 WHERE m.enabled = 1 AND m.auto_disabled = 0 AND c.enabled = 1
+		 ORDER BY m.call_count ASC`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var models []*model.Model
+	prefixLower := strings.ToLower(prefix)
+	for rows.Next() {
+		m := &model.Model{}
+		var expiresAtStr sql.NullString
+		if err := rows.Scan(&m.ID, &m.ChannelID, &m.Name, &m.Type, &m.Enabled, &m.CallCount, &m.RateLimits, &m.TotalTokenLimit, &expiresAtStr, &m.TotalCalls, &m.TotalTokens, &m.CostPerToken, &m.Currency, &m.CreatedAt, &m.ChannelName, &m.Format); err != nil {
+			continue
+		}
+		m.ExpiresAt = parseExpiresAt(expiresAtStr)
+		
+		modelNameLower := strings.ToLower(m.Name)
+		channelNameLower := strings.ToLower(m.ChannelName)
+		
+		if strings.HasPrefix(modelNameLower, prefixLower) {
+			models = append(models, m)
+			continue
+		}
+		
+		if strings.Contains(modelNameLower, "/") {
+			parts := strings.Split(modelNameLower, "/")
+			lastPart := parts[len(parts)-1]
+			if strings.HasPrefix(lastPart, prefixLower) {
+				models = append(models, m)
+				continue
+			}
+		}
+		
+		if strings.HasPrefix(channelNameLower + "/" + modelNameLower, prefixLower) {
+			models = append(models, m)
+			continue
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return models, nil
+}
+
 func (r *ModelRepo) GetByChannelAndName(channelID int64, name string) (*model.Model, error) {
 	model := &model.Model{}
 	var expiresAtStr sql.NullString

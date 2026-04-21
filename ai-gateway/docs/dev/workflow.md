@@ -156,3 +156,29 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 - Smart + minimax-m2.5: ✅ 10/10
 - Polling + __AUTO__: ✅ 10/10
 - Polling + minimax-m2.5: ✅ 10/10
+
+## 问题排查记录 (2026-04-21)
+
+### 1. baoming API Key 问题
+- **现象**: NVIDIA API key 可以列出模型但无法进行chat completions
+- **错误**: `{"error":{"message":"404 Function not found for account..."}}`
+- **原因**: API key 权限限制，仅允许模型列表操作
+- **状态**: 上游API key限制，非代码问题
+
+### 2. baoming 速率限制更新
+- **操作**: 直接更新数据库
+- **旧限制**: `{"type":"calls","max_count":40,"window":"minute"}`
+- **新限制**: `{"type":"tokens","max_count":1000000000,"window":"hour"}`
+- **SQL**: `UPDATE channels SET rate_limits = '[{"type":"tokens","max_count":1000000000,"window":"hour"}]' WHERE id = 10;`
+
+### 3. API 响应时间
+- **现象**: NVIDIA API (baoming) 响应时间3分钟以上
+- **影响**: 调度测试受限
+- **状态**: 系统本身工作正常，上游API慢
+
+### 4. Docs.vue 空白页面
+- **现象**: 内嵌文档页面空白
+- **排查**: 
+  - 后端 `/docs/*` 正确返回markdown内容 ✅
+  - JS包包含 marked 和 DOMPurify ✅
+  - 需浏览器环境进一步调试

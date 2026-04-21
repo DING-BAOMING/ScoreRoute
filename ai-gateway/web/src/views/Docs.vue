@@ -67,6 +67,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import { Search, Loading } from '@element-plus/icons-vue'
 
 const userDocs = [
@@ -110,7 +111,9 @@ const loadDoc = async (path) => {
     const text = await response.text()
     // Use marked.parse for better compatibility with v18+
     const result = marked.parse(text)
-    renderedContent.value = typeof result === 'string' ? result : ''
+    // Use DOMPurify to sanitize HTML and prevent XSS
+    const clean = DOMPurify.sanitize(typeof result === 'string' ? result : '', { USE_PROFILES: { html: true } })
+    renderedContent.value = clean
   } catch (e) {
     error.value = e.message
     renderedContent.value = ''

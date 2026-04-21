@@ -484,9 +484,21 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 			return nil, 0, err
 		}
 		if singleModel == nil {
-			return nil, 0, fmt.Errorf("model not found: %s", modelName)
+			prefixModels, err := d.modelService.GetByNamePrefix(modelName)
+			if err != nil {
+				return nil, 0, err
+			}
+			if len(prefixModels) == 0 {
+				return nil, 0, fmt.Errorf("model not found: %s", modelName)
+			}
+			bestModel, err := d.selectBestFromPrefixModels(prefixModels, token.Format, token.Type)
+			if err != nil || bestModel == nil {
+				return nil, 0, fmt.Errorf("no available models for prefix: %s", modelName)
+			}
+			rankedModels = []*model.Model{bestModel}
+		} else {
+			rankedModels = []*model.Model{singleModel}
 		}
-		rankedModels = []*model.Model{singleModel}
 	} else {
 		rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
 		if err != nil {
@@ -706,9 +718,21 @@ func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStrea
 			return nil, 0, err
 		}
 		if singleModel == nil {
-			return nil, 0, fmt.Errorf("model not found: %s", modelName)
+			prefixModels, err := d.modelService.GetByNamePrefix(modelName)
+			if err != nil {
+				return nil, 0, err
+			}
+			if len(prefixModels) == 0 {
+				return nil, 0, fmt.Errorf("model not found: %s", modelName)
+			}
+			bestModel, err := d.selectBestFromPrefixModels(prefixModels, token.Format, token.Type)
+			if err != nil || bestModel == nil {
+				return nil, 0, fmt.Errorf("no available models for prefix: %s", modelName)
+			}
+			rankedModels = []*model.Model{bestModel}
+		} else {
+			rankedModels = []*model.Model{singleModel}
 		}
-		rankedModels = []*model.Model{singleModel}
 	} else {
 		rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
 		if err != nil {

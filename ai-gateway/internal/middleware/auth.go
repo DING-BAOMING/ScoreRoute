@@ -45,7 +45,7 @@ func CORSMiddleware() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
-		
+
 		// If allowedOrigins is set and not "*", validate the origin
 		if allowedOrigins != "" && allowedOrigins != "*" {
 			// Check if origin matches allowed list (comma-separated)
@@ -67,7 +67,7 @@ func CORSMiddleware() gin.HandlerFunc {
 			// For production without CORS config, don't set Allow-Origin
 			// This prevents credential leakage to arbitrary origins
 		}
-		
+
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		c.Header("Access-Control-Max-Age", "86400")

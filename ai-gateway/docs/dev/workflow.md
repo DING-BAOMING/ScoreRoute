@@ -413,3 +413,27 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 ### Token测试
 - GetByID: sk-c7c585d7-acd3-4bcf-b987-dd9e6b818588 ✅
 - List: ****0102 (masked) ✅
+
+## 20步执行 (2026-04-22)
+
+### P0问题状态
+| # | 问题 | 修复 | 验证 |
+|---|------|------|------|
+| P0-1 | install.sh heredoc | ✅ 变量已定义 | ✅ 代码正确 |
+| P0-2 | Docs.vue渲染 | ✅ x.parse | ✅ Container已验证 |
+| P1-1 | Token Key掩码 | ✅ GetByID完整(39字符) | ✅ API测试通过 |
+
+### 已知问题
+| 问题 | 说明 | 处理 |
+|------|------|------|
+| 上游API超时 | api.029101.xyz响应慢 | 非代码问题 |
+
+### 系统状态
+- Health: healthy ✅
+- Docker: 运行中 ✅
+- Go fmt/vet: 通过 ✅
+- 磁盘: 31% ✅
+
+### Token测试
+- GetByID(115): sk-c7c585d7-acd3-4bcf-b987-dd9e6b818588 (39字符) ✅
+- List: ****4ba9 (masked) ✅

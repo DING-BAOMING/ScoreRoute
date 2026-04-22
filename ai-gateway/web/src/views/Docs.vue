@@ -57,7 +57,7 @@
       <div v-else-if="htmlContent" class="markdown-body" v-html="htmlContent"></div>
       
       <div v-else class="welcome">
-        <h1>ScoreRoute 文档中心</h1>
+        <h1>Score ScoreRoute 文档中心</h1>
         <p>选择一个文档开始阅读</p>
       </div>
     </div>
@@ -67,6 +67,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import { Search, Loading } from '@element-plus/icons-vue'
 
 marked.setOptions({
@@ -118,7 +119,8 @@ function escapeHtml(text) {
 
 function renderMarkdown(text) {
   try {
-    return marked.parse(text)
+    const rawHtml = marked.parse(text)
+    return DOMPurify.sanitize(rawHtml)
   } catch (e) {
     console.error('Markdown parsing error:', e)
     return '<p>' + escapeHtml(text) + '</p>'

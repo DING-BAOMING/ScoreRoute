@@ -23,7 +23,7 @@
           :key="doc.path"
           class="doc-item"
           :class="{ active: currentDoc === doc.path }"
-          @click="loadDoc(doc.path)"
+          @click.prevent="loadDoc(doc.path)"
         >
           {{ doc.name }}
         </div>
@@ -36,7 +36,7 @@
           :key="doc.path"
           class="doc-item"
           :class="{ active: currentDoc === doc.path }"
-          @click="loadDoc(doc.path)"
+          @click.prevent="loadDoc(doc.path)"
         >
           {{ doc.name }}
         </div>
@@ -51,13 +51,13 @@
       
       <div v-else-if="error" class="error">
         <p>加载文档失败: {{ error }}</p>
-        <el-button @click="loadDoc('/docs/README.md')">返回首页</el-button>
+        <el-button @click.prevent="loadDoc('/docs/README.md')">返回首页</el-button>
       </div>
       
-      <div v-else-if="htmlContent" class="markdown-body" v-html="htmlContent"></div>
+      <div v-else-if="htmlContent" class="markdown-body" v-html="sanitizedContent"></div>
       
       <div v-else class="welcome">
-        <h1>Score ScoreRoute 文档中心</h1>
+        <h1>ScoreRoute 文档中心</h1>
         <p>选择一个文档开始阅读</p>
       </div>
     </div>
@@ -91,10 +91,21 @@ const devDocs = [
 ]
 
 const currentDoc = ref('')
-const htmlContent = ref('')
+const rawContent = ref('')
 const loading = ref(false)
 const error = ref('')
 const searchQuery = ref('')
+
+const sanitizedContent = computed(() => {
+  if (!rawContent.value) return ''
+  try {
+    const html = marked.parse(rawContent.value)
+    return DOMPurify.sanitize(html)
+  } catch (e) {
+    console.error('Markdown parsing error:', e)
+    return '<p>渲染失败</p>'
+  }
+})
 
 const filteredUserDocs = computed(() => {
   if (!searchQuery.value) return userDocs
@@ -117,21 +128,11 @@ function escapeHtml(text) {
   return text.replace(/[&<>"']/g, m => map[m])
 }
 
-function renderMarkdown(text) {
-  try {
-    const rawHtml = marked.parse(text)
-    return DOMPurify.sanitize(rawHtml)
-  } catch (e) {
-    console.error('Markdown parsing error:', e)
-    return '<p>' + escapeHtml(text) + '</p>'
-  }
-}
-
-const loadDoc = async (path) => {
+async function loadDoc(path) {
   loading.value = true
   error.value = ''
   currentDoc.value = path
-  htmlContent.value = ''
+  rawContent.value = ''
   
   try {
     const response = await fetch(path)
@@ -139,10 +140,10 @@ const loadDoc = async (path) => {
       throw new Error('HTTP ' + response.status)
     }
     const text = await response.text()
-    htmlContent.value = renderMarkdown(text)
+    rawContent.value = text
   } catch (e) {
     error.value = e.message
-    htmlContent.value = ''
+    console.error('Failed to load doc:', e)
   }
   
   loading.value = false

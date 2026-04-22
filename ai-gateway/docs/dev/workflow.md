@@ -321,3 +321,18 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 - Health: healthy
 - Docker: 运行中
 - Go vet: 通过
+
+## 20步执行 (2026-04-22)
+
+### P0问题验证
+| # | 问题 | 状态 |
+|---|------|------|
+| P0-1 | install.sh语法 | ✅ 代码正确 |
+| P0-2 | Docs.vue渲染 | ✅ 正常 |
+| P1-1 | Token List掩码 | ✅ 正常(列表显示用) |
+
+### 系统
+- Health: healthy
+- Docker: 运行中
+- Go fmt/vet: 通过
+- 资源: 已清理

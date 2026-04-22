@@ -124,6 +124,9 @@ function renderMarkdown(text) {
     return '<p>' + escapeHtml(text) + '</p>'
   }
 }
+
+const loadDoc = async (path) => {
+  loading.value = true
   error.value = ''
   currentDoc.value = path
   htmlContent.value = ''

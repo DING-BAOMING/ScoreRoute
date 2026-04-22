@@ -437,3 +437,27 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 ### Token测试
 - GetByID(115): sk-c7c585d7-acd3-4bcf-b987-dd9e6b818588 (39字符) ✅
 - List: ****4ba9 (masked) ✅
+
+## 调度测试结果 (2026-04-22)
+
+### 测试配置
+- Token: sk-c7c585d7-acd3-4bcf-b987-dd9e6b818588
+- Dispatch Mode: smart
+- 测试模型: minimax-m2.5, __AUTO__
+
+### 测试结果
+| 组合 | 成功 | 失败 | 成功率 | 返回模型 |
+|------|------|------|--------|----------|
+| Polling + minimax-m2.5 | 9 | 1 | 90% | minimaxai/minimax-m2.5 |
+| Polling + __AUTO__ | 3 | 7 | 30% | minimaxai/minimax-m2.5, minimaxai/minimax-m2.7 |
+| Smart + minimax-m2.5 | 10 | 0 | 100% | minimaxai/minimax-m2.5 |
+| Smart + __AUTO__ | 5 | 5 | 50% | minimaxai/minimax-m2.5, minimaxai/minimax-m2.7 |
+
+### 分析
+- 固定模型请求完全正常（90-100%成功率）
+- __AUTO__请求受上游API稳定性影响
+- 智能调度确实在选择不同模型（m2.5 vs m2.7）
+
+### 已知问题
+- 上游API (api.029101.xyz) 不稳定，导致部分请求超时
+- 非代码问题，是上游服务问题

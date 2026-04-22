@@ -437,3 +437,38 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 ### Token测试
 - GetByID(115): sk-c7c585d7-acd3-4bcf-b987-dd9e6b818588 (39字符) ✅
 - List: ****4ba9 (masked) ✅
+
+## 20步审查 (2026-04-22)
+
+### 系统状态
+- Health: healthy ✅
+- Docker: running (ai-gateway-app-1)
+- Go fmt/vet: 通过 ✅
+- 磁盘: 32% ✅
+
+### P0问题最终验证
+| # | 问题 | 状态 |
+|---|------|------|
+| P0-1 | install.sh heredoc | ✅ 已修复 |
+| P0-2 | Docs.vue渲染 | ✅ 已修复 |
+| P1-1 | Token Key掩码 | ✅ 已修复 |
+
+### 全流程测试
+| 测试项 | 结果 |
+|--------|------|
+| API调用 (Smart模式) | ✅ 正常 |
+| Call Logs记录 | ✅ 正常 |
+| Model Stats更新 | ✅ 正常 |
+| Extra Rating | ✅ 正常 |
+| Sample Analysis Ratings | ✅ 正常 |
+
+### 已知问题
+| 问题 | 说明 | 处理 |
+|------|------|------|
+| 上游API慢 | api.029101.xyz响应1.6s-17s | 非代码问题 |
+
+### API端点验证
+- /api/extra-rating/config ✅
+- /api/extra-rating/records ✅
+- /api/sample-analysis/ratings ✅
+- /api/user-ratings ✅

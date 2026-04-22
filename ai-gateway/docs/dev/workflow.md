@@ -363,3 +363,28 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 ### 系统
 - Health: healthy
 - Go fmt/vet: 通过
+
+## 20步执行 (2026-04-22 最终)
+
+### P0问题最终状态
+| # | 问题 | 修复 | 验证 |
+|---|------|------|------|
+| P0-1 | install.sh heredoc | `<< 'EOF'` | ✅ Container已验证 |
+| P0-2 | Docs.vue空白 | x.parse (marked.parse) | ✅ Container Docs.js已验证 |
+| P1-1 | Token Key掩码 | GetByID返回完整key | ✅ API测试通过 |
+
+### Docker重建
+- 日期: 2026-04-22
+- 镜像: ai-gateway-app:latest (sha256:f2c04c315e8a...)
+- 容器: ai-gateway-app-1 (运行中)
+- Docs.js: Docs-BmgtKAyl.js
+
+### 系统状态
+- Health: healthy ✅
+- 磁盘: 23% ✅
+- Go fmt/vet: 通过 ✅
+
+### Dispatch测试
+- Request 1: MiniMax-M2.1 ✅
+- Request 2: mistralai/mistral-large-3 ✅
+- Request 3: qwen/qwen3.5 ✅

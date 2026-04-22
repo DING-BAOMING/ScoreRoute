@@ -351,3 +351,15 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 - Docker: 运行中
 - Go fmt/vet: 通过
 - 资源: 已清理
+
+## 20步执行 (2026-04-22 v2)
+
+### P0问题
+| # | 问题 | 状态 |
+|---|------|------|
+| P0-1 | install.sh heredoc变量展开 | ⚠️ 需修复 |
+| P0-2 | Docs.vue渲染空白 | ⚠️ 需检查 |
+
+### 系统
+- Health: healthy
+- Go fmt/vet: 通过

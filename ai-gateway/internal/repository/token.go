@@ -51,11 +51,6 @@ func (r *TokenRepo) GetByID(id int64) (*model.Token, error) {
 	if autoDisableReason.Valid {
 		token.AutoDisableReason = autoDisableReason.String
 	}
-	if len(token.Key) >= 4 {
-		token.Key = "****" + token.Key[len(token.Key)-4:]
-	} else {
-		token.Key = "****"
-	}
 	return token, nil
 }
 
@@ -82,11 +77,6 @@ func (r *TokenRepo) GetByKey(key string) (*model.Token, error) {
 	}
 	if autoDisableReason.Valid {
 		token.AutoDisableReason = autoDisableReason.String
-	}
-	if len(token.Key) >= 4 {
-		token.Key = "****" + token.Key[len(token.Key)-4:]
-	} else {
-		token.Key = "****"
 	}
 	return token, nil
 }

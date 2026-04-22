@@ -52,6 +52,14 @@
           <span>开发文档</span>
         </el-menu-item>
       </el-menu>
+      <div class="version-info">
+        <div class="version-text">v{{ currentVersion }}</div>
+        <div v-if="hasNewVersion" class="version-badge">
+          <el-badge value="新" type="danger" @click="openNewVersionUrl">
+            <span class="new-version-text">发现新版本</span>
+          </el-badge>
+        </div>
+      </div>
     </el-aside>
     <el-container>
       <el-header class="header">
@@ -79,20 +87,99 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox, ElNotification } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
+const currentVersion = ref('2.19.0')
+const hasNewVersion = ref(false)
+const latestVersion = ref('')
+let checkInterval = null
+
 const activeMenu = computed(() => route.path)
+
+const GITHUB_RELEASES_URL = 'https://api.github.com/repos/DING-BAOMING/ScoreRoute/releases/latest'
+const ONE_DAY_MS = 86400000
 
 function openUrl(url) {
   window.open(url, "_blank")
 }
+
+function openNewVersionUrl() {
+  window.open('https://github.com/DING-BAOMING/ScoreRoute/releases', '_blank')
+}
+
+async function checkNewVersion() {
+  try {
+    const response = await fetch(GITHUB_RELEASES_URL)
+    if (!response.ok) return
+    
+    const data = await response.json()
+    const tagName = data.tag_name || ''
+    const version = tagName.startsWith('v') ? tagName.substring(1) : tagName
+    
+    latestVersion.value = version
+    
+    const currentParts = currentVersion.value.split('.').map(Number)
+    const latestParts = version.split('.').map(Number)
+    
+    let isNewer = false
+    for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
+      const curr = currentParts[i] || 0
+      const latest = latestParts[i] || 0
+      if (latest > curr) {
+        isNewer = true
+        break
+      }
+      if (latest < curr) break
+    }
+    
+    if (isNewer && !localStorage.getItem('versionDismissed_' + version)) {
+      hasNewVersion.value = true
+      ElNotification({
+        title: '发现新版本',
+        message: `检测到新版本 v${version}，点击查看更新`,
+        type: 'info',
+        duration: 0,
+        onClick: () => openNewVersionUrl()
+      })
+    }
+    
+    localStorage.setItem('lastVersionCheck', Date.now().toString())
+  } catch (e) {
+    console.error('Version check failed:', e)
+  }
+}
+
+function startVersionPolling() {
+  const lastCheck = localStorage.getItem('lastVersionCheck')
+  const now = Date.now()
+  
+  if (!lastCheck || (now - parseInt(lastCheck)) >= ONE_DAY_MS) {
+    checkNewVersion()
+  } else {
+    const nextCheckDelay = ONE_DAY_MS - (now - parseInt(lastCheck))
+    setTimeout(() => {
+      checkNewVersion()
+      checkInterval = setInterval(checkNewVersion, ONE_DAY_MS)
+    }, nextCheckDelay)
+  }
+}
+
+onMounted(() => {
+  startVersionPolling()
+})
+
+onUnmounted(() => {
+  if (checkInterval) {
+    clearInterval(checkInterval)
+  }
+})
 
 function handleLogout() {
   ElMessageBox.confirm('确定要退出登录吗？', '提示', {
@@ -113,6 +200,8 @@ function handleLogout() {
 
 .aside {
   background: #304156;
+  display: flex;
+  flex-direction: column;
 }
 
 .logo {
@@ -126,6 +215,7 @@ function handleLogout() {
 .menu {
   border-right: none;
   background: transparent;
+  flex: 1;
 }
 
 :deep(.el-menu-item) {
@@ -136,6 +226,32 @@ function handleLogout() {
 :deep(.el-menu-item.is-active) {
   background: #263445;
   color: #409eff;
+}
+
+.version-info {
+  padding: 10px;
+  text-align: center;
+  background: #2b3a4a;
+  border-top: 1px solid #3d5066;
+}
+
+.version-text {
+  color: #8a8a8a;
+  font-size: 12px;
+}
+
+.version-badge {
+  margin-top: 5px;
+}
+
+.new-version-text {
+  color: #f56c6c;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.new-version-text:hover {
+  text-decoration: underline;
 }
 
 .header {

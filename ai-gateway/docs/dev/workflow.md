@@ -1,3 +1,9 @@
+<!--
+IMPORTANT: Session start 时执行:
+1. cat /home/ubuntu/OpenCode/ai-gateway/.agent_rules.md
+2. 遵循其中规则
+-->
+
 # ScoreRoute 开发工作流程
 
 ## 项目信息

@@ -336,3 +336,18 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 - Docker: 运行中
 - Go fmt/vet: 通过
 - 资源: 已清理
+
+## 20步执行 (2026-04-22 完整)
+
+### P0问题验证
+| # | 问题 | 状态 |
+|---|------|------|
+| P0-1 | install.sh语法 | ✅ 正确 |
+| P0-2 | Docs.vue渲染 | ✅ 正常 |
+| P0-3 | Token Key掩码 | ✅ 已修复 |
+
+### 系统
+- Health: healthy
+- Docker: 运行中
+- Go fmt/vet: 通过
+- 资源: 已清理

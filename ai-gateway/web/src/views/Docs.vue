@@ -117,32 +117,13 @@ function escapeHtml(text) {
 }
 
 function renderMarkdown(text) {
-  let html = text
-  
-  html = escapeHtml(html)
-  
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
-  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>')
-  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>')
-  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>')
-  html = html.replace(/^\* (.+)$/gm, '<li>$1</li>')
-  html = html.replace(/^- (.+)$/gm, '<li>$1</li>')
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>')
-  html = html.replace(/^---$/gm, '<hr>')
-  html = html.replace(/\n\n/g, '</p><p>')
-  html = '<p>' + html + '</p>'
-  html = html.replace(/<p><(h[123]|pre|hr|li)/g, '<$1')
-  html = html.replace(/<\/(h[123]|pre|li)><\/p>/g, '</$1>')
-  html = html.replace(/<p><\/p>/g, '')
-  
-  return html
+  try {
+    return marked.parse(text)
+  } catch (e) {
+    console.error('Markdown parsing error:', e)
+    return '<p>' + escapeHtml(text) + '</p>'
+  }
 }
-
-const loadDoc = async (path) => {
-  loading.value = true
   error.value = ''
   currentDoc.value = path
   htmlContent.value = ''

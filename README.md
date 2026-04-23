@@ -63,7 +63,7 @@
 ### 一键安装
 
 ```bash
-curl -O https://raw.githubusercontent.com/DING-BAOMING/ScoreRoute/main/install.sh && chmod +x install.sh && ./install.sh
+curl -O https://raw.githubusercontent.com/DING-BAOMING/ScoreRoute/main/ai-gateway/install.sh && chmod +x install.sh && ./install.sh
 ```
 
 安装脚本会自动：

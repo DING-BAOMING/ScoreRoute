@@ -26,7 +26,22 @@ api.interceptors.response.use(
 
 export const authAPI = {
   login: (data) => api.post('/auth/login', data),
-  validate: () => api.get('/auth/validate')
+  validate: () => api.get('/auth/validate'),
+  getSetupStatus: () => {
+    const noAuthApi = axios.create({
+      baseURL: '/api',
+      timeout: 30000
+    })
+    return noAuthApi.get('/auth/setup-status')
+  },
+  passwordLessLogin: () => {
+    const noAuthApi = axios.create({
+      baseURL: '/api',
+      timeout: 30000
+    })
+    return noAuthApi.post('/auth/passwordless-login')
+  },
+  setupPassword: (data) => api.post('/system-config/setup-password', data)
 }
 
 export const channelAPI = {
@@ -65,7 +80,9 @@ export const logAPI = {
   stats: () => api.get('/logs/stats'),
   dashboard: () => api.get('/logs/dashboard'),
   cleanup: (days) => api.delete('/logs/cleanup', { data: { days } }),
-  modelStats: () => api.get('/logs/model-stats')
+  modelStats: () => api.get('/logs/model-stats'),
+  getSystemConfig: () => api.get('/system-config'),
+  setPasswordLessMode: (data) => api.put('/system-config/password-less', data)
 }
 
 export const userRatingAPI = {

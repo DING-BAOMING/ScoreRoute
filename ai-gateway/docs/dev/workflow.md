@@ -580,3 +580,22 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 - 部分请求15秒超时（上游API问题）
 - 成功请求在0.4-4秒
 
+
+## 21步执行 (2026-04-23 第三轮)
+
+### 问题验证
+| 问题 | 状态 |
+|------|------|
+| Token Key截断 | ✅ 已修复 - showFullKey按钮在构建中 |
+| Docs.vue空白 | ✅ 已修复 - DOMPurify渲染正常 |
+| Docker持久化 | ✅ 命名卷配置 |
+
+### Docker重建
+- 镜像: ai-gateway-app:latest (9349b9b0efae)
+- 使用 --no-cache 确保最新构建
+
+### 系统状态
+- Health: healthy ✅
+- Docker: running ✅
+- Named Volumes: ✅
+

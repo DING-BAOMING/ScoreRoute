@@ -7,9 +7,9 @@ services:
     ports:
       - "${PORT:-3000}:3000"
     volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-      - ./cache:/app/cache
+      - scoreroute-data:/app/data
+      - scoreroute-logs:/app/logs
+      - scoreroute-cache:/app/cache
     env_file:
       - .env
     environment:
@@ -18,6 +18,11 @@ services:
       - LOG_PATH=/app/logs
     networks:
       - scoreroute-network
+
+volumes:
+  scoreroute-data:
+  scoreroute-logs:
+  scoreroute-cache:
 
 networks:
   scoreroute-network:

@@ -143,6 +143,76 @@
       </el-col>
     </el-row>
 
+    <el-row :gutter="20" style="margin-top: 20px">
+      <el-col :span="24">
+        <el-card>
+          <template #header>
+            <div class="card-header">
+              <span>安全设置</span>
+            </div>
+          </template>
+          <div class="security-settings">
+            <div class="setting-item">
+              <div class="setting-info">
+                <div class="setting-title">
+                  <el-icon><Lock /></el-icon>
+                  <span>无需密码访问</span>
+                </div>
+                <div class="setting-desc">
+                  启用后可直接访问系统，无需登录（适合开发测试环境）
+                </div>
+              </div>
+              <el-switch
+                v-model="passwordLessMode"
+                @change="handlePasswordLessModeChange"
+              />
+            </div>
+            <div class="setting-item">
+              <div class="setting-info">
+                <div class="setting-title">
+                  <el-icon><Key /></el-icon>
+                  <span>修改密码</span>
+                </div>
+                <div class="setting-desc">
+                  更改管理员登录密码
+                </div>
+              </div>
+              <el-button type="primary" size="small" @click="showPasswordDialog = true">
+                修改密码
+              </el-button>
+            </div>
+            <el-alert
+              v-if="passwordLessMode"
+              type="warning"
+              :closable="false"
+              show-icon
+              class="security-warning"
+            >
+              <template #title>
+                安全提醒：当前已启用无需密码访问，任何人都可以访问系统管理界面。
+                如需更高安全性，请关闭此功能。
+              </template>
+            </el-alert>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-dialog v-model="showPasswordDialog" title="修改密码" width="400px">
+      <el-form :model="passwordForm" :rules="passwordRules" ref="passwordFormRef">
+        <el-form-item label="新密码" prop="password">
+          <el-input v-model="passwordForm.password" type="password" show-password />
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input v-model="passwordForm.confirmPassword" type="password" show-password />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showPasswordDialog = false">取消</el-button>
+        <el-button type="primary" @click="handleChangePassword">确定</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -156,6 +226,12 @@ const tokenStats = ref([])
 const channelCount = ref(0)
 const tokenCount = ref(0)
 const passwordLessMode = ref(false)
+const showPasswordDialog = ref(false)
+const passwordFormRef = ref()
+const passwordForm = ref({
+  password: '',
+  confirmPassword: ''
+})
 
 function formatNumber(num) {
   if (!num) return '0'
@@ -172,6 +248,26 @@ onMounted(async () => {
   await loadDashboard()
   await loadSecuritySettings()
 })
+
+const passwordRules = {
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, message: '密码长度至少6位', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请确认密码', trigger: 'blur' },
+    { 
+      validator: (rule, value, callback) => {
+        if (value !== passwordForm.value.password) {
+          callback(new Error('两次输入的密码不一致'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ]
+}
 
 async function loadSecuritySettings() {
   try {
@@ -191,6 +287,21 @@ async function handlePasswordLessModeChange(value) {
   } catch (e) {
     ElMessage.error('设置失败：' + (e.message || '未知错误'))
     passwordLessMode.value = !value
+  }
+}
+
+async function handleChangePassword() {
+  const valid = await passwordFormRef.value.validate().catch(() => false)
+  if (!valid) return
+  
+  try {
+    await logAPI.changePassword({ password: passwordForm.value.password })
+    ElMessage.success('密码修改成功')
+    showPasswordDialog.value = false
+    passwordForm.value.password = ''
+    passwordForm.value.confirmPassword = ''
+  } catch (e) {
+    ElMessage.error('修改失败：' + (e.message || '未知错误'))
   }
 }
 

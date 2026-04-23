@@ -82,7 +82,8 @@ export const logAPI = {
   cleanup: (days) => api.delete('/logs/cleanup', { data: { days } }),
   modelStats: () => api.get('/logs/model-stats'),
   getSystemConfig: () => api.get('/system-config'),
-  setPasswordLessMode: (data) => api.put('/system-config/password-less', data)
+  setPasswordLessMode: (data) => api.put('/system-config/password-less', data),
+  changePassword: (data) => api.post('/system-config/setup-password', data)
 }
 
 export const userRatingAPI = {

@@ -599,3 +599,36 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 - Docker: running ✅
 - Named Volumes: ✅
 
+
+## 21步执行 (2026-04-23 第四轮)
+
+### 问题：Docker自动启动未生效
+
+**问题描述**: ai-gateway-app-1 容器未运行，导致 api.029101.xyz 返回502
+
+**原因分析**: 
+1. docker-compose.yml 配置了 `restart: always`
+2. 但之前执行 `docker-compose down` 停止了容器
+3. `restart: always` 只在容器异常退出时自动重启，手动停止后不会自动启动
+
+**修复方案**:
+1. 手动启动容器: `docker-compose up -d`
+2. 更新重启策略: `docker update --restart always ai-gateway-app-1`
+3. 删除旧容器 scoreroute-demo
+
+**验证**:
+```bash
+# 确认容器运行
+docker ps
+
+# 确认重启策略
+docker inspect ai-gateway-app-1 --format '{{.HostConfig.RestartPolicy}}'
+# 输出: {always 0}
+```
+
+### 系统状态
+- Health: healthy ✅
+- Docker: ai-gateway-app-1 running ✅
+- Restart Policy: always ✅
+- api.029101.xyz: working ✅
+

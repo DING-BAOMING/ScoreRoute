@@ -9,10 +9,12 @@ NC='\033[0m'
 
 DEFAULT_PORT=3000
 REPO_URL="https://github.com/DING-BAOMING/ScoreRoute.git"
+GITEE_URL="https://gitee.com/BM-D/ScoreRoute.git"
 INSTALL_DIR="${HOME}/scoreroute"
 
 PORT="${PORT:-${DEFAULT_PORT}}"
 NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
+USE_GITEE="${USE_GITEE:-false}"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -20,7 +22,8 @@ while [[ $# -gt 0 ]]; do
         --password) ADMIN_PASSWORD="$2"; shift 2 ;;
         --dir) INSTALL_DIR="$2"; shift 2 ;;
         --non-interactive) NON_INTERACTIVE=true; shift ;;
-        --help|-h) echo "Usage: $0 [--port PORT] [--password PASS] [--dir DIR] [--non-interactive]"; exit 0 ;;
+        --help|-h) echo "Usage: $0 [--port PORT] [--password PASS] [--dir DIR] [--non-interactive] [--gitee]"; exit 0 ;;
+        --gitee) USE_GITEE=true; shift ;;
         *) echo "Unknown: $1"; exit 1 ;;
     esac
 done
@@ -56,7 +59,11 @@ setup_directory() {
     if [ -d ".git" ]; then
         git fetch origin && git reset --hard origin/main
     else
-        git clone "$REPO_URL" .
+        if [ "$USE_GITEE" = "true" ]; then
+            git clone "$GITEE_URL" .
+        else
+            git clone "$REPO_URL" .
+        fi
     fi
     log_ok "目录就绪"
 }

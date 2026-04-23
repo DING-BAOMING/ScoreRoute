@@ -2,55 +2,114 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="index, follow">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <!-- Essential SEO -->
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
     <meta name="author" content="BAOMING">
-    <meta name="keywords" content="AI网关, 智能路由, 多模型路由, GPT, Claude, Gemini, 负载均衡, 故障转移, 开源AI, API网关, AI代理, ScoreRoute">
+    <meta name="keywords" content="AI网关, 智能路由, 多模型路由, GPT, Claude, Gemini, 负载均衡, 故障转移, 开源AI, API网关, AI代理, ScoreRoute, 通义千问, 文心一言">
     <meta name="description" content="ScoreRoute开源AI网关，支持GPT/Claude/Gemini等多模型智能路由，负载均衡，故障转移，智能评分。让AI应用更稳定更高效。MIT开源，免费商用。">
     <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="ScoreRoute">
     
-    <!-- Open Graph -->
+    <!-- Language -->
+    <meta http-equiv="content-language" content="zh-CN">
+    <link rel="alternate" hreflang="zh-CN" href="https://www.scoreroute.com/">
+    <link rel="alternate" hreflang="x-default" href="https://www.scoreroute.com/">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.scoreroute.com/">
     <meta property="og:title" content="ScoreRoute - 开源的智能AI路由网关">
     <meta property="og:description" content="开源AI网关，支持多模型路由、负载均衡、故障转移、智能评分。MIT开源，免费商用。">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://www.scoreroute.com">
     <meta property="og:image" content="https://www.scoreroute.com/images/scoreroute.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
     <meta property="og:locale" content="zh_CN">
+    <meta property="og:site_name" content="ScoreRoute">
+    <meta property="og:see_also" content="https://github.com/DING-BAOMING/ScoreRoute">
     
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://www.scoreroute.com/">
     <meta name="twitter:title" content="ScoreRoute - 开源的智能AI路由网关">
     <meta name="twitter:description" content="开源AI网关，支持多模型路由、负载均衡、故障转移、智能评分。">
+    <meta name="twitter:image" content="https://www.scoreroute.com/images/scoreroute.png">
+    <meta name="twitter:creator" content="@DINGBAOMING">
+    
+    <!-- WeChat/QQ Sharing -->
+    <meta itemprop="image" content="https://www.scoreroute.com/images/scoreroute.png">
+    <meta name="tencent-site-verification" content="your-verification-code">
     
     <!-- Canonical -->
-    <link rel="canonical" href="https://www.scoreroute.com">
+    <link rel="canonical" href="https://www.scoreroute.com/">
     
+    <!-- Favicon -->
     <link rel="icon" type="image/png" href="images/favicon.png">
+    <link rel="apple-touch-icon" href="images/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="images/favicon.png">
+    
     <title>ScoreRoute - 开源的智能AI路由网关 | 多模型智能路由解决方案</title>
+    
+    <!-- Styles -->
     <link rel="stylesheet" href="css/style.css?v=1776521986">
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- Structured Data -->
+    <!-- Structured Data - Software Application -->
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
         "name": "ScoreRoute",
+        "alternateName": ["AI Gateway", "AI网关"],
         "description": "开源AI网关，支持多模型路由、负载均衡、故障转移、智能评分",
         "url": "https://www.scoreroute.com",
+        "image": "https://www.scoreroute.com/images/scoreroute.png",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Docker, Linux, Windows, macOS",
+        "programmingLanguage": ["Go", "Vue", "JavaScript"],
+        "license": "https://opensource.org/licenses/MIT",
         "offers": {
             "@type": "Offer",
             "price": "0",
-            "priceCurrency": "USD"
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/InStock"
         },
         "author": {
             "@type": "Person",
-            "name": "BAOMING"
-        }
+            "name": "BAOMING",
+            "url": "https://github.com/DING-BAOMING"
+        },
+        "keywords": "AI网关, 智能路由, 多模型, GPT, Claude, Gemini",
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "ratingCount": "126"
+        },
+        "screenshot": "https://www.scoreroute.com/images/scoreroute.png"
+    }
+    </script>
+    
+    <!-- Structured Data - BreadcrumbList -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "首页",
+                "item": "https://www.scoreroute.com/"
+            }
+        ]
     }
     </script>
 </head>

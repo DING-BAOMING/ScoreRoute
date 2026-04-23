@@ -478,3 +478,51 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 - /api/extra-rating/records ✅
 - /api/sample-analysis/ratings ✅
 - /api/user-ratings ✅
+
+## 23步执行 (2026-04-23)
+
+### 问题验证和修复
+
+| # | 问题 | 状态 |
+|---|------|------|
+| P0-1 | Token Key截断(用户无法使用) | ✅ 已修复并部署 |
+| P1-1 | Docs.vue文档空白 | ✅ 已修复并部署 |
+| P2-1 | Docker数据持久化 | ✅ 已配置命名卷 |
+
+### 修复详情
+
+1. **Token Key问题**
+   - 修复: merge fix/token-key-display → main
+   - 功能: "查看完整Key"按钮 + 弹窗显示完整Key
+   - 部署: Docker镜像 d8d25c0d3b40
+
+2. **Docs.vue问题**
+   - 修复: @click.prevent + DOMPurify.sanitize
+   - 部署: Docs-_G2v8_kK.js
+
+3. **Docker持久化**
+   - 修复: docker-compose.yml named volumes
+   - 状态: scoreroute-data, scoreroute-logs, scoreroute-cache
+
+### Docker重建
+- 日期: 2026-04-23
+- 镜像: ai-gateway-app:latest (sha256:d8d25c0d3b40)
+- 容器: ai-gateway-app-1 (运行中)
+- 构建: --no-cache
+
+### 系统状态
+- Health: healthy ✅
+- Docker: running ✅
+- Named Volumes: ✅
+- Go fmt/vet: 通过 ✅
+
+### 测试验证
+| 功能 | 状态 |
+|------|------|
+| Health Check | ✅ |
+| Token List (masked) | ✅ |
+| Token GetByID (full key) | ✅ |
+| Docs serving | ✅ |
+| DOMPurify in Docs.js | ✅ |
+| showFullKey in Tokens.js | ✅ |
+

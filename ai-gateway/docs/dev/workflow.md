@@ -557,3 +557,26 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 - Named Volumes: ✅
 - Go fmt/vet: 通过 ✅
 
+
+## 21步执行 (2026-04-23 第二轮)
+
+### 系统检查
+| 检查项 | 结果 |
+|--------|------|
+| Health | ✅ healthy |
+| Docs | ✅ 正常 |
+| Channels | ✅ 6个 |
+| Models | ✅ 35个 |
+| Token API | ✅ GetByID返回完整key |
+
+### 3个测试API
+| Token | 模型 | 状态 |
+|-------|------|------|
+| sk-3ad88df0... | MiniMax-M2.7 | ✅ |
+| sk-77747ad0... | __AUTO__ | ✅ |
+| sk-4906bb66... | __AUTO__ (1M/h) | ✅ |
+
+### 延迟测试
+- 部分请求15秒超时（上游API问题）
+- 成功请求在0.4-4秒
+

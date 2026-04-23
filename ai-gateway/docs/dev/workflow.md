@@ -526,3 +526,34 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 | DOMPurify in Docs.js | ✅ |
 | showFullKey in Tokens.js | ✅ |
 
+
+## 23步执行 (2026-04-23 完整验证)
+
+### 修复验证
+
+| # | 问题 | 状态 | 验证 |
+|---|------|------|------|
+| P0-1 | Token Key截断 | ✅ 已修复 | GetByID返回完整key |
+| P1-1 | Docs.vue空白 | ✅ 已修复 | markdown正常渲染 |
+| P2-1 | Docker持久化 | ✅ 已配置 | 命名卷工作正常 |
+
+### 新发现：模型名称大小写问题
+
+| 问题 | 说明 | 修复 |
+|------|------|------|
+| 模型名称大小写 | `minimax-m2.7` vs `MiniMax-M2.7` | Token模型名改为正确大小写 |
+
+### 3个测试API验证
+
+| Token | 模型 | 结果 |
+|-------|------|------|
+| sk-3ad88df0... | MiniMax-M2.7 (修正) | ✅ qwen3.5响应 |
+| sk-77747ad0... | __AUTO__ | ✅ phi-4响应 |
+| sk-4906bb66... | __AUTO__ (1M/h) | ✅ qwen3.5响应 |
+
+### 系统状态
+- Health: healthy ✅
+- Docker: running ✅
+- Named Volumes: ✅
+- Go fmt/vet: 通过 ✅
+

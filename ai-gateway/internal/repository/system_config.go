@@ -28,7 +28,7 @@ func (r *SystemConfigRepo) Get() (*model.SystemConfig, error) {
 			DispatchMode:      "polling",
 			PasswordLessMode:  false,
 			PasswordSetupDone: false,
-			UpdatedAt:        time.Now(),
+			UpdatedAt:         time.Now(),
 		}
 		if _, err := DB.Exec(`INSERT INTO system_config (exchange_rate, currency, dispatch_mode, password_less_mode, password_setup_done) VALUES (?, ?, ?, ?, ?)`, config.ExchangeRate, config.Currency, config.DispatchMode, config.PasswordLessMode, config.PasswordSetupDone); err != nil {
 			return nil, fmt.Errorf("failed to create system config: %w", err)

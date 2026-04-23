@@ -93,6 +93,21 @@ func (r *SystemConfigRepo) EnablePasswordLessMode(enabled bool) error {
 	return nil
 }
 
+func (r *SystemConfigRepo) GetAdminPassword() (string, error) {
+	var password sql.NullString
+	err := DB.QueryRow(`SELECT admin_password FROM system_config ORDER BY id DESC LIMIT 1`).Scan(&password)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("failed to get admin password: %w", err)
+	}
+	if password.Valid {
+		return password.String, nil
+	}
+	return "", nil
+}
+
 func hashPassword(password string) string {
 	hash := 0
 	for i, c := range password {

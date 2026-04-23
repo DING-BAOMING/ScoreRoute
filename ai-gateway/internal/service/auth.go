@@ -2,17 +2,23 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 
 	"ai-gateway/internal/config"
+	"ai-gateway/internal/repository"
 )
 
-type AuthService struct{}
+type AuthService struct {
+	configRepo *repository.SystemConfigRepo
+}
 
 func NewAuthService() *AuthService {
-	return &AuthService{}
+	return &AuthService{
+		configRepo: repository.NewSystemConfigRepo(),
+	}
 }
 
 type Claims struct {
@@ -25,8 +31,27 @@ func (s *AuthService) Login(username, password string) (string, error) {
 		return "", errors.New("用户名或密码错误")
 	}
 
-	if password != config.AppConfig.AdminPassword {
+	cfg, err := s.configRepo.Get()
+	if err != nil {
 		return "", errors.New("用户名或密码错误")
+	}
+
+	if cfg.PasswordSetupDone && !cfg.PasswordLessMode {
+		storedPassword, err := s.configRepo.GetAdminPassword()
+		if err == nil && storedPassword != "" {
+			hashedInput := hashPassword(password)
+			if hashedInput != storedPassword {
+				return "", errors.New("用户名或密码错误")
+			}
+		} else {
+			if password != config.AppConfig.AdminPassword {
+				return "", errors.New("用户名或密码错误")
+			}
+		}
+	} else {
+		if password != config.AppConfig.AdminPassword {
+			return "", errors.New("用户名或密码错误")
+		}
 	}
 
 	return s.GenerateTokenForUser(username)
@@ -59,4 +84,12 @@ func (s *AuthService) ValidateToken(tokenString string) (*Claims, error) {
 	}
 
 	return nil, errors.New("invalid token")
+}
+
+func hashPassword(password string) string {
+	hash := 0
+	for i, c := range password {
+		hash = hash*31 + int(c) + i
+	}
+	return fmt.Sprintf("%x", hash)
 }

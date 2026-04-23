@@ -86,13 +86,13 @@ type Token struct {
 }
 
 type SystemConfig struct {
-	ID                 int64     `json:"id"`
-	ExchangeRate       float64   `json:"exchange_rate"`       // CNY to USD rate
-	Currency           string    `json:"currency"`            // base currency for cost calculation
-	DispatchMode       string    `json:"dispatch_mode"`       // "polling" or "smart"
-	PasswordLessMode   bool      `json:"password_less_mode"`  // enable password-less access
-	PasswordSetupDone  bool      `json:"password_setup_done"` // password has been configured
-	UpdatedAt          time.Time `json:"updated_at"`
+	ID                int64     `json:"id"`
+	ExchangeRate      float64   `json:"exchange_rate"`       // CNY to USD rate
+	Currency          string    `json:"currency"`            // base currency for cost calculation
+	DispatchMode      string    `json:"dispatch_mode"`       // "polling" or "smart"
+	PasswordLessMode  bool      `json:"password_less_mode"`  // enable password-less access
+	PasswordSetupDone bool      `json:"password_setup_done"` // password has been configured
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 type CallLog struct {

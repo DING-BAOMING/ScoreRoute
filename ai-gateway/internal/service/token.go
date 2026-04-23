@@ -26,7 +26,9 @@ func (s *TokenService) Create(req *model.TokenRequest) (*model.Token, error) {
 	if req.Enabled == 0 {
 		req.Enabled = 1
 	}
-	req.Key = "sk-" + uuid.New().String()
+	if req.Key == "" {
+		req.Key = "sk-" + uuid.New().String()
+	}
 	token, err := s.repo.Create(req)
 	if err != nil {
 		return nil, err

@@ -155,6 +155,7 @@ const topChannels = ref([])
 const tokenStats = ref([])
 const channelCount = ref(0)
 const tokenCount = ref(0)
+const passwordLessMode = ref(false)
 
 function formatNumber(num) {
   if (!num) return '0'
@@ -169,7 +170,29 @@ function formatNumber(num) {
 
 onMounted(async () => {
   await loadDashboard()
+  await loadSecuritySettings()
 })
+
+async function loadSecuritySettings() {
+  try {
+    const response = await logAPI.getSystemConfig()
+    if (response.code === 0) {
+      passwordLessMode.value = response.data.password_less_mode || false
+    }
+  } catch (e) {
+    console.error('Failed to load security settings:', e)
+  }
+}
+
+async function handlePasswordLessModeChange(value) {
+  try {
+    await logAPI.setPasswordLessMode({ enabled: value })
+    ElMessage.success(value ? '已启用无需密码访问' : '已禁用无需密码访问')
+  } catch (e) {
+    ElMessage.error('设置失败：' + (e.message || '未知错误'))
+    passwordLessMode.value = !value
+  }
+}
 
 async function loadDashboard() {
   try {
@@ -226,6 +249,52 @@ async function loadDashboard() {
   color: #999;
   font-size: 14px;
   margin-top: 5px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.security-settings {
+  padding: 10px 0;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.setting-item:last-of-type {
+  border-bottom: none;
+}
+
+.setting-info {
+  flex: 1;
+}
+
+.setting-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.setting-desc {
+  font-size: 13px;
+  color: #909399;
+  margin-top: 5px;
+  margin-left: 32px;
+}
+
+.security-warning {
+  margin-top: 15px;
 }
 
 </style>

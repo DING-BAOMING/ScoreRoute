@@ -462,5 +462,21 @@ func migrateTables() error {
 		log.Println("Channels table already has auto_disabled column, skipping")
 	}
 
+	// Migration: Add password columns to system_config
+	var passwordLessModeCount int
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('system_config') WHERE name='password_less_mode'")
+	if err := row.Scan(&passwordLessModeCount); err != nil {
+		log.Printf("Warning: failed to check password_less_mode column: %v", err)
+	}
+	if passwordLessModeCount == 0 {
+		log.Println("Adding password columns to system_config table...")
+		DB.Exec(`ALTER TABLE system_config ADD COLUMN password_less_mode INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE system_config ADD COLUMN password_setup_done INTEGER DEFAULT 0`)
+		DB.Exec(`ALTER TABLE system_config ADD COLUMN admin_password TEXT`)
+		log.Println("Password columns added successfully")
+	} else {
+		log.Println("system_config table already has password columns, skipping")
+	}
+
 	return nil
 }

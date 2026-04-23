@@ -6,16 +6,19 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"ai-gateway/internal/model"
+	"ai-gateway/internal/repository"
 	"ai-gateway/internal/service"
 )
 
 type AuthHandler struct {
-	service *service.AuthService
+	service    *service.AuthService
+	configRepo *repository.SystemConfigRepo
 }
 
 func NewAuthHandler() *AuthHandler {
 	return &AuthHandler{
-		service: service.NewAuthService(),
+		service:    service.NewAuthService(),
+		configRepo: repository.NewSystemConfigRepo(),
 	}
 }
 
@@ -57,5 +60,47 @@ func (h *AuthHandler) HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "healthy",
 		"service": "ScoreRoute",
+	})
+}
+
+func (h *AuthHandler) CheckSetupStatus(c *gin.Context) {
+	config, err := h.configRepo.Get()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, model.APIResponse{
+		Code:    0,
+		Message: "success",
+		Data: gin.H{
+			"password_setup_done": config.PasswordSetupDone,
+			"password_less_mode":  config.PasswordLessMode,
+		},
+	})
+}
+
+func (h *AuthHandler) PasswordLessLogin(c *gin.Context) {
+	config, err := h.configRepo.Get()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
+		return
+	}
+
+	if !config.PasswordLessMode {
+		c.JSON(http.StatusUnauthorized, model.APIResponse{Code: 401, Message: "密码登录已启用，请使用密码登录"})
+		return
+	}
+
+	token, err := h.service.GenerateTokenForUser("admin")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: "生成令牌失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, model.APIResponse{
+		Code:    0,
+		Message: "登录成功",
+		Data:    model.LoginResponse{Token: token},
 	})
 }

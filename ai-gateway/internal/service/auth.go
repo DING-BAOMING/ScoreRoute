@@ -29,6 +29,10 @@ func (s *AuthService) Login(username, password string) (string, error) {
 		return "", errors.New("用户名或密码错误")
 	}
 
+	return s.GenerateTokenForUser(username)
+}
+
+func (s *AuthService) GenerateTokenForUser(username string) (string, error) {
 	claims := &Claims{
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{

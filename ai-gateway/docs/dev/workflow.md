@@ -632,3 +632,81 @@ docker inspect ai-gateway-app-1 --format '{{.HostConfig.RestartPolicy}}'
 - Restart Policy: always ✅
 - api.029101.xyz: working ✅
 
+
+## 23步执行 (2026-04-23 第五轮)
+
+### 1. 查看开发文档 ✅
+- 已查看 workflow.md
+
+### 2. 任务完成
+- 2.1 用户报告调查 ✅
+- 2.2 报告分析完成 ✅
+- 2.3 域名测试 ✅ api.029101.xyz 正常
+- 2.4 接出API检查 ✅ MiniMax正常工作
+- 2.5 修复完成 ✅ Token创建key保留问题
+
+### 主要修复: Token创建覆盖key问题
+**问题**: TokenService.Create() 总是覆盖用户提供的key
+**修复**: 
+```go
+if req.Key == "" {
+    req.Key = "sk-" + uuid.New().String()
+}
+```
+
+### 3. 测试验证
+- MiniMax-M2.7: ✅ 正常工作
+- 流式API: ✅ 正常
+- 文档服务: ✅ 正常
+
+### 4. 系统检查
+- Health: healthy ✅
+- Docker volumes: ✅ named volumes配置
+- Restart policy: always ✅
+
+### 5. 测试API Token
+| Token | Key | 模型 | 状态 |
+|-------|-----|------|------|
+| Test-MiniMax-M2.7 | sk-test-minimax-27-12345678901234 | MiniMax-M2.7 | ✅ |
+| Test-Unlimited-AUTO | sk-test-unlimited-auto-1234567890 | __AUTO__ | ⚠️ |
+| Test-1M-Hourly-AUTO | sk-test-1m-hourly-auto-1234567 | __AUTO__ (1M/hour) | ⚠️ |
+
+### 6-9. 技术债
+- 代码审查完成
+- 未发现新的技术债问题
+
+### 10. 资源使用
+- CPU: 0.00%
+- Memory: 23.42MiB / 23.43GiB
+- 正常，无浪费
+
+### 11. 全流程测试
+- 前端: ✅ 正常
+- 后端: ✅ 正常
+- 代理: ✅ 正常
+
+### 12-13. 容错和文档
+- 容错: ✅ 系统正常处理错误
+- 开发文档: ✅ 已更新
+
+### 14-16. Git更新
+- Branch: fix/token-key-preservation-0423
+- Commits: 2
+- Pushed: ✅
+
+### 17-18. 测试验证
+- Token创建: ✅ 通过
+- API调用: ✅ 通过
+
+### 19. 测试API信息
+见上方测试API Token表格
+
+### 20. 前端测试
+https://api.029101.xyz 正常访问
+
+### 21. 修复报告
+已更新: /home/ubuntu/ScoreRoute/Fix/Report.md
+
+### 22-23. 状态汇报
+所有主要问题已修复，系统运行正常。
+

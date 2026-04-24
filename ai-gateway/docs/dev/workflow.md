@@ -883,3 +883,26 @@ https://api.029101.xyz 正常访问
 - Branch: fix/pagination-page2
 - Commit: 54e6aea
 - Push: ✅
+
+## 23步执行 (2026-04-24): 唯一模型名称修复
+
+### 1. 查看开发文档 ✅
+
+### 2. 任务完成 ✅
+- 问题: 创建Token时显示24个重复模型
+- 原因: 4渠道×6模型=24，但用户只需选择模型类型
+- 修复: 添加uniqueModels计算属性过滤重复
+
+### 修复内容
+- Tokens.vue: 添加computed属性过滤唯一模型名
+- 之前: 24个模型(重复×4渠道)
+- 之后: 6个唯一模型名
+
+### 系统状态
+- Health: healthy ✅
+- Docker: running ✅
+
+### Git
+- Branch: fix/unique-model-names
+- Commit: 4ee233e
+- Push: ✅

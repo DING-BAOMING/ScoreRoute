@@ -1,5 +1,5 @@
 #!/bin/bash
-# ScoreRoute一键安装脚本v2.0.0 完全自动化
+# ScoreRoute一键安装脚本v2.0.1 完全自动化
 set -e
 
 RED='\033[0;31m'
@@ -10,12 +10,16 @@ NC='\033[0m'
 DEFAULT_PORT=3000
 REPO_URL="https://github.com/DING-BAOMING/ScoreRoute.git"
 GITEE_URL="https://gitee.com/BM-D/ScoreRoute.git"
-INSTALL_DIR="${HOME}/scoreroute"
 
-PORT="${PORT:-${DEFAULT_PORT}}"
-NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
-USE_GITEE="${USE_GITEE:-false}"
+# 默认安装目录为当前目录的scoreroute子目录
+CURRENT_DIR="$(cd "$(dirname "$0")" && pwd)"
+INSTALL_DIR="${CURRENT_DIR}/scoreroute"
 
+PORT="${DEFAULT_PORT}"
+NON_INTERACTIVE="false"
+USE_GITEE="false"
+ADMIN_PASSWORD=""
+# arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
         --port) PORT="$2"; shift 2 ;;
@@ -28,10 +32,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-PORT="${PORT:-$DEFAULT_PORT}"
-
 show_banner() {
-    echo -e "${GREEN}ScoreRoute一键安装v2.0.0${NC}"
+    echo -e "${GREEN}ScoreRoute一键安装v2.0.1${NC}"
 }
 
 log_info() { echo -e "${BLUE}[INFO]${NC} $*"; }
@@ -57,15 +59,17 @@ setup_directory() {
     mkdir -p "$INSTALL_DIR"
     cd "$INSTALL_DIR"
     if [ -d ".git" ]; then
+        log_info "更新代码..."
         git fetch origin && git reset --hard origin/main
     else
+        log_info "克隆代码..."
         if [ "$USE_GITEE" = "true" ]; then
             git clone "$GITEE_URL" .
         else
             git clone "$REPO_URL" .
         fi
     fi
-    log_ok "目录就绪"
+    log_ok "目录就绪: $(pwd)"
 }
 
 generate_config() {
@@ -73,7 +77,6 @@ generate_config() {
     ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)}"
     JWT_SECRET="$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 32)"
     cat > .env << EOF
-PORT=${PORT}
 DATABASE_PATH=./data/gateway.db
 LOG_PATH=./logs
 ADMIN_PASSWORD=${ADMIN_PASSWORD}
@@ -85,8 +88,12 @@ EOF
 
 update_docker_compose() {
     log_info "配置Docker..."
-    sed -i "s/\${PORT:-3000}/${PORT}/" docker-compose.yml
-    log_ok "Docker配置完成"
+    if [ -f "docker-compose.yml" ]; then
+        sed -i "s/\${PORT:-3000}/${PORT}/" docker-compose.yml
+        log_ok "Docker配置完成"
+    else
+        log_error "未找到docker-compose.yml"
+    fi
 }
 
 build_and_start() {
@@ -94,17 +101,23 @@ build_and_start() {
     "$DC" down 2>/dev/null || true
     "$DC" up -d --build
     log_info "等待服务启动..."
-    for _ in $(seq 1 60); do
-        curl -s "http://localhost:${PORT}/health" >/dev/null 2>&1 && { log_ok "服务启动成功"; break; }
+    for i in $(seq 1 60); do
+        if curl -s "http://localhost:${PORT}/health" >/dev/null 2>&1; then
+            log_ok "服务启动成功"
+            return 0
+        fi
         sleep 1
     done
+    log_error "服务启动超时"
 }
 
 show_complete() {
     echo "====================================="
     echo "ScoreRoute安装完成!"
     echo "====================================="
-    echo "访问: http://localhost:${PORT}"
+    echo "安装目录: $INSTALL_DIR"
+    echo "访问地址: http://localhost:${PORT}"
+    echo "API端点: http://localhost:${PORT}/v1"
     echo "账号: admin"
     echo "密码: ${ADMIN_PASSWORD}"
 }

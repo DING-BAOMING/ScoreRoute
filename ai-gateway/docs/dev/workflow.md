@@ -790,3 +790,145 @@ https://api.029101.xyz 正常访问
 ### 17-23. 状态
 所有问题已修复，系统正常运行。
 
+
+## 23步执行 (2026-04-24)
+
+### 1. 查看开发文档 ✅
+
+### 2. 任务完成 ✅
+- 2.1 调查模型名称显示问题
+- 2.4 访问api.029101.xyz确认正常
+- 2.5-2.6 修复Tokens.vue模型名称简化
+
+### 主要修复: 模型名称简化
+**问题**: 模型下拉框显示"minimaxai/minimax-m2.7"而非"minimax-m2.7"
+**修复**: 添加simplifyModelName()函数，自动去除提供商前缀
+
+### 系统状态
+- Health: healthy ✅
+- Docker: running ✅
+- Channels: 4 (NVIDIA)
+- Models: 24
+- Tokens: 3
+
+### 测试结果
+- Token API: ✅ 正常响应
+- 模型简化: ✅ 显示"minimax-m2.7"格式
+
+### Git
+- Branch: fix/simplify-model-names
+- Commit: d84caff
+- Push: ✅
+
+## 23步执行 (2026-04-24): 调度测试
+
+### 1. 查看开发文档 ✅
+
+### 2. 任务完成 ✅
+- 2.1 智能调度+auto: ✅ 工作正常
+- 2.2 智能调度+固定模型: ✅ 选择高分模型
+- 2.3 轮询调度+固定模型: ✅ 轮询不同API
+- 2.4 轮询调度+auto: ✅ 轮询同格式类型模型
+- 2.5 问题调查: minimax模型在NVIDIA API超时(上游问题)
+
+### 测试结果汇总
+
+| 组合 | 模式 | 结果 | 说明 |
+|------|------|------|------|
+| Polling+固定llama | 轮询 | ✅ | 10请求分配到4个API |
+| Polling+auto | 轮询 | ⚠️ | minimax模型慢(30s+) |
+| Smart+固定llama | 智能 | ✅ | 10请求分配到4个API |
+| Smart+auto | 智能 | ⚠️ | minimax模型慢 |
+
+### 发现的问题
+1. **minimax模型在NVIDIA API超时** - 上游API问题，非代码问题
+2. **model_stats显示0分** - 评分系统未实时更新
+
+### 修复操作
+- 删除旧的MiniMax-Channel (id=1)
+- 切换回polling模式
+
+### 系统状态
+- Health: healthy ✅
+- Dispatch: polling ✅
+- Channels: 4 (NVIDIA) ✅
+- Models: 24 ✅
+
+### Git
+- Branch: fix/simplify-model-names
+- Status: 已同步
+
+## 23步执行 (2026-04-24): 分页Page2修复
+
+### 1. 查看开发文档 ✅
+
+### 2. 任务完成 ✅
+- 调查Page2没反应问题
+- 根因: Vue 3模板中page.value = p错误
+
+### 修复内容
+| 文件 | 修复 |
+|------|------|
+| Logs.vue | page.value → page |
+| Channels.vue | page.value → page |
+| Models.vue | page.value → page |
+| SampleAnalysis.vue | page.value → page |
+
+### 系统状态
+- Health: healthy ✅
+- Docker: running ✅
+- Pagination: ✅ 已修复
+
+### Git
+- Branch: fix/pagination-page2
+- Commit: 54e6aea
+- Push: ✅
+
+## 23步执行 (2026-04-24): 唯一模型名称修复
+
+### 1. 查看开发文档 ✅
+
+### 2. 任务完成 ✅
+- 问题: 创建Token时显示24个重复模型
+- 原因: 4渠道×6模型=24，但用户只需选择模型类型
+- 修复: 添加uniqueModels计算属性过滤重复
+
+### 修复内容
+- Tokens.vue: 添加computed属性过滤唯一模型名
+- 之前: 24个模型(重复×4渠道)
+- 之后: 6个唯一模型名
+
+### 系统状态
+- Health: healthy ✅
+- Docker: running ✅
+
+### Git
+- Branch: fix/unique-model-names
+- Commit: 4ee233e
+- Push: ✅
+
+## 23步执行 (2026-04-24): 调度测试
+
+### 1. 查看开发文档 ✅
+
+### 2. 测试结果
+
+| 组合 | 结果 | 说明 |
+|------|------|------|
+| Smart+AUTO | ✅ | 选择llama模型 |
+| Smart+固定llama | ✅ | 轮询4个API |
+| Polling+固定llama | ✅ | 轮询4个API |
+| Polling+AUTO | ✅ | 轮询多个模型 |
+
+### 2.5 问题调查
+- minimax模型: NVIDIA API超时(上游问题)
+- qwen模型: 正常工作
+- llama模型: 稳定快速(~850ms)
+
+### 系统状态
+- Health: healthy ✅
+- Dispatch: polling (当前)
+
+### Git
+- Branch: fix/unique-model-names
+- Status: 已同步

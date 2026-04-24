@@ -27,10 +27,10 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="model_name" label="模型" width="120">
+        <el-table-column prop="model_name" label="模型" width="140">
           <template #default="{ row }">
             <el-tag v-if="row.model_name === '__AUTO__'" type="success">自动</el-tag>
-            <el-tag v-else type="info">{{ row.model_name }}</el-tag>
+            <el-tag v-else type="info">{{ simplifyModelName(row.model_name) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="enabled" label="状态" width="80">
@@ -82,7 +82,7 @@
         <el-form-item label="模型">
           <el-select v-model="form.model_name" placeholder="选择模型或输入" filterable allow-create>
             <el-option label="__AUTO__ (自动选择)" value="__AUTO__" />
-            <el-option v-for="m in models" :key="m.id" :label="m.name" :value="m.name" />
+            <el-option v-for="m in uniqueModels" :key="m.id" :label="simplifyModelName(m.name)" :value="m.name" />
           </el-select>
         </el-form-item>
         <el-form-item label="限流规则">
@@ -188,6 +188,31 @@ const rateLimitOptions = {
     { label: '天', value: 'day' }
   ]
 }
+
+function simplifyModelName(modelName) {
+  if (!modelName) return modelName
+  let n = modelName.toLowerCase()
+  const prefixes = ['minimaxai/', 'z-ai/', 'qwen/', 'meta/', 'mistralai/', 'microsoft/', 'anthropic/', 'cohere/', 'google/', 'openai/', 'azure/', 'aws/', 'alibaba/', 'baidu/', 'tencent/', 'nvidia/']
+  for (const prefix of prefixes) {
+    if (n.startsWith(prefix)) {
+      n = n.substring(prefix.length)
+      break
+    }
+  }
+  if (n.startsWith('mini-max')) {
+    n = 'minimax' + n.substring(8)
+  }
+  return n
+}
+
+const uniqueModels = computed(() => {
+  const seen = new Set()
+  return models.value.filter(m => {
+    if (seen.has(m.name)) return false
+    seen.add(m.name)
+    return true
+  })
+})
 
 function addRateLimit() {
   rateLimitRules.value.push({ type: 'calls', max_count: 100, window: 'minute' })

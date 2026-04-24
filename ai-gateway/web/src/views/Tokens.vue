@@ -82,7 +82,7 @@
         <el-form-item label="模型">
           <el-select v-model="form.model_name" placeholder="选择模型或输入" filterable allow-create>
             <el-option label="__AUTO__ (自动选择)" value="__AUTO__" />
-            <el-option v-for="m in models" :key="m.id" :label="simplifyModelName(m.name)" :value="m.name" />
+            <el-option v-for="m in uniqueModels" :key="m.id" :label="simplifyModelName(m.name)" :value="m.name" />
           </el-select>
         </el-form-item>
         <el-form-item label="限流规则">
@@ -204,6 +204,15 @@ function simplifyModelName(modelName) {
   }
   return n
 }
+
+const uniqueModels = computed(() => {
+  const seen = new Set()
+  return models.value.filter(m => {
+    if (seen.has(m.name)) return false
+    seen.add(m.name)
+    return true
+  })
+})
 
 function addRateLimit() {
   rateLimitRules.value.push({ type: 'calls', max_count: 100, window: 'minute' })

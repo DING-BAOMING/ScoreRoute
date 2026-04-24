@@ -1,13 +1,13 @@
 <!--
 IMPORTANT: Session start 时执行:
-1. cat /home/ubuntu/OpenCode/ai-gateway/.agent_rules.md
+1. cat /path/to/scoreroute/.agent_rules.md
 2. 遵循其中规则
 -->
 
 # ScoreRoute 开发工作流程
 
 ## 项目信息
-- **项目路径**: /home/ubuntu/OpenCode/ai-gateway
+- **项目路径**: /path/to/scoreroute
 - **分支**: main
 - **域名**: https://***REDACTED***
 - **环境**: Docker (生产级)
@@ -18,7 +18,7 @@ IMPORTANT: Session start 时执行:
 ### 常用命令
 ```bash
 # 构建并启动
-cd /home/ubuntu/OpenCode/ai-gateway
+cd /path/to/scoreroute
 sudo docker-compose down && sudo docker build -t ai-gateway-app:latest . && sudo docker-compose up -d
 
 # 查看日志
@@ -705,7 +705,7 @@ if req.Key == "" {
 https://***REDACTED*** 正常访问
 
 ### 21. 修复报告
-已更新: /home/ubuntu/ScoreRoute/Fix/Report.md
+已更新: /path/to/scoreroute/Fix/Report.md
 
 ### 22-23. 状态汇报
 所有主要问题已修复，系统运行正常。
@@ -781,7 +781,7 @@ https://***REDACTED*** 正常访问
 |------|------|
 | API /health | ✅ healthy |
 | API /auth/setup-status | ✅ password_setup_done=false |
-| 登录 admin/dbm52100 | ✅ 成功 |
+| 登录 *** | ✅ 成功 |
 
 ### 3-11. 系统检查 ✅
 

@@ -521,7 +521,7 @@ func SeedDemoData() error {
 	}
 
 	models := []struct {
-		name     string
+		name      string
 		modelType string
 	}{
 		{"MiniMax-M2.7", "chat"},

@@ -35,6 +35,7 @@ func Setup() *gin.Engine {
 	r.POST("/api/auth/passwordless-login", handler.NewAuthHandler().PasswordLessLogin)
 	r.GET("/api/auth/setup-status", handler.NewAuthHandler().CheckSetupStatus)
 	r.POST("/api/system-config/setup-password", handler.NewSystemConfigHandler().SetupPassword)
+	r.PUT("/api/system-config/password-less", handler.NewSystemConfigHandler().EnablePasswordLessMode)
 	r.GET("/health", handler.NewAuthHandler().HealthCheck)
 	r.GET("/api/health", handler.NewAuthHandler().HealthCheck)
 
@@ -124,7 +125,6 @@ func Setup() *gin.Engine {
 			systemConfig.GET("", systemConfigHandler.Get)
 			systemConfig.PUT("", systemConfigHandler.Update)
 			systemConfig.PUT("/dispatch-mode", systemConfigHandler.UpdateDispatchMode)
-			systemConfig.PUT("/password-less", systemConfigHandler.EnablePasswordLessMode)
 			systemConfig.GET("/setup-status", systemConfigHandler.CheckSetupStatus)
 		}
 

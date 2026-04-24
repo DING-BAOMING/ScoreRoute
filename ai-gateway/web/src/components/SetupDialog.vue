@@ -176,6 +176,7 @@ async function handleNext() {
   if (mode.value === 'passwordless') {
     try {
       await axios.put('/api/system-config/password-less', { enabled: true })
+      localStorage.setItem('password_less_mode', 'true')
       step.value = 1
     } catch (e) {
       ElMessage.error('设置失败：' + (e.message || '未知错误'))

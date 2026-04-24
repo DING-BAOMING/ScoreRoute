@@ -50,7 +50,7 @@ func (r *SystemConfigRepo) Get() (*model.SystemConfig, error) {
 
 func (r *SystemConfigRepo) Update(exchangeRate float64, currency string, passwordLessMode bool) error {
 	_, err := DB.Exec(
-		`UPDATE system_config SET exchange_rate = ?, currency = ?, password_less_mode = ?, updated_at = ?`,
+		`UPDATE system_config SET exchange_rate = ?, currency = ?, password_less_mode = ?, password_setup_done = 1, updated_at = ?`,
 		exchangeRate, currency, passwordLessMode, time.Now(),
 	)
 	if err != nil {
@@ -84,7 +84,7 @@ func (r *SystemConfigRepo) SetupPassword(password string) error {
 
 func (r *SystemConfigRepo) EnablePasswordLessMode(enabled bool) error {
 	_, err := DB.Exec(
-		`UPDATE system_config SET password_less_mode = ?, updated_at = ?`,
+		`UPDATE system_config SET password_less_mode = ?, password_setup_done = 1, updated_at = ?`,
 		enabled, time.Now(),
 	)
 	if err != nil {

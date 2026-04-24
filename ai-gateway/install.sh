@@ -1,5 +1,5 @@
 #!/bin/bash
-# ScoreRoute一键安装脚本v2.0.2 完全自动化
+# ScoreRoute一键安装脚本v2.0.3 完全自动化
 set -e
 
 RED='\033[0;31m'
@@ -8,16 +8,14 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 DEFAULT_PORT=3000
-# GitHub仓库根目录包含ai-gateway子目录
 REPO_URL="https://github.com/DING-BAOMING/ScoreRoute.git"
 GITEE_URL="https://gitee.com/BM-D/ScoreRoute.git"
 
-# 默认安装目录为当前目录的scoreroute子目录
 CURRENT_DIR="$(cd "$(dirname "$0")" && pwd)"
 INSTALL_DIR="${CURRENT_DIR}/scoreroute"
 
 PORT="${DEFAULT_PORT}"
-export NON_INTERACTIVE="false"
+NON_INTERACTIVE="false"
 USE_GITEE="false"
 ADMIN_PASSWORD=""
 
@@ -34,7 +32,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 show_banner() {
-    echo -e "${GREEN}ScoreRoute一键安装v2.0.2${NC}"
+    echo -e "${GREEN}ScoreRoute一键安装v2.0.3${NC}"
 }
 
 log_info() { echo -e "${BLUE}[INFO]${NC} $*"; }
@@ -55,6 +53,12 @@ check_docker() {
     log_ok "Docker就绪"
 }
 
+validate_port() {
+    if ! [[ "$PORT" =~ ^[0-9]+$ ]] || [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; then
+        log_error "端口必须是1-65535之间的数字，当前值: $PORT"
+    fi
+}
+
 setup_directory() {
     log_info "创建目录: $INSTALL_DIR"
     mkdir -p "$INSTALL_DIR"
@@ -72,8 +76,6 @@ setup_directory() {
         fi
     fi
     
-    # GitHub仓库结构是 repo/ai-gateway/
-    # 检查是否需要进入ai-gateway子目录
     if [ -d "ai-gateway" ] && [ ! -f "docker-compose.yml" ]; then
         log_info "进入ai-gateway目录..."
         cd ai-gateway
@@ -112,7 +114,7 @@ build_and_start() {
     "$DC" down 2>/dev/null || true
     "$DC" up -d --build
     log_info "等待服务启动..."
-    for _ in $(seq 1 60); do
+    for i in $(seq 1 60); do
         if curl -s "http://localhost:${PORT}/health" >/dev/null 2>&1; then
             log_ok "服务启动成功"
             return 0
@@ -134,6 +136,7 @@ show_complete() {
 }
 
 show_banner
+validate_port
 check_docker
 setup_directory
 generate_config

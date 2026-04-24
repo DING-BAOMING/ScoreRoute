@@ -46,6 +46,82 @@
         }
     }
     </script>
+
+    <!-- FAQ Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": "ScoreRoute支持哪些AI模型？",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "ScoreRoute支持GPT、Claude、Gemini、MiniMax、Qwen、通义千问、文心一言等所有OpenAI兼容格式的AI模型。"
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "ScoreRoute是否免费使用？",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "ScoreRoute采用MIT开源协议，完全免费商用，无需支付任何费用。"
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "如何快速部署ScoreRoute？",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "使用一键安装脚本：curl -O https://raw.githubusercontent.com/DING-BAOMING/ScoreRoute/main/ai-gateway/install.sh && chmod +x install.sh && ./install.sh"
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "数据安全性如何保障？",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "所有数据存储在本地SQLite数据库，不上传任何第三方，API密钥加密存储。"
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "支持Docker部署吗？",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "是的，支持Docker和Docker Compose部署，提供数据持久化配置。"
+                }
+            }
+        ]
+    }
+    </script>
+
+
+    <!-- BreadcrumbList Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "首页",
+                "item": "https://www.scoreroute.com/"
+            },
+            
+            {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "常见问题",
+                "item": "https://www.scoreroute.com/faq.html"
+            }
+        
+        ]
+    }
+    </script>
+
 </head>
 <body>
     <header>
@@ -92,7 +168,12 @@
             <h1>常见问题</h1>
             <p>遇到问题？这里可能有答案</p>
         </div>
+    <div class="breadcrumb">
+        <div class="container">
+            <a href="index.html">首页</a> &gt; <span>常见问题</span>
+        </div>
     </div>
+        </div>
 
     <section class="section">
         <div class="container">

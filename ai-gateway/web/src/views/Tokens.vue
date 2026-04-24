@@ -18,7 +18,7 @@
           <template #default="{ row }">
             <div class="key-cell">
               <code>{{ row.key }}</code>
-              <el-button size="small" text @click="copyKey(row.key)" title="复制">
+              <el-button size="small" text @click="copyKeyById(row.id)" title="复制">
                 <el-icon><CopyDocument /></el-icon>
               </el-button>
               <el-button size="small" text type="primary" @click="showFullKey(row.id)" title="查看完整Key">
@@ -335,6 +335,19 @@ function copyKey(key) {
   }).catch(() => {
     ElMessage.error('复制失败')
   })
+}
+
+async function copyKeyById(id) {
+  try {
+    const res = await tokenAPI.get(id)
+    if (res.code === 0 && res.data) {
+      await copyKey(res.data.key)
+    } else {
+      ElMessage.error('获取Token失败')
+    }
+  } catch (e) {
+    ElMessage.error('获取Token失败')
+  }
 }
 
 async function deleteToken(id) {

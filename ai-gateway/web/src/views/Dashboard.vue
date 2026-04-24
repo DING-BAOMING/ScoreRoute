@@ -283,6 +283,7 @@ async function loadSecuritySettings() {
 async function handlePasswordLessModeChange(value) {
   try {
     await logAPI.setPasswordLessMode({ enabled: value })
+    localStorage.setItem('password_less_mode', value ? 'true' : 'false')
     ElMessage.success(value ? '已启用无需密码访问' : '已禁用无需密码访问')
   } catch (e) {
     ElMessage.error('设置失败：' + (e.message || '未知错误'))

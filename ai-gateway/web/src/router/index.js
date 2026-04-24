@@ -82,12 +82,13 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const hasToken = !!localStorage.getItem('token')
+  const passwordLessMode = localStorage.getItem('password_less_mode') === 'true'
   
-  if (to.meta.requiresAuth !== false && !hasToken) {
+  if (to.meta.requiresAuth !== false && !hasToken && !passwordLessMode) {
     next('/login')
-  } else if (to.path === '/login' && hasToken) {
+  } else if (to.path === '/login' && (hasToken || passwordLessMode)) {
     next('/')
   } else {
     next()

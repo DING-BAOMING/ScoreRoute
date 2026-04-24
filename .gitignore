@@ -33,3 +33,4 @@ go.work.sum
 
 # Agent logs (local maintenance)
 .agent/
+data/

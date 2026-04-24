@@ -9,9 +9,9 @@ IMPORTANT: Session start 时执行:
 ## 项目信息
 - **项目路径**: /home/ubuntu/OpenCode/ai-gateway
 - **分支**: main
-- **域名**: https://api.029101.xyz
+- **域名**: https://***REDACTED***
 - **环境**: Docker (生产级)
-- **登录凭证**: admin / dbm52100
+- **登录凭证**: ***REDACTED***/ ***REDACTED***
 
 ## 快速开始
 
@@ -25,10 +25,10 @@ sudo docker-compose down && sudo docker build -t ai-gateway-app:latest . && sudo
 sudo docker logs -f ai-gateway-app-1
 
 # 健康检查
-curl -s https://api.029101.xyz/health
+curl -s https://***REDACTED***/health
 
 # 登录获取token
-curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: application/json" -d '{"username":"admin","password":"dbm52100"}'
+curl -s -X POST "https://***REDACTED***/api/auth/login" -H "Content-Type: application/json" -d '{"username":"***","password":"***"}'
 ```
 
 ## 核心功能
@@ -407,7 +407,7 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 ### 已知问题
 | 问题 | 说明 | 处理 |
 |------|------|------|
-| 上游API超时 | api.029101.xyz响应慢 | 非代码问题 |
+| 上游API超时 | ***REDACTED***响应慢 | 非代码问题 |
 | enabled字段类型 | 需要int(1)而非boolean(true) | 需传1 |
 
 ### 系统状态
@@ -432,7 +432,7 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 ### 已知问题
 | 问题 | 说明 | 处理 |
 |------|------|------|
-| 上游API超时 | api.029101.xyz响应慢 | 非代码问题 |
+| 上游API超时 | ***REDACTED***响应慢 | 非代码问题 |
 
 ### 系统状态
 - Health: healthy ✅
@@ -471,7 +471,7 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 ### 已知问题
 | 问题 | 说明 | 处理 |
 |------|------|------|
-| 上游API慢 | api.029101.xyz响应1.6s-17s | 非代码问题 |
+| 上游API慢 | ***REDACTED***响应1.6s-17s | 非代码问题 |
 
 ### API端点验证
 - /api/extra-rating/config ✅
@@ -604,7 +604,7 @@ curl -s -X POST "https://api.029101.xyz/api/auth/login" -H "Content-Type: applic
 
 ### 问题：Docker自动启动未生效
 
-**问题描述**: ai-gateway-app-1 容器未运行，导致 api.029101.xyz 返回502
+**问题描述**: ai-gateway-app-1 容器未运行，导致 ***REDACTED*** 返回502
 
 **原因分析**: 
 1. docker-compose.yml 配置了 `restart: always`
@@ -630,7 +630,7 @@ docker inspect ai-gateway-app-1 --format '{{.HostConfig.RestartPolicy}}'
 - Health: healthy ✅
 - Docker: ai-gateway-app-1 running ✅
 - Restart Policy: always ✅
-- api.029101.xyz: working ✅
+- ***REDACTED***: working ✅
 
 
 ## 23步执行 (2026-04-23 第五轮)
@@ -641,7 +641,7 @@ docker inspect ai-gateway-app-1 --format '{{.HostConfig.RestartPolicy}}'
 ### 2. 任务完成
 - 2.1 用户报告调查 ✅
 - 2.2 报告分析完成 ✅
-- 2.3 域名测试 ✅ api.029101.xyz 正常
+- 2.3 域名测试 ✅ ***REDACTED*** 正常
 - 2.4 接出API检查 ✅ MiniMax正常工作
 - 2.5 修复完成 ✅ Token创建key保留问题
 
@@ -702,7 +702,7 @@ if req.Key == "" {
 见上方测试API Token表格
 
 ### 20. 前端测试
-https://api.029101.xyz 正常访问
+https://***REDACTED*** 正常访问
 
 ### 21. 修复报告
 已更新: /home/ubuntu/ScoreRoute/Fix/Report.md
@@ -721,7 +721,7 @@ https://api.029101.xyz 正常访问
 - 2.3 无需密码可直接登录 ✅
 - 2.4 仪表盘可关闭密码认证 ✅
 - 2.5 仪表盘可启用密码认证 ✅
-- 2.6 访问 api.029101.xyz ✅
+- 2.6 访问 ***REDACTED*** ✅
 - 2.7 测试验证 ✅
 
 ### 修复记录
@@ -797,7 +797,7 @@ https://api.029101.xyz 正常访问
 
 ### 2. 任务完成 ✅
 - 2.1 调查模型名称显示问题
-- 2.4 访问api.029101.xyz确认正常
+- 2.4 访问***REDACTED***确认正常
 - 2.5-2.6 修复Tokens.vue模型名称简化
 
 ### 主要修复: 模型名称简化

@@ -15,7 +15,7 @@ CURRENT_DIR="$(cd "$(dirname "$0")" && pwd)"
 INSTALL_DIR="${CURRENT_DIR}/scoreroute"
 
 PORT="${DEFAULT_PORT}"
-NON_INTERACTIVE="false"
+export NON_INTERACTIVE="false"
 USE_GITEE="false"
 ADMIN_PASSWORD=""
 
@@ -114,7 +114,7 @@ build_and_start() {
     "$DC" down 2>/dev/null || true
     "$DC" up -d --build
     log_info "等待服务启动..."
-    for i in $(seq 1 60); do
+    for _ in $(seq 1 60); do
         if curl -s "http://localhost:${PORT}/health" >/dev/null 2>&1; then
             log_ok "服务启动成功"
             return 0

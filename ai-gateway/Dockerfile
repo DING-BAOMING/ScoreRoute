@@ -37,7 +37,4 @@ ENV GIN_MODE=release
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=5s \
-  CMD wget -q -O- http://localhost:3000/health || exit 1
-
 CMD ["./server"]

@@ -201,6 +201,7 @@ function handleCancel() {
 }
 
 async function handleFinish() {
+  dialogVisible.value = false
   if (mode.value === 'passwordless') {
     try {
       const response = await axios.post('/api/auth/passwordless-login')

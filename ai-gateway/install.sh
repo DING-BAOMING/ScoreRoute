@@ -1,5 +1,5 @@
 #!/bin/bash
-# ScoreRoute一键安装脚本v2.0.1 完全自动化
+# ScoreRoute一键安装脚本v2.0.2 完全自动化
 set -e
 
 RED='\033[0;31m'
@@ -8,6 +8,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 DEFAULT_PORT=3000
+# GitHub仓库根目录包含ai-gateway子目录
 REPO_URL="https://github.com/DING-BAOMING/ScoreRoute.git"
 GITEE_URL="https://gitee.com/BM-D/ScoreRoute.git"
 
@@ -19,7 +20,7 @@ PORT="${DEFAULT_PORT}"
 NON_INTERACTIVE="false"
 USE_GITEE="false"
 ADMIN_PASSWORD=""
-# arguments
+
 while [[ $# -gt 0 ]]; do
     case $1 in
         --port) PORT="$2"; shift 2 ;;
@@ -33,7 +34,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 show_banner() {
-    echo -e "${GREEN}ScoreRoute一键安装v2.0.1${NC}"
+    echo -e "${GREEN}ScoreRoute一键安装v2.0.2${NC}"
 }
 
 log_info() { echo -e "${BLUE}[INFO]${NC} $*"; }
@@ -58,6 +59,7 @@ setup_directory() {
     log_info "创建目录: $INSTALL_DIR"
     mkdir -p "$INSTALL_DIR"
     cd "$INSTALL_DIR"
+    
     if [ -d ".git" ]; then
         log_info "更新代码..."
         git fetch origin && git reset --hard origin/main
@@ -69,6 +71,14 @@ setup_directory() {
             git clone "$REPO_URL" .
         fi
     fi
+    
+    # GitHub仓库结构是 repo/ai-gateway/
+    # 检查是否需要进入ai-gateway子目录
+    if [ -d "ai-gateway" ] && [ ! -f "docker-compose.yml" ]; then
+        log_info "进入ai-gateway目录..."
+        cd ai-gateway
+    fi
+    
     log_ok "目录就绪: $(pwd)"
 }
 
@@ -77,6 +87,7 @@ generate_config() {
     ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)}"
     JWT_SECRET="$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 32)"
     cat > .env << EOF
+PORT=${PORT}
 DATABASE_PATH=./data/gateway.db
 LOG_PATH=./logs
 ADMIN_PASSWORD=${ADMIN_PASSWORD}
@@ -92,7 +103,7 @@ update_docker_compose() {
         sed -i "s/\${PORT:-3000}/${PORT}/" docker-compose.yml
         log_ok "Docker配置完成"
     else
-        log_error "未找到docker-compose.yml"
+        log_error "未找到docker-compose.yml，请检查目录结构"
     fi
 }
 
@@ -115,7 +126,7 @@ show_complete() {
     echo "====================================="
     echo "ScoreRoute安装完成!"
     echo "====================================="
-    echo "安装目录: $INSTALL_DIR"
+    echo "安装目录: $(pwd)"
     echo "访问地址: http://localhost:${PORT}"
     echo "API端点: http://localhost:${PORT}/v1"
     echo "账号: admin"

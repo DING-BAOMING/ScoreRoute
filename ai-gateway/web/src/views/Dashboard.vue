@@ -198,13 +198,13 @@
       </el-col>
     </el-row>
 
-    <el-dialog v-model="showPasswordDialog" title="修改密码" width="400px">
-      <el-form :model="passwordForm" :rules="passwordRules" ref="passwordFormRef">
+    <el-dialog v-model="showPasswordDialog" title="修改密码" width="420px">
+      <el-form :model="passwordForm" :rules="passwordRules" ref="passwordFormRef" label-width="85px" status-icon>
         <el-form-item label="新密码" prop="password">
-          <el-input v-model="passwordForm.password" type="password" show-password />
+          <el-input v-model="passwordForm.password" type="password" show-password placeholder="请输入新密码（至少6位）" />
         </el-form-item>
         <el-form-item label="确认密码" prop="confirmPassword">
-          <el-input v-model="passwordForm.confirmPassword" type="password" show-password />
+          <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -292,7 +292,7 @@ async function handlePasswordLessModeChange(value) {
 
 async function handleChangePassword() {
   const valid = await passwordFormRef.value.validate().catch(() => false)
-  if (!valid) return
+  if (!valid) { ElMessage.warning("请检查输入格式"); return }
   
   try {
     await logAPI.changePassword({ password: passwordForm.value.password })

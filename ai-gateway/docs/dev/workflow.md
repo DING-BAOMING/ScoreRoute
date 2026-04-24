@@ -790,3 +790,32 @@ https://api.029101.xyz 正常访问
 ### 17-23. 状态
 所有问题已修复，系统正常运行。
 
+
+## 23步执行 (2026-04-24)
+
+### 1. 查看开发文档 ✅
+
+### 2. 任务完成 ✅
+- 2.1 调查模型名称显示问题
+- 2.4 访问api.029101.xyz确认正常
+- 2.5-2.6 修复Tokens.vue模型名称简化
+
+### 主要修复: 模型名称简化
+**问题**: 模型下拉框显示"minimaxai/minimax-m2.7"而非"minimax-m2.7"
+**修复**: 添加simplifyModelName()函数，自动去除提供商前缀
+
+### 系统状态
+- Health: healthy ✅
+- Docker: running ✅
+- Channels: 4 (NVIDIA)
+- Models: 24
+- Tokens: 3
+
+### 测试结果
+- Token API: ✅ 正常响应
+- 模型简化: ✅ 显示"minimax-m2.7"格式
+
+### Git
+- Branch: fix/simplify-model-names
+- Commit: d84caff
+- Push: ✅

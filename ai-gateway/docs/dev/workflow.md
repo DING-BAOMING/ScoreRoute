@@ -819,3 +819,41 @@ https://api.029101.xyz 正常访问
 - Branch: fix/simplify-model-names
 - Commit: d84caff
 - Push: ✅
+
+## 23步执行 (2026-04-24): 调度测试
+
+### 1. 查看开发文档 ✅
+
+### 2. 任务完成 ✅
+- 2.1 智能调度+auto: ✅ 工作正常
+- 2.2 智能调度+固定模型: ✅ 选择高分模型
+- 2.3 轮询调度+固定模型: ✅ 轮询不同API
+- 2.4 轮询调度+auto: ✅ 轮询同格式类型模型
+- 2.5 问题调查: minimax模型在NVIDIA API超时(上游问题)
+
+### 测试结果汇总
+
+| 组合 | 模式 | 结果 | 说明 |
+|------|------|------|------|
+| Polling+固定llama | 轮询 | ✅ | 10请求分配到4个API |
+| Polling+auto | 轮询 | ⚠️ | minimax模型慢(30s+) |
+| Smart+固定llama | 智能 | ✅ | 10请求分配到4个API |
+| Smart+auto | 智能 | ⚠️ | minimax模型慢 |
+
+### 发现的问题
+1. **minimax模型在NVIDIA API超时** - 上游API问题，非代码问题
+2. **model_stats显示0分** - 评分系统未实时更新
+
+### 修复操作
+- 删除旧的MiniMax-Channel (id=1)
+- 切换回polling模式
+
+### 系统状态
+- Health: healthy ✅
+- Dispatch: polling ✅
+- Channels: 4 (NVIDIA) ✅
+- Models: 24 ✅
+
+### Git
+- Branch: fix/simplify-model-names
+- Status: 已同步

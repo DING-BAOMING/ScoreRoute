@@ -5,7 +5,7 @@ services:
     build: .
     restart: always
     ports:
-      - "${PORT:-3000}:3000"
+      - "${PORT:-3000}:${PORT:-3000}"
     volumes:
       - scoreroute-data:/app/data
       - scoreroute-logs:/app/logs

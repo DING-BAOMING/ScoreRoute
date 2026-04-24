@@ -816,3 +816,41 @@ footer {
 .login-info strong {
     min-width: 100px;
 }
+
+/* Breadcrumb Navigation */
+.breadcrumb {
+    background: #f8f9fa;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.breadcrumb .container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #666;
+}
+
+.breadcrumb a {
+    color: #667eea;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.breadcrumb a:hover {
+    color: #764ba2;
+    text-decoration: underline;
+}
+
+.breadcrumb span {
+    color: #333;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .breadcrumb {
+        padding: 10px 0;
+        font-size: 13px;
+    }
+}

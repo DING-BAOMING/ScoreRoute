@@ -174,6 +174,10 @@ func createTables() error {
 		return fmt.Errorf("failed to migrate: %w", err)
 	}
 
+	if err := SeedDemoData(); err != nil {
+		log.Printf("Warning: failed to seed demo data: %v", err)
+	}
+
 	return nil
 }
 
@@ -478,5 +482,71 @@ func migrateTables() error {
 		log.Println("system_config table already has password columns, skipping")
 	}
 
+	return nil
+}
+
+func SeedDemoData() error {
+	var channelCount int
+	row := DB.QueryRow("SELECT COUNT(*) FROM channels")
+	if err := row.Scan(&channelCount); err != nil {
+		return fmt.Errorf("failed to check channel count: %w", err)
+	}
+
+	if channelCount > 0 {
+		log.Println("Channels already exist, skipping seed data")
+		return nil
+	}
+
+	log.Println("Seeding demo MiniMax channel and models...")
+
+	_, err := DB.Exec(`
+		INSERT INTO channels (name, format, base_url, api_key, enabled, rate_limits, total_token_limit)
+		VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		"Demo-MiniMax",
+		"openai",
+		"https://api.minimax.chat/v1",
+		"YOUR_MINIMAX_API_KEY",
+		1,
+		"[]",
+		0,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to insert demo channel: %w", err)
+	}
+
+	var channelID int64
+	row = DB.QueryRow("SELECT id FROM channels WHERE name = 'Demo-MiniMax'")
+	if err := row.Scan(&channelID); err != nil {
+		return fmt.Errorf("failed to get demo channel ID: %w", err)
+	}
+
+	models := []struct {
+		name     string
+		modelType string
+	}{
+		{"MiniMax-M2.7", "chat"},
+		{"MiniMax-Text-01", "chat"},
+		{"abab6-chat", "chat"},
+	}
+
+	for _, m := range models {
+		_, err := DB.Exec(`
+			INSERT INTO models (channel_id, name, type, enabled, rate_limits, total_token_limit, cost_per_token, currency)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			channelID,
+			m.name,
+			m.modelType,
+			1,
+			"[]",
+			0,
+			0,
+			"CNY",
+		)
+		if err != nil {
+			log.Printf("Warning: failed to insert demo model %s: %v", m.name, err)
+		}
+	}
+
+	log.Println("Demo seed data inserted successfully")
 	return nil
 }

@@ -906,3 +906,29 @@ https://api.029101.xyz 正常访问
 - Branch: fix/unique-model-names
 - Commit: 4ee233e
 - Push: ✅
+
+## 23步执行 (2026-04-24): 调度测试
+
+### 1. 查看开发文档 ✅
+
+### 2. 测试结果
+
+| 组合 | 结果 | 说明 |
+|------|------|------|
+| Smart+AUTO | ✅ | 选择llama模型 |
+| Smart+固定llama | ✅ | 轮询4个API |
+| Polling+固定llama | ✅ | 轮询4个API |
+| Polling+AUTO | ✅ | 轮询多个模型 |
+
+### 2.5 问题调查
+- minimax模型: NVIDIA API超时(上游问题)
+- qwen模型: 正常工作
+- llama模型: 稳定快速(~850ms)
+
+### 系统状态
+- Health: healthy ✅
+- Dispatch: polling (当前)
+
+### Git
+- Branch: fix/unique-model-names
+- Status: 已同步

@@ -367,7 +367,7 @@ func (d *Dispatcher) selectModelAndChannel(token *model.Token, req map[string]in
 
 	modelName, _ := req["model"].(string)
 
-	if modelName == "POLL_ALL" {
+	if modelName == "POLL_ALL" || modelName == "__POLL_ALL__" {
 		modelItem, err = d.modelService.GetNextModelAny()
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get next model: %w", err)
@@ -384,7 +384,7 @@ func (d *Dispatcher) selectModelAndChannel(token *model.Token, req map[string]in
 		if dispatchMode == "smart" {
 			modelItem, err = d.GetNextModelSmart(token.Format, token.Type)
 		} else {
-			modelItem, err = d.modelService.GetNextModelAny()
+			modelItem, err = d.modelService.GetNextModelGlobal(token.Format, token.Type)
 		}
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get next model: %w", err)
@@ -393,7 +393,16 @@ func (d *Dispatcher) selectModelAndChannel(token *model.Token, req map[string]in
 			return nil, nil, fmt.Errorf("no available models")
 		}
 	} else if modelName == "auto" || modelName == "Auto" {
-		modelItem, err = d.GetNextModelSmart(token.Format, token.Type)
+		config, _ := d.systemConfigRepo.Get()
+		dispatchMode := "polling"
+		if config != nil {
+			dispatchMode = config.DispatchMode
+		}
+		if dispatchMode == "smart" {
+			modelItem, err = d.GetNextModelSmart(token.Format, token.Type)
+		} else {
+			modelItem, err = d.modelService.GetNextModelGlobal(token.Format, token.Type)
+		}
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get next model: %w", err)
 		}
@@ -468,7 +477,7 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 
 	modelName, _ := req["model"].(string)
 
-	useSmartDispatch := modelName == "AUTO" || modelName == "__AUTO__" || modelName == "POLL_ALL"
+	useSmartDispatch := modelName == "AUTO" || modelName == "__AUTO__" || modelName == "POLL_ALL" || modelName == "__POLL_ALL__" || modelName == "__POLL_ALL__"
 	useAutoSelect := modelName == "auto" || modelName == "Auto"
 
 	var rankedModels []*model.Model
@@ -729,7 +738,7 @@ func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStrea
 
 	modelName, _ := req["model"].(string)
 
-	useSmartDispatch := modelName == "AUTO" || modelName == "__AUTO__" || modelName == "POLL_ALL"
+	useSmartDispatch := modelName == "AUTO" || modelName == "__AUTO__" || modelName == "POLL_ALL" || modelName == "__POLL_ALL__" || modelName == "__POLL_ALL__"
 	useAutoSelect := modelName == "auto" || modelName == "Auto"
 
 	var rankedModels []*model.Model

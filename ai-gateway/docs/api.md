@@ -74,7 +74,7 @@ curl -X POST "https://api.scoreroute.com/v1/chat/completions" \
 | PUT | /api/channels/:id | 更新渠道 |
 | DELETE | /api/channels/:id | 删除渠道 |
 | POST | /api/channels/test-credentials | 测试渠道连接 |
-| POST | /api/channels/:id/enabled | 启用/禁用渠道 |
+| PUT | /api/channels/:id/enabled | 启用/禁用渠道 |
 
 ### 模型管理
 

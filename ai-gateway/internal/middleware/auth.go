@@ -7,13 +7,22 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"ai-gateway/internal/repository"
 	"ai-gateway/internal/service"
 )
 
 func AuthMiddleware() gin.HandlerFunc {
 	authService := service.NewAuthService()
+	systemConfigRepo := repository.NewSystemConfigRepo()
 
 	return func(c *gin.Context) {
+		config, err := systemConfigRepo.Get()
+		if err == nil && config.PasswordLessMode {
+			c.Set("username", "password_less_mode_user")
+			c.Next()
+			return
+		}
+
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "未提供认证令牌"})
@@ -46,9 +55,7 @@ func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
 
-		// If allowedOrigins is set and not "*", validate the origin
 		if allowedOrigins != "" && allowedOrigins != "*" {
-			// Check if origin matches allowed list (comma-separated)
 			allowedList := strings.Split(allowedOrigins, ",")
 			originAllowed := false
 			for _, allowed := range allowedList {
@@ -61,11 +68,7 @@ func CORSMiddleware() gin.HandlerFunc {
 				c.Header("Access-Control-Allow-Origin", origin)
 			}
 		} else if allowedOrigins == "*" {
-			// Only set Allow-Origin to * if explicitly configured
 			c.Header("Access-Control-Allow-Origin", "*")
-		} else if origin != "" {
-			// For production without CORS config, don't set Allow-Origin
-			// This prevents credential leakage to arbitrary origins
 		}
 
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")

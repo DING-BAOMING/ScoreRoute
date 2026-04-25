@@ -147,6 +147,39 @@ func Setup() *gin.Engine {
 			modelRating.GET("/cost-time", modelRatingHandler.GetCostTimeRatings)
 			modelRating.GET("/scores", modelRatingHandler.GetAllScores)
 		}
+
+		extraRatings := api.Group("/extra-ratings")
+		{
+			extraRatingHandler := handler.NewExtraRatingHandler()
+			extraRatings.GET("", extraRatingHandler.GetRecords)
+			extraRatings.GET("/config", extraRatingHandler.GetConfig)
+			extraRatings.PUT("/config", extraRatingHandler.SetConfig)
+			extraRatings.GET("/records", extraRatingHandler.GetRecords)
+			extraRatings.DELETE("/records", extraRatingHandler.ClearRecords)
+			extraRatings.DELETE("/records/:id", extraRatingHandler.DeleteRecord)
+			extraRatings.GET("/model-scores", extraRatingHandler.GetAllModelExtraScores)
+		}
+
+		modelRatings := api.Group("/model-ratings")
+		{
+			modelRatingHandler := handler.NewModelRatingHandler()
+			modelRatings.GET("", modelRatingHandler.GetAllScores)
+			modelRatings.GET("/weights", modelRatingHandler.GetWeights)
+			modelRatings.PUT("/weights", modelRatingHandler.UpdateWeights)
+			modelRatings.GET("/cost-time", modelRatingHandler.GetCostTimeRatings)
+			modelRatings.GET("/scores", modelRatingHandler.GetAllScores)
+		}
+
+		sampleAnalysisConfig := api.Group("/sample-analysis-config")
+		{
+			sampleAnalysisHandler := handler.NewSampleAnalysisHandler()
+			sampleAnalysisConfig.GET("", sampleAnalysisHandler.GetConfig)
+		}
+
+		invocations := api.Group("/invocations")
+		{
+			invocations.GET("", handler.NewLogHandler().List)
+		}
 	}
 
 	v1 := r.Group("/v1")

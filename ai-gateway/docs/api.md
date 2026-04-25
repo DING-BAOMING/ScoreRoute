@@ -71,10 +71,25 @@ curl -X POST "https://api.scoreroute.com/v1/chat/completions" \
 |------|------|------|
 | GET | /api/channels | 获取渠道列表 |
 | POST | /api/channels | 创建渠道 |
-| PUT | /api/channels/:id | 更新渠道 |
+| PUT | /api/channels/:id | 更新渠道（支持部分更新） |
 | DELETE | /api/channels/:id | 删除渠道 |
 | POST | /api/channels/test-credentials | 测试渠道连接 |
 | PUT | /api/channels/:id/enabled | 启用/禁用渠道 |
+
+**更新渠道（支持部分更新）:**
+```bash
+# 只更新名称
+curl -X PUT "https://api.scoreroute.com/api/channels/1" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"新名称"}'
+
+# 只更新启用状态
+curl -X PUT "https://api.scoreroute.com/api/channels/1" \
+  -H "Content-Type: application/json" \
+  -d '{"enabled":0}'
+```
+
+### 模型管理
 
 ### 模型管理
 
@@ -82,10 +97,27 @@ curl -X POST "https://api.scoreroute.com/v1/chat/completions" \
 |------|------|------|
 | GET | /api/models | 获取模型列表 |
 | POST | /api/models | 创建模型 |
-| PUT | /api/models/:id | 更新模型 |
+| PUT | /api/models/:id | 更新模型（支持部分更新） |
 | DELETE | /api/models/:id | 删除模型 |
 | POST | /api/models/test/:id | 测试模型 |
 | GET | /api/channels/:id/models | 获取渠道可用模型 |
+| POST | /api/models/batch | 批量创建模型 |
+
+**更新模型（支持部分更新）:**
+```bash
+# 只更新启用状态
+curl -X PUT "https://api.scoreroute.com/api/models/1" \
+  -H "Content-Type: application/json" \
+  -d '{"enabled":0}'
+```
+
+**批量创建模型:**
+```bash
+curl -X POST "https://api.scoreroute.com/api/models/batch" \
+  -H "Content-Type: application/json" \
+  -d '{"channel_id":1,"model_names":["gpt-4","gpt-3.5"]}'
+# 注意: 也可以使用 "models" 代替 "model_names"
+```
 
 ### Token管理
 
@@ -93,24 +125,46 @@ curl -X POST "https://api.scoreroute.com/v1/chat/completions" \
 |------|------|------|
 | GET | /api/tokens | 获取Token列表 |
 | POST | /api/tokens | 创建Token |
-| PUT | /api/tokens/:id | 更新Token |
+| PUT | /api/tokens/:id | 更新Token（支持部分更新） |
 | DELETE | /api/tokens/:id | 删除Token |
 | PUT | /api/tokens/:id/enabled | 启用/禁用Token |
+
+**更新Token（支持部分更新）:**
+```bash
+# 只更新名称
+curl -X PUT "https://api.scoreroute.com/api/tokens/1" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"新名称"}'
+```
 
 ### 系统配置
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | /api/system-config | 获取系统配置 |
+| PUT | /api/system-config | 更新系统配置（支持部分更新） |
 | PUT | /api/system-config/dispatch-mode | 更新调度模式 |
 | PUT | /api/system-config/password-less | 开启/关闭免密模式 |
+
+**更新系统配置（支持部分更新）:**
+```bash
+# 只更新汇率
+curl -X PUT "https://api.scoreroute.com/api/system-config" \
+  -H "Content-Type: application/json" \
+  -d '{"exchange_rate":0.14}'
+
+# 只更新密码模式
+curl -X PUT "https://api.scoreroute.com/api/system-config" \
+  -H "Content-Type: application/json" \
+  -d '{"password_less_mode":true}'
+```
 
 **更新调度模式示例:**
 ```bash
 curl -X PUT "https://api.scoreroute.com/api/system-config/dispatch-mode" \
   -H "Content-Type: application/json" \
   -d '{"dispatch_mode":"smart"}'
-# 可选值: "smart" 或 "polling"
+# 也支持: {"mode":"smart"}
 ```
 
 **开启/关闭免密模式示例:**

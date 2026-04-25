@@ -30,17 +30,36 @@ func (h *SystemConfigHandler) Get(c *gin.Context) {
 }
 
 func (h *SystemConfigHandler) Update(c *gin.Context) {
+	existing, err := h.repo.Get()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
+		return
+	}
+
 	var req struct {
-		ExchangeRate     float64 `json:"exchange_rate" binding:"required"`
-		Currency         string  `json:"currency" binding:"required"`
-		PasswordLessMode bool    `json:"password_less_mode"`
+		ExchangeRate     float64 `json:"exchange_rate"`
+		Currency         string  `json:"currency"`
+		PasswordLessMode *bool   `json:"password_less_mode"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})
 		return
 	}
 
-	if err := h.repo.Update(req.ExchangeRate, req.Currency, req.PasswordLessMode); err != nil {
+	exchangeRate := req.ExchangeRate
+	if exchangeRate == 0 {
+		exchangeRate = existing.ExchangeRate
+	}
+	currency := req.Currency
+	if currency == "" {
+		currency = existing.Currency
+	}
+	passwordLessMode := existing.PasswordLessMode
+	if req.PasswordLessMode != nil {
+		passwordLessMode = *req.PasswordLessMode
+	}
+
+	if err := h.repo.Update(exchangeRate, currency, passwordLessMode); err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
 		return
 	}

@@ -43,6 +43,17 @@ type ChannelRequest struct {
 	ExpiresAt       *time.Time `json:"expires_at"`
 }
 
+type ChannelUpdateRequest struct {
+	Name            string     `json:"name"`
+	Format          string     `json:"format"`
+	BaseURL         string     `json:"base_url"`
+	APIKey          string     `json:"api_key"`
+	Enabled         int        `json:"enabled"`
+	RateLimits      string     `json:"rate_limits"`
+	TotalTokenLimit int64      `json:"total_token_limit"`
+	ExpiresAt       *time.Time `json:"expires_at"`
+}
+
 type Model struct {
 	ID                int64      `json:"id"`
 	ChannelID         int64      `json:"channel_id"`
@@ -129,11 +140,35 @@ type ModelRequest struct {
 	Currency        string     `json:"currency"`
 }
 
+type ModelUpdateRequest struct {
+	ChannelID       int64      `json:"channel_id"`
+	Name            string     `json:"name"`
+	Type            string     `json:"type"`
+	Enabled         int        `json:"enabled"`
+	RateLimits      string     `json:"rate_limits"`
+	TotalTokenLimit int64      `json:"total_token_limit"`
+	ExpiresAt       *time.Time `json:"expires_at"`
+	CostPerToken    float64    `json:"cost_per_token"`
+	Currency        string     `json:"currency"`
+}
+
 type TokenRequest struct {
 	Key             string     `json:"key"` // For internal use (regenerate)
 	Name            string     `json:"name" binding:"required"`
 	Format          string     `json:"format" binding:"required"`
 	Type            string     `json:"type" binding:"required"`
+	ModelName       string     `json:"model_name"`
+	Enabled         int        `json:"enabled"`
+	RateLimits      string     `json:"rate_limits"`
+	TotalTokenLimit int64      `json:"total_token_limit"`
+	ExpiresAt       *time.Time `json:"expires_at"`
+}
+
+type TokenUpdateRequest struct {
+	Key             string     `json:"key"`
+	Name            string     `json:"name"`
+	Format          string     `json:"format"`
+	Type            string     `json:"type"`
 	ModelName       string     `json:"model_name"`
 	Enabled         int        `json:"enabled"`
 	RateLimits      string     `json:"rate_limits"`
@@ -221,11 +256,11 @@ type SampleRating struct {
 }
 
 type SampleAnalysisConfigRequest struct {
-	Format    string `json:"format" binding:"required"`
-	BaseURL   string `json:"base_url" binding:"required"`
-	APIKey    string `json:"api_key" binding:"required"`
-	ModelName string `json:"model_name" binding:"required"`
-	Enabled   int    `json:"enabled"`
+	Format    string      `json:"format" binding:"required"`
+	BaseURL   string      `json:"base_url" binding:"required"`
+	APIKey    string      `json:"api_key" binding:"required"`
+	ModelName string      `json:"model_name" binding:"required"`
+	Enabled   interface{} `json:"enabled"`
 }
 
 type SampleRatingRequest struct {

@@ -23,38 +23,47 @@ func (r *LogRepo) Create(log *model.CallLog) error {
 	return err
 }
 
-func (r *LogRepo) List(page, pageSize int, startTime, endTime *time.Time) ([]*model.CallLog, int64, error) {
+func (r *LogRepo) List(page, pageSize int, startTime, endTime *time.Time, modelFilter, status, tokenId, channelId string) ([]*model.CallLog, int64, error) {
 	offset := (page - 1) * pageSize
 
-	query := `SELECT COUNT(*) FROM call_logs WHERE 1=1`
+	whereClause := "WHERE 1=1"
 	args := []interface{}{}
 
 	if startTime != nil {
-		query += ` AND created_at >= ?`
+		whereClause += ` AND created_at >= ?`
 		args = append(args, startTime)
 	}
 	if endTime != nil {
-		query += ` AND created_at <= ?`
+		whereClause += ` AND created_at <= ?`
 		args = append(args, endTime)
 	}
+	if modelFilter != "" {
+		whereClause += ` AND model_name LIKE ?`
+		args = append(args, "%"+modelFilter+"%")
+	}
+	if status != "" {
+		whereClause += ` AND status = ?`
+		args = append(args, status)
+	}
+	if tokenId != "" {
+		whereClause += ` AND token_name LIKE ?`
+		args = append(args, "%"+tokenId+"%")
+	}
+	if channelId != "" {
+		whereClause += ` AND channel_name LIKE ?`
+		args = append(args, "%"+channelId+"%")
+	}
 
+	countQuery := `SELECT COUNT(*) FROM call_logs ` + whereClause
 	var total int64
-	if err := DB.QueryRow(query, args...).Scan(&total); err != nil {
+	if err := DB.QueryRow(countQuery, args...).Scan(&total); err != nil {
 		total = 0
 	}
 
-	selectQuery := `SELECT id, token_name, channel_name, model_name, latency_ms, token_used, status, error, created_at FROM call_logs WHERE 1=1`
-	if startTime != nil {
-		selectQuery += ` AND created_at >= ?`
-	}
-	if endTime != nil {
-		selectQuery += ` AND created_at <= ?`
-	}
-	selectQuery += ` ORDER BY id DESC LIMIT ? OFFSET ?`
+	selectQuery := `SELECT id, token_name, channel_name, model_name, latency_ms, token_used, status, error, created_at FROM call_logs ` + whereClause + ` ORDER BY id DESC LIMIT ? OFFSET ?`
+	selectArgs := append(args, pageSize, offset)
 
-	args = append(args, pageSize, offset)
-
-	rows, err := DB.Query(selectQuery, args...)
+	rows, err := DB.Query(selectQuery, selectArgs...)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -17,14 +17,14 @@ func NewLogService() *LogService {
 	}
 }
 
-func (s *LogService) List(page, pageSize int, startTime, endTime *time.Time) ([]*model.CallLog, int64, error) {
+func (s *LogService) List(page, pageSize int, startTime, endTime *time.Time, model, status, tokenId, channelId string) ([]*model.CallLog, int64, error) {
 	if page < 1 {
 		page = 1
 	}
 	if pageSize < 1 || pageSize > 100 {
 		pageSize = 20
 	}
-	return s.repo.List(page, pageSize, startTime, endTime)
+	return s.repo.List(page, pageSize, startTime, endTime, model, status, tokenId, channelId)
 }
 
 func (s *LogService) GetStats() (map[string]interface{}, error) {

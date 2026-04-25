@@ -37,7 +37,12 @@ func (h *LogHandler) List(c *gin.Context) {
 		}
 	}
 
-	logs, total, err := h.service.List(page, pageSize, startTime, endTime)
+	modelFilter := c.Query("model")
+	statusFilter := c.Query("status")
+	tokenIdFilter := c.Query("token_id")
+	channelIdFilter := c.Query("channel_id")
+
+	logs, total, err := h.service.List(page, pageSize, startTime, endTime, modelFilter, statusFilter, tokenIdFilter, channelIdFilter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
 		return

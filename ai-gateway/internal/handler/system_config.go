@@ -50,19 +50,25 @@ func (h *SystemConfigHandler) Update(c *gin.Context) {
 
 func (h *SystemConfigHandler) UpdateDispatchMode(c *gin.Context) {
 	var req struct {
-		DispatchMode string `json:"dispatch_mode" binding:"required"`
+		DispatchMode string `json:"dispatch_mode"`
+		Mode         string `json:"mode"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})
 		return
 	}
 
-	if req.DispatchMode != "polling" && req.DispatchMode != "smart" {
+	dispatchMode := req.DispatchMode
+	if dispatchMode == "" {
+		dispatchMode = req.Mode
+	}
+
+	if dispatchMode != "polling" && dispatchMode != "smart" {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "dispatch_mode must be 'polling' or 'smart'"})
 		return
 	}
 
-	if err := h.repo.UpdateDispatchMode(req.DispatchMode); err != nil {
+	if err := h.repo.UpdateDispatchMode(dispatchMode); err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
 		return
 	}

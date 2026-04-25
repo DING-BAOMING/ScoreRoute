@@ -102,8 +102,23 @@ curl -X POST "https://api.scoreroute.com/v1/chat/completions" \
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | /api/system-config | 获取系统配置 |
-| PUT | /api/system-config/dispatch-mode | 更新调度模式 (smart/polling) |
+| PUT | /api/system-config/dispatch-mode | 更新调度模式 |
 | PUT | /api/system-config/password-less | 开启/关闭免密模式 |
+
+**更新调度模式示例:**
+```bash
+curl -X PUT "https://api.scoreroute.com/api/system-config/dispatch-mode" \
+  -H "Content-Type: application/json" \
+  -d '{"dispatch_mode":"smart"}'
+# 可选值: "smart" 或 "polling"
+```
+
+**开启/关闭免密模式示例:**
+```bash
+curl -X PUT "https://api.scoreroute.com/api/system-config/password-less" \
+  -H "Content-Type: application/json" \
+  -d '{"enabled":true}'
+```
 
 
 ### 评分相关

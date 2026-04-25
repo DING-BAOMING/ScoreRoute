@@ -93,7 +93,7 @@ curl -s -X POST "https://***REDACTED***/api/auth/login" -H "Content-Type: applic
 | Polling + minimax-m2.5 | ✅ 8/10成功 | 上游504/529错误,调度器fallback正常 |
 
 ### Demo-1 API测试
-- Token: sk-c0c45ba8-2657-4d12-be5c-912c88857739
+- Token: ***REDACTED***
 - 测试: 5/5 成功请求
 - 状态: ✅ 正常工作
 
@@ -417,7 +417,7 @@ curl -s -X POST "https://***REDACTED***/api/auth/login" -H "Content-Type: applic
 - 磁盘: 27% ✅
 
 ### Token测试
-- GetByID: sk-c7c585d7-acd3-4bcf-b987-dd9e6b818588 ✅
+- GetByID: ***REDACTED*** ✅
 - List: ****0102 (masked) ✅
 
 ## 20步执行 (2026-04-22)
@@ -441,7 +441,7 @@ curl -s -X POST "https://***REDACTED***/api/auth/login" -H "Content-Type: applic
 - 磁盘: 31% ✅
 
 ### Token测试
-- GetByID(115): sk-c7c585d7-acd3-4bcf-b987-dd9e6b818588 (39字符) ✅
+- GetByID(115): ***REDACTED*** (39字符) ✅
 - List: ****4ba9 (masked) ✅
 
 ## 20步审查 (2026-04-22)
@@ -547,9 +547,9 @@ curl -s -X POST "https://***REDACTED***/api/auth/login" -H "Content-Type: applic
 
 | Token | 模型 | 结果 |
 |-------|------|------|
-| sk-3ad88df0... | MiniMax-M2.7 (修正) | ✅ qwen3.5响应 |
-| sk-77747ad0... | __AUTO__ | ✅ phi-4响应 |
-| sk-4906bb66... | __AUTO__ (1M/h) | ✅ qwen3.5响应 |
+| ***REDACTED*** | MiniMax-M2.7 (修正) | ✅ qwen3.5响应 |
+| ***REDACTED*** | __AUTO__ | ✅ phi-4响应 |
+| ***REDACTED*** | __AUTO__ (1M/h) | ✅ qwen3.5响应 |
 
 ### 系统状态
 - Health: healthy ✅
@@ -572,9 +572,9 @@ curl -s -X POST "https://***REDACTED***/api/auth/login" -H "Content-Type: applic
 ### 3个测试API
 | Token | 模型 | 状态 |
 |-------|------|------|
-| sk-3ad88df0... | MiniMax-M2.7 | ✅ |
-| sk-77747ad0... | __AUTO__ | ✅ |
-| sk-4906bb66... | __AUTO__ (1M/h) | ✅ |
+| ***REDACTED*** | MiniMax-M2.7 | ✅ |
+| ***REDACTED*** | __AUTO__ | ✅ |
+| ***REDACTED*** | __AUTO__ (1M/h) | ✅ |
 
 ### 延迟测试
 - 部分请求15秒超时（上游API问题）
@@ -667,9 +667,9 @@ if req.Key == "" {
 ### 5. 测试API Token
 | Token | Key | 模型 | 状态 |
 |-------|-----|------|------|
-| Test-MiniMax-M2.7 | sk-test-minimax-27-12345678901234 | MiniMax-M2.7 | ✅ |
-| Test-Unlimited-AUTO | sk-test-unlimited-auto-1234567890 | __AUTO__ | ⚠️ |
-| Test-1M-Hourly-AUTO | sk-test-1m-hourly-auto-1234567 | __AUTO__ (1M/hour) | ⚠️ |
+| Test-MiniMax-M2.7 | ***REDACTED*** | MiniMax-M2.7 | ✅ |
+| Test-Unlimited-AUTO | ***REDACTED*** | __AUTO__ | ⚠️ |
+| Test-1M-Hourly-AUTO | ***REDACTED*** | __AUTO__ (1M/hour) | ⚠️ |
 
 ### 6-9. 技术债
 - 代码审查完成

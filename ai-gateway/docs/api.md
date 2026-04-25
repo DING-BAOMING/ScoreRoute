@@ -97,13 +97,22 @@ curl -X POST "https://api.scoreroute.com/v1/chat/completions" \
 | DELETE | /api/tokens/:id | 删除Token |
 | PUT | /api/tokens/:id/enabled | 启用/禁用Token |
 
+### 系统配置
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /api/system-config | 获取系统配置 |
+| PUT | /api/system-config/dispatch-mode | 更新调度模式 (smart/polling) |
+| PUT | /api/system-config/password-less | 开启/关闭免密模式 |
+
+
 ### 评分相关
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | /api/model-rating/scores | 获取模型评分 |
 | GET | /api/user-ratings | 获取用户评分 |
-| POST | /api/user-ratings | 创建/更新用户评分 |
+| POST | /api/user-ratings | 创建/更新用户评分 (参数: model_name, user_rating) |
 | DELETE | /api/user-ratings/:id | 删除用户评分 |
 
 ### 日志

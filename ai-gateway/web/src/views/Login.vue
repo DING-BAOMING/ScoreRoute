@@ -3,7 +3,10 @@
     <el-card class="login-card">
       <template #header>
         <div class="card-header">
-          <h2>ScoreRoute</h2>
+          <div class="header-top">
+            <h2>ScoreRoute</h2>
+            <a href="https://www.scoreroute.com/faq.html" target="_blank" class="official-site-btn">官网</a>
+          </div>
           <p>API网关管理系统</p>
         </div>
       </template>
@@ -79,13 +82,34 @@ async function handleLogin() {
   text-align: center;
 }
 
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .card-header h2 {
-  margin: 0 0 10px;
+  margin: 0;
   color: #333;
 }
 
+.official-site-btn {
+  font-size: 14px;
+  color: #666;
+  text-decoration: none;
+  padding: 4px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+.official-site-btn:hover {
+  color: #667eea;
+  border-color: #667eea;
+}
+
 .card-header p {
-  margin: 0;
+  margin: 10px 0 0;
   color: #666;
 }
 </style>

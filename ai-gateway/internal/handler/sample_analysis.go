@@ -38,6 +38,21 @@ func (h *SampleAnalysisHandler) SaveConfig(c *gin.Context) {
 		return
 	}
 
+	if req.Enabled != nil {
+		switch v := req.Enabled.(type) {
+		case bool:
+			if v {
+				req.Enabled = 1
+			} else {
+				req.Enabled = 0
+			}
+		case float64:
+			req.Enabled = int(v)
+		case int:
+			req.Enabled = v
+		}
+	}
+
 	if err := h.svc.SaveConfig(&req); err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
 		return
@@ -51,6 +66,21 @@ func (h *SampleAnalysisHandler) TestConfig(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: err.Error()})
 		return
+	}
+
+	if req.Enabled != nil {
+		switch v := req.Enabled.(type) {
+		case bool:
+			if v {
+				req.Enabled = 1
+			} else {
+				req.Enabled = 0
+			}
+		case float64:
+			req.Enabled = int(v)
+		case int:
+			req.Enabled = v
+		}
 	}
 
 	success, msg, err := h.svc.TestConnection(&req)

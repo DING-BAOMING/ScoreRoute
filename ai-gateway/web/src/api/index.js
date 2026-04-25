@@ -17,7 +17,9 @@ api.interceptors.response.use(
   response => response.data,
   error => {
     if (error.response?.status === 401) {
+      const passwordLessMode = localStorage.getItem('password_less_mode') === 'true'
       localStorage.removeItem('token')
+      if (passwordLessMode) { return Promise.reject(error); }
       window.location.href = '/login'
     }
     return Promise.reject(error)

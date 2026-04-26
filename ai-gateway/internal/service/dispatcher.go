@@ -28,7 +28,7 @@ type Dispatcher struct {
 	modelRepo          *repository.ModelRepo
 	systemConfigRepo   *repository.SystemConfigRepo
 	extraRatingService *ExtraRatingService
-	circuitBreaker   *CircuitBreaker
+	circuitBreaker     *CircuitBreaker
 	tokenRepo          *repository.TokenRepo
 	client             *http.Client
 }
@@ -59,7 +59,7 @@ func NewDispatcher() *Dispatcher {
 		modelRepo:          repository.NewModelRepo(),
 		systemConfigRepo:   repository.NewSystemConfigRepo(),
 		extraRatingService: NewExtraRatingService(),
-		circuitBreaker:   NewCircuitBreaker(5, 5 * time.Minute),
+		circuitBreaker:     NewCircuitBreaker(5, 5*time.Minute),
 		tokenRepo:          repository.NewTokenRepo(),
 		client: &http.Client{
 			Timeout:   1200 * time.Second,

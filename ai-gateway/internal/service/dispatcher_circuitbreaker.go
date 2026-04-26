@@ -6,11 +6,11 @@ import (
 )
 
 type CircuitBreaker struct {
-	mu             sync.RWMutex
-	failures       map[int64]int
-	lastFailure    map[int64]time.Time
-	threshold      int
-	timeout        time.Duration
+	mu          sync.RWMutex
+	failures    map[int64]int
+	lastFailure map[int64]time.Time
+	threshold   int
+	timeout     time.Duration
 }
 
 func NewCircuitBreaker(threshold int, timeout time.Duration) *CircuitBreaker {
@@ -39,10 +39,10 @@ func (cb *CircuitBreaker) RecordFailure(channelID int64) {
 func (cb *CircuitBreaker) IsOpen(channelID int64) bool {
 	cb.mu.RLock()
 	defer cb.mu.RUnlock()
-	
+
 	failures := cb.failures[channelID]
 	lastFailure := cb.lastFailure[channelID]
-	
+
 	if failures >= cb.threshold {
 		if time.Since(lastFailure) < cb.timeout {
 			return true

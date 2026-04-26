@@ -46,6 +46,7 @@ func Setup() *gin.Engine {
 
 	api := r.Group("/api")
 	api.Use(middleware.AuthMiddleware())
+	api.Use(middleware.RateLimitHeadersMiddleware())
 	{
 		api.GET("/auth/validate", handler.NewAuthHandler().Validate)
 
@@ -204,6 +205,10 @@ func Setup() *gin.Engine {
 			proxyHandler.Handle(c)
 		})
 		v1.GET("/models", func(c *gin.Context) {
+			proxyHandler := handler.NewProxyHandler()
+			proxyHandler.HandleModels(c)
+		})
+		v1.POST("/models", func(c *gin.Context) {
 			proxyHandler := handler.NewProxyHandler()
 			proxyHandler.HandleModels(c)
 		})

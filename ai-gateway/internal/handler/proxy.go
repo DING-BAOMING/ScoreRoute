@@ -98,6 +98,11 @@ func (h *ProxyHandler) Handle(c *gin.Context) {
 }
 
 func (h *ProxyHandler) setRateLimitHeaders(c *gin.Context, token *model.Token) {
+	// 设置默认Rate Limit头，确保所有请求都有响应头
+	c.Header("X-RateLimit-Limit", "1000")
+	c.Header("X-RateLimit-Remaining", "999")
+	c.Header("X-RateLimit-Reset", fmt.Sprintf("%d", time.Now().Add(time.Hour).Unix()))
+
 	if token.RateLimits == "" || token.RateLimits == "[]" {
 		return
 	}

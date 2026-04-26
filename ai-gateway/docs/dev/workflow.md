@@ -932,3 +932,45 @@ https://***REDACTED*** 正常访问
 ### Git
 - Branch: fix/unique-model-names
 - Status: 已同步
+
+## 最近修复 (2026-04-26)
+
+### 1. Polling模式Failover机制 ✅
+- **问题**: Polling模式下auto模型返回404
+- **根因**: 只尝试一个模型，无failover
+- **修复**: 
+  - 添加GetNextModelsPolling函数，返回多个模型
+  - 按call_count排序，最低优先
+  - 失败时自动尝试下一个模型
+- **文件**: internal/service/dispatcher.go, internal/service/model.go
+
+### 2. __POLL_ALL__修复 ✅
+- **问题**: __POLL_ALL__模型名称返回404
+- **修复**: 使用polling dispatch路径（带failover）
+- **文件**: internal/service/dispatcher.go
+
+### 3. CORS安全修复 ✅
+- **问题**: wildcard origin时设置credentials有安全风险
+- **修复**: 只在使用具体origin时设置Access-Control-Allow-Credentials
+- **文件**: internal/middleware/auth.go
+
+### 4. NVIDIA渠道模型清理 ✅
+- **问题**: xuetao渠道注册了不支持的模型
+- **修复**: 删除gpt-4, claude-3, gpt-4o等不支持的模型
+- **保留**: meta/llama-*, minimaxai/*, qwen/*
+
+### 5. API路由别名 ✅
+- **问题**: 前端期望的路由返回HTML
+- **修复**: 添加/api/extra-ratings, /api/model-ratings等路由别名
+- **文件**: internal/router/router.go
+
+---
+
+## 测试API Token
+
+| Token | 用途 | 模型 |
+|-------|------|------|
+| sk-test-minimax-27-fixed-12345678 | 固定MiniMax 2.7 | minimaxai/minimax-m2.7 |
+| sk-test-unlimited-auto-fixed-1234 | Auto无限制 | auto |
+| sk-test-1m-hourly-fixed-12345 | Auto有限制 | auto |
+

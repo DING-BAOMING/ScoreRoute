@@ -238,7 +238,7 @@ func (h *ChannelHandler) SetRateLimit(c *gin.Context) {
 		Name:       existing.Name,
 		Format:     existing.Format,
 		BaseURL:    existing.BaseURL,
-		APIKey:    existing.APIKey,
+		APIKey:     existing.APIKey,
 		Enabled:    existing.Enabled,
 		RateLimits: req.RateLimits,
 	}

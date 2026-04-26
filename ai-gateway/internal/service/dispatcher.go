@@ -175,8 +175,6 @@ type modelRatingWeights struct {
 	TimeRatingWeight   float64
 }
 
-
-
 func (d *Dispatcher) GetNextModelsPolling(format, modelType string, limit int) ([]*model.Model, error) {
 	allModels, err := d.modelService.ListEnabledModels(format, modelType)
 	if err != nil || len(allModels) == 0 {

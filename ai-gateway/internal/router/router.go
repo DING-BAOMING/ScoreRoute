@@ -53,7 +53,9 @@ func Setup() *gin.Engine {
 			channels.PUT("/:id", handler.NewChannelHandler().Update)
 			channels.DELETE("/:id", handler.NewChannelHandler().Delete)
 			channels.PUT("/:id/enabled", handler.NewChannelHandler().SetEnabled)
+			channels.PUT("/:id/rate-limit", handler.NewChannelHandler().SetRateLimit)
 			channels.GET("/:id/models", handler.NewChannelHandler().FetchModels)
+			channels.GET("/rate-limit", handler.NewChannelHandler().List)
 		}
 
 		models := api.Group("/models")
@@ -66,18 +68,23 @@ func Setup() *gin.Engine {
 			models.PUT("/:id", handler.NewModelHandler().Update)
 			models.DELETE("/:id", handler.NewModelHandler().Delete)
 			models.PUT("/:id/enabled", handler.NewModelHandler().SetEnabled)
+			models.PUT("/:id/rate-limit", handler.NewModelHandler().SetRateLimit)
 			models.GET("/channel/:channel_id", handler.NewModelHandler().ListByChannel)
+			models.GET("/rate-limit", handler.NewModelHandler().List)
 		}
 
 		tokens := api.Group("/tokens")
 		{
 			tokens.GET("", handler.NewTokenHandler().List)
 			tokens.POST("", handler.NewTokenHandler().Create)
+			tokens.POST("/batch", handler.NewTokenHandler().BatchCreate)
 			tokens.GET("/:id", handler.NewTokenHandler().Get)
 			tokens.PUT("/:id", handler.NewTokenHandler().Update)
 			tokens.DELETE("/:id", handler.NewTokenHandler().Delete)
 			tokens.PUT("/:id/enabled", handler.NewTokenHandler().SetEnabled)
+			tokens.PUT("/:id/rate-limit", handler.NewTokenHandler().SetRateLimit)
 			tokens.POST("/:id/regenerate", handler.NewTokenHandler().RegenerateKey)
+			tokens.GET("/rate-limit", handler.NewTokenHandler().List)
 		}
 
 		logs := api.Group("/logs")
@@ -154,6 +161,8 @@ func Setup() *gin.Engine {
 			extraRatings.GET("", extraRatingHandler.GetRecords)
 			extraRatings.GET("/config", extraRatingHandler.GetConfig)
 			extraRatings.PUT("/config", extraRatingHandler.SetConfig)
+			extraRatings.PUT("/penalty", extraRatingHandler.UpdatePenalty)
+			extraRatings.PUT("/reward", extraRatingHandler.UpdateReward)
 			extraRatings.GET("/records", extraRatingHandler.GetRecords)
 			extraRatings.DELETE("/records", extraRatingHandler.ClearRecords)
 			extraRatings.DELETE("/records/:id", extraRatingHandler.DeleteRecord)
@@ -174,6 +183,7 @@ func Setup() *gin.Engine {
 		{
 			sampleAnalysisHandler := handler.NewSampleAnalysisHandler()
 			sampleAnalysisConfig.GET("", sampleAnalysisHandler.GetConfig)
+			sampleAnalysisConfig.PUT("", sampleAnalysisHandler.SaveConfig)
 		}
 
 		invocations := api.Group("/invocations")

@@ -212,3 +212,42 @@ func (h *ChannelHandler) TestCredentials(c *gin.Context) {
 
 	c.JSON(http.StatusOK, model.APIResponse{Code: 0, Message: "连接成功", Data: gin.H{"success": success}})
 }
+
+func (h *ChannelHandler) SetRateLimit(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "无效的ID"})
+		return
+	}
+
+	existing, err := h.service.GetByID(id)
+	if err != nil || existing == nil {
+		c.JSON(http.StatusNotFound, model.APIResponse{Code: 404, Message: "渠道不存在"})
+		return
+	}
+
+	var req struct {
+		RateLimits string `json:"rate_limits"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})
+		return
+	}
+
+	fullReq := model.ChannelRequest{
+		Name:       existing.Name,
+		Format:     existing.Format,
+		BaseURL:    existing.BaseURL,
+		APIKey:    existing.APIKey,
+		Enabled:    existing.Enabled,
+		RateLimits: req.RateLimits,
+	}
+
+	channel, err := h.service.Update(id, &fullReq)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, model.APIResponse{Code: 0, Message: "设置成功", Data: channel})
+}

@@ -221,3 +221,21 @@ func NormalizeModelKey(channelName, format, modelType, modelName string) string 
 	key := strings.ToLower(fmt.Sprintf("%s_%s_%s_%s", channelName, format, modelType, modelName))
 	return key
 }
+
+func (s *ExtraRatingService) ApplyPenalty(modelKey string, score int, decayPerRequest int) error {
+	if score > 0 {
+		score = -score
+	}
+	if decayPerRequest <= 0 {
+		decayPerRequest = 1
+	}
+	return s.repo.AddPenaltyRecord(modelKey, score, decayPerRequest, 0, nil)
+}
+
+func (s *ExtraRatingService) ApplyReward(modelKey string, score int, hours int) error {
+	if score <= 0 || hours <= 0 {
+		return fmt.Errorf("invalid reward parameters")
+	}
+	expiresAt := time.Now().Add(time.Duration(hours) * time.Hour)
+	return s.repo.AddRewardRecord(modelKey, score, 0, 0, &expiresAt)
+}

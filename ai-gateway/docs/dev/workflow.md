@@ -974,3 +974,66 @@ https://***REDACTED*** 正常访问
 | sk-test-unlimited-auto-fixed-1234 | Auto无限制 | auto |
 | sk-test-1m-hourly-fixed-12345 | Auto有限制 | auto |
 
+
+## 最近修复 (2026-04-26) - Iteration 33
+
+### 1. ISSUE-008: API路由缺失 ✅
+- **问题**: 多个API端点路径不存在
+- **修复**: 添加了以下端点:
+  - PUT /api/tokens/:id/rate-limit
+  - PUT /api/channels/:id/rate-limit
+  - PUT /api/models/:id/rate-limit
+  - POST /api/tokens/batch
+  - PUT /api/extra-ratings/penalty
+  - PUT /api/extra-ratings/reward
+  - PUT /api/sample-analysis-config
+- **文件**: internal/router/router.go, internal/handler/*.go
+
+### 2. Rate Limit Headers ✅
+- **问题**: API响应无Rate Limit头
+- **修复**: 添加X-RateLimit-Limit/Remaining/Reset头
+- **文件**: internal/handler/proxy.go
+
+---
+
+## API路由清单 (2026-04-26)
+
+### Token管理
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| /api/tokens | GET | 列表 |
+| /api/tokens | POST | 创建 |
+| /api/tokens | POST /batch | 批量创建 |
+| /api/tokens/:id | PUT | 更新 |
+| /api/tokens/:id | DELETE | 删除 |
+| /api/tokens/:id/rate-limit | PUT | 设置限流 |
+| /api/tokens/:id/enabled | PUT | 启用/禁用 |
+| /api/tokens/:id/regenerate | POST | 重新生成密钥 |
+
+### 渠道管理
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| /api/channels | GET | 列表 |
+| /api/channels | POST | 创建 |
+| /api/channels/:id | PUT | 更新 |
+| /api/channels/:id/rate-limit | PUT | 设置限流 |
+| /api/channels/:id/enabled | PUT | 启用/禁用 |
+
+### 模型管理
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| /api/models | GET | 列表 |
+| /api/models | POST | 创建 |
+| /api/models | POST /batch | 批量创建 |
+| /api/models/:id | PUT | 更新 |
+| /api/models/:id/rate-limit | PUT | 设置限流 |
+| /api/models/:id/enabled | PUT | 启用/禁用 |
+
+### 评分/奖励
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| /api/extra-ratings | GET | 积分记录 |
+| /api/extra-ratings/penalty | PUT | 应用惩罚 |
+| /api/extra-ratings/reward | PUT | 应用奖励 |
+| /api/extra-ratings/config | PUT | 配置 |
+

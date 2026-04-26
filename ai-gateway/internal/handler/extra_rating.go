@@ -140,3 +140,41 @@ func (h *ExtraRatingHandler) GetAllModelExtraScores(c *gin.Context) {
 
 	c.JSON(http.StatusOK, model.APIResponse{Code: 0, Message: "success", Data: result})
 }
+
+func (h *ExtraRatingHandler) UpdatePenalty(c *gin.Context) {
+	var req struct {
+		ModelKey     string `json:"model_key" binding:"required"`
+		Score        int    `json:"score"`
+		DecayPerRequest int `json:"decay_per_request"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})
+		return
+	}
+
+	if err := h.service.ApplyPenalty(req.ModelKey, req.Score, req.DecayPerRequest); err != nil {
+		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, model.APIResponse{Code: 0, Message: "惩罚已应用"})
+}
+
+func (h *ExtraRatingHandler) UpdateReward(c *gin.Context) {
+	var req struct {
+		ModelKey string `json:"model_key" binding:"required"`
+		Score    int    `json:"score"`
+		Hours    int    `json:"hours"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})
+		return
+	}
+
+	if err := h.service.ApplyReward(req.ModelKey, req.Score, req.Hours); err != nil {
+		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, model.APIResponse{Code: 0, Message: "奖励已应用"})
+}

@@ -66,6 +66,7 @@ func CORSMiddleware() gin.HandlerFunc {
 			}
 			if originAllowed {
 				c.Header("Access-Control-Allow-Origin", origin)
+				c.Header("Access-Control-Allow-Credentials", "true")
 			}
 		} else if allowedOrigins == "*" {
 			c.Header("Access-Control-Allow-Origin", "*")
@@ -74,7 +75,6 @@ func CORSMiddleware() gin.HandlerFunc {
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		c.Header("Access-Control-Max-Age", "86400")
-		c.Header("Access-Control-Allow-Credentials", "true")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)

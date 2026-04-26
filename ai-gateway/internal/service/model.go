@@ -72,6 +72,21 @@ func (s *ModelService) ListEnabled() ([]*model.Model, error) {
 	return s.repo.ListEnabled()
 }
 
+func (s *ModelService) ListEnabledModels(format, modelType string) ([]*model.Model, error) {
+	allModels, err := s.repo.ListEnabled()
+	if err != nil {
+		return nil, err
+	}
+
+	var filtered []*model.Model
+	for _, m := range allModels {
+		if m.Format == format && (modelType == "" || m.Type == modelType) {
+			filtered = append(filtered, m)
+		}
+	}
+	return filtered, nil
+}
+
 func (s *ModelService) GetByName(name string) (*model.Model, error) {
 	return s.repo.GetByName(name)
 }

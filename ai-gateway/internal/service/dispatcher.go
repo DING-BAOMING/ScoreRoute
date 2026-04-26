@@ -175,6 +175,30 @@ type modelRatingWeights struct {
 	TimeRatingWeight   float64
 }
 
+
+
+func (d *Dispatcher) GetNextModelsPolling(format, modelType string, limit int) ([]*model.Model, error) {
+	allModels, err := d.modelService.ListEnabledModels(format, modelType)
+	if err != nil || len(allModels) == 0 {
+		return nil, err
+	}
+
+	// Sort by call_count (polling = lowest first)
+	sortedModels := make([]*model.Model, len(allModels))
+	copy(sortedModels, allModels)
+	for i := 0; i < len(sortedModels)-1; i++ {
+		for j := i + 1; j < len(sortedModels); j++ {
+			if sortedModels[i].CallCount > sortedModels[j].CallCount {
+				sortedModels[i], sortedModels[j] = sortedModels[j], sortedModels[i]
+			}
+		}
+	}
+
+	if len(sortedModels) > limit {
+		return sortedModels[:limit], nil
+	}
+	return sortedModels, nil
+}
 func (d *Dispatcher) getModelRatingWeights() (*modelRatingWeights, error) {
 	repo := repository.NewModelRatingConfigRepo()
 	repoWeights, err := repo.GetAll()
@@ -477,26 +501,26 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 
 	modelName, _ := req["model"].(string)
 
-	useSmartDispatch := modelName == "AUTO" || modelName == "__AUTO__" || modelName == "POLL_ALL" || modelName == "__POLL_ALL__" || modelName == "__POLL_ALL__"
+	useSmartDispatch := modelName == "AUTO" || modelName == "__AUTO__"
+	usePollingDispatch := modelName == "POLL_ALL" || modelName == "__POLL_ALL__"
 	useAutoSelect := modelName == "auto" || modelName == "Auto"
 
 	var rankedModels []*model.Model
 	var err error
 
-	if useAutoSelect {
+	if useAutoSelect || usePollingDispatch {
 		config, _ := d.systemConfigRepo.Get()
 		dispatchMode := "polling"
 		if config != nil {
 			dispatchMode = config.DispatchMode
 		}
-		if dispatchMode == "smart" {
+		if dispatchMode == "smart" && !usePollingDispatch {
 			rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
 		} else {
-			selectedModel, err := d.modelService.GetNextModelGlobal(token.Format, token.Type)
-			if err != nil || selectedModel == nil {
-				return nil, 0, err
+			rankedModels, err = d.GetNextModelsPolling(token.Format, token.Type, 3)
+			if err != nil || len(rankedModels) == 0 {
+				return nil, 0, fmt.Errorf("no available models for format=%s type=%s", token.Format, token.Type)
 			}
-			rankedModels = []*model.Model{selectedModel}
 		}
 	} else if useSmartDispatch {
 		rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
@@ -738,26 +762,26 @@ func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStrea
 
 	modelName, _ := req["model"].(string)
 
-	useSmartDispatch := modelName == "AUTO" || modelName == "__AUTO__" || modelName == "POLL_ALL" || modelName == "__POLL_ALL__" || modelName == "__POLL_ALL__"
+	useSmartDispatch := modelName == "AUTO" || modelName == "__AUTO__"
+	usePollingDispatch := modelName == "POLL_ALL" || modelName == "__POLL_ALL__"
 	useAutoSelect := modelName == "auto" || modelName == "Auto"
 
 	var rankedModels []*model.Model
 	var err error
 
-	if useAutoSelect {
+	if useAutoSelect || usePollingDispatch {
 		config, _ := d.systemConfigRepo.Get()
 		dispatchMode := "polling"
 		if config != nil {
 			dispatchMode = config.DispatchMode
 		}
-		if dispatchMode == "smart" {
+		if dispatchMode == "smart" && !usePollingDispatch {
 			rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)
 		} else {
-			selectedModel, err := d.modelService.GetNextModelGlobal(token.Format, token.Type)
-			if err != nil || selectedModel == nil {
-				return nil, 0, err
+			rankedModels, err = d.GetNextModelsPolling(token.Format, token.Type, 3)
+			if err != nil || len(rankedModels) == 0 {
+				return nil, 0, fmt.Errorf("no available models for format=%s type=%s", token.Format, token.Type)
 			}
-			rankedModels = []*model.Model{selectedModel}
 		}
 	} else if useSmartDispatch {
 		rankedModels, err = d.GetRankedModelsSmart(token.Format, token.Type, 3)

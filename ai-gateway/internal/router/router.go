@@ -31,6 +31,11 @@ func Setup() *gin.Engine {
 		c.HTML(200, "index.html", nil)
 	})
 
+	r.GET("/docs", func(c *gin.Context) {
+		c.Header("Content-Type", "text/markdown")
+		c.File("./docs/README.md")
+	})
+
 	r.POST("/api/auth/login", handler.NewAuthHandler().Login)
 	r.POST("/api/auth/passwordless-login", handler.NewAuthHandler().PasswordLessLogin)
 	r.GET("/api/auth/setup-status", handler.NewAuthHandler().CheckSetupStatus)

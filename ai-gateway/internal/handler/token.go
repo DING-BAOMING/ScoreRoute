@@ -194,12 +194,12 @@ func (h *TokenHandler) SetRateLimit(c *gin.Context) {
 	}
 
 	fullReq := model.TokenRequest{
-		Name:        existing.Name,
-		Format:      existing.Format,
+		Name:       existing.Name,
+		Format:     existing.Format,
 		Type:       existing.Type,
-		ModelName:   existing.ModelName,
-		Enabled:     existing.Enabled,
-		RateLimits:  req.RateLimits,
+		ModelName:  existing.ModelName,
+		Enabled:    existing.Enabled,
+		RateLimits: req.RateLimits,
 	}
 
 	token, err := h.service.Update(id, &fullReq)

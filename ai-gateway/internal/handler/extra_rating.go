@@ -143,9 +143,9 @@ func (h *ExtraRatingHandler) GetAllModelExtraScores(c *gin.Context) {
 
 func (h *ExtraRatingHandler) UpdatePenalty(c *gin.Context) {
 	var req struct {
-		ModelKey     string `json:"model_key" binding:"required"`
-		Score        int    `json:"score"`
-		DecayPerRequest int `json:"decay_per_request"`
+		ModelKey        string `json:"model_key" binding:"required"`
+		Score           int    `json:"score"`
+		DecayPerRequest int    `json:"decay_per_request"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})

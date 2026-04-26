@@ -74,6 +74,7 @@ func createTables() error {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_call_logs_created ON call_logs(created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_call_logs_status ON call_logs(status)`,
 		`CREATE INDEX IF NOT EXISTS idx_models_channel ON models(channel_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_tokens_key ON tokens(key)`,
 		`CREATE TABLE IF NOT EXISTS user_ratings (

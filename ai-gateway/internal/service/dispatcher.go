@@ -606,8 +606,16 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 		proxyReq.Header.Set("Authorization", "Bearer "+selectedChannel.APIKey)
 		proxyReq.Header.Set("User-Agent", "ScoreRoute/1.0")
 
+		if d.circuitBreaker.IsOpen(selectedChannel.ID) {
+			lastErr = fmt.Errorf("circuit breaker open for channel: %s", selectedChannel.Name)
+			lastStatusCode = 503
+			log.Printf("[DispatchStreamDirect] circuit breaker open: %s, trying next model", selectedChannel.Name)
+			continue
+		}
+
 		resp, err := d.client.Do(proxyReq)
 		if err != nil {
+			d.circuitBreaker.RecordFailure(selectedChannel.ID)
 			modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
 			if err := d.extraRatingService.ApplyPenaltyAndReward(modelKey); err != nil {
 				log.Printf("[DispatchStreamDirect] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
@@ -644,6 +652,7 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 		}
 
 		if resp.StatusCode == 200 {
+			d.circuitBreaker.RecordSuccess(selectedChannel.ID)
 			modelKey := NormalizeModelKey(selectedChannel.Name, selectedChannel.Format, modelItem.Type, modelItem.Name)
 			if err := d.extraRatingService.ApplyPenaltyAndReward(modelKey); err != nil {
 				log.Printf("[DispatchStreamDirect] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
@@ -669,6 +678,7 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 		if err := d.extraRatingService.ApplyPenaltyAndReward(modelKey); err != nil {
 			log.Printf("[DispatchStreamDirect] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
 		}
+		d.circuitBreaker.RecordFailure(selectedChannel.ID)
 		lastErr = fmt.Errorf("upstream returned status %d", resp.StatusCode)
 		lastStatusCode = resp.StatusCode
 		lastBody = body
@@ -869,8 +879,16 @@ func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStrea
 		proxyReq.Header.Set("Authorization", "Bearer "+selectedChannel.APIKey)
 		proxyReq.Header.Set("User-Agent", "ScoreRoute/1.0")
 
+		if d.circuitBreaker.IsOpen(selectedChannel.ID) {
+			lastErr = fmt.Errorf("circuit breaker open for channel: %s", selectedChannel.Name)
+			lastStatusCode = 503
+			log.Printf("[dispatch] circuit breaker open: %s, trying next model", selectedChannel.Name)
+			continue
+		}
+
 		resp, err := d.client.Do(proxyReq)
 		if err != nil {
+			d.circuitBreaker.RecordFailure(selectedChannel.ID)
 			d.logCall(token, selectedChannel, modelItem, startTime, 0, 503, err.Error())
 			lastErr = fmt.Errorf("upstream request failed: %w", err)
 			lastStatusCode = 503
@@ -929,9 +947,11 @@ func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStrea
 		}
 
 		if resp.StatusCode == 200 {
+			d.circuitBreaker.RecordSuccess(selectedChannel.ID)
 			log.Printf("[dispatch] succeeded on try %d: %s/%s score rank %d", i+1, selectedChannel.Name, modelItem.Name, i+1)
 			return body, resp.StatusCode, nil
 		}
+		d.circuitBreaker.RecordFailure(selectedChannel.ID)
 
 		lastErr = fmt.Errorf("upstream returned status %d", resp.StatusCode)
 		lastStatusCode = resp.StatusCode

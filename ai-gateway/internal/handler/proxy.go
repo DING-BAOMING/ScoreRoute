@@ -265,6 +265,25 @@ func (h *ProxyHandler) HandleStreamWithBody(c *gin.Context, token *model.Token, 
 }
 
 func (h *ProxyHandler) HandleModels(c *gin.Context) {
+	authHeader := c.GetHeader("Authorization")
+	var token *model.Token
+	if authHeader != "" {
+		var apiKey string
+		if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+			apiKey = authHeader[7:]
+		} else {
+			apiKey = authHeader
+		}
+		token, _ = h.tokenSvc.GetByKey(apiKey)
+	}
+	if token != nil {
+		h.setRateLimitHeaders(c, token)
+	} else {
+		c.Header("X-RateLimit-Limit", "1000")
+		c.Header("X-RateLimit-Remaining", "1000")
+		c.Header("X-RateLimit-Reset", fmt.Sprintf("%d", time.Now().Add(time.Hour).Unix()))
+	}
+
 	models, err := h.dispatcher.ListEnabledModels()
 	if err != nil || models == nil {
 		c.JSON(http.StatusOK, gin.H{

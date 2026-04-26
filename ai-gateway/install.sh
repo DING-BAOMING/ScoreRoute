@@ -77,8 +77,14 @@ setup_directory() {
     fi
     
     if [ -d "ai-gateway" ] && [ ! -f "docker-compose.yml" ]; then
-        log_info "进入ai-gateway目录..."
-        cd ai-gateway
+        if [ -f "ai-gateway/docker-compose.yml" ]; then
+            log_info "移动ai-gateway内容到当前目录..."
+            mv ai-gateway/* ai-gateway/.* . 2>/dev/null || true
+            rmdir ai-gateway 2>/dev/null || true
+        else
+            log_info "进入ai-gateway目录..."
+            cd ai-gateway
+        fi
     fi
     
     log_ok "目录就绪: $(pwd)"

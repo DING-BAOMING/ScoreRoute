@@ -97,6 +97,30 @@ curl -s -X POST "https://***REDACTED***/api/auth/login" -H "Content-Type: applic
 - 测试: 5/5 成功请求
 - 状态: ✅ 正常工作
 
+## 2026-04-26 修复 (Iteration 38-39)
+
+### 1. Rate Limit Headers 完整修复
+- **问题**: 只对 POST /v1/chat/completions 返回头，/v1/models 和 /api/* 缺失
+- **修复**:
+  - 在 proxy.go HandleModels() 添加 rate limit headers
+  - 新增 middleware/ratelimit.go 中间件
+  - 在 router.go 所有 /api/* 路由使用 RateLimitHeadersMiddleware
+- **验证**: 所有 API 端点现在都返回 X-RateLimit-* 头
+
+### 2. 熔断器集成
+- **问题**: CircuitBreaker 代码存在但未集成
+- **修复**:
+  - 在 dispatcher.go dispatch() 方法集成 circuitBreaker.IsOpen() 检查
+  - 添加 circuitBreaker.RecordSuccess() 和 RecordFailure() 调用
+  - 同样集成到 DispatchStreamDirect() 方法
+- **验证**: 失败5次后通道熔断，5分钟后恢复
+
+### 3. 安装目录嵌套修复
+- **问题**: install.sh 创建 ai-gateway/ai-gateway/ 嵌套目录
+- **修复**:
+  - 检测到 ai-gateway 子目录时，移动内容到当前目录
+  - 只有当子目录包含 docker-compose.yml 时才执行移动
+
 ## Git 状态
 - **main分支**: 23 commits ahead of origin/main
 - **已推送分支**:

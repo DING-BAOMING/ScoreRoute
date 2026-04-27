@@ -187,7 +187,7 @@ func (h *TokenHandler) SetRateLimit(c *gin.Context) {
 	}
 
 	var req struct {
-		RateLimits any    `json:"rate_limits"`
+		RateLimits any `json:"rate_limits"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})

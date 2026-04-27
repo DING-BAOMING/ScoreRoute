@@ -181,7 +181,7 @@ func (h *ExtraRatingHandler) UpdateReward(c *gin.Context) {
 
 	score := req.Score
 	hours := req.Hours
-	
+
 	if score == 0 && req.Reward > 0 {
 		score = req.Reward
 	}

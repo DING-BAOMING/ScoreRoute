@@ -1,6 +1,9 @@
 package router
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 
 	"ai-gateway/internal/handler"
@@ -215,6 +218,11 @@ func Setup() *gin.Engine {
 	}
 
 	r.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+		if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/v1/") || strings.HasPrefix(path, "/v2/") {
+			c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "API路由不存在"})
+			return
+		}
 		c.File("./web/dist/index.html")
 	})
 

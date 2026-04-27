@@ -146,13 +146,19 @@ func (h *ExtraRatingHandler) UpdatePenalty(c *gin.Context) {
 		ModelKey        string `json:"model_key" binding:"required"`
 		Score           int    `json:"score"`
 		DecayPerRequest int    `json:"decay_per_request"`
+		Penalty         int    `json:"penalty"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})
 		return
 	}
 
-	if err := h.service.ApplyPenalty(req.ModelKey, req.Score, req.DecayPerRequest); err != nil {
+	score := req.Score
+	if score == 0 && req.Penalty > 0 {
+		score = req.Penalty
+	}
+
+	if err := h.service.ApplyPenalty(req.ModelKey, score, req.DecayPerRequest); err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
 		return
 	}
@@ -165,13 +171,25 @@ func (h *ExtraRatingHandler) UpdateReward(c *gin.Context) {
 		ModelKey string `json:"model_key" binding:"required"`
 		Score    int    `json:"score"`
 		Hours    int    `json:"hours"`
+		Reward   int    `json:"reward"`
+		Reason   string `json:"reason"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})
 		return
 	}
 
-	if err := h.service.ApplyReward(req.ModelKey, req.Score, req.Hours); err != nil {
+	score := req.Score
+	hours := req.Hours
+	
+	if score == 0 && req.Reward > 0 {
+		score = req.Reward
+	}
+	if hours == 0 {
+		hours = 24
+	}
+
+	if err := h.service.ApplyReward(req.ModelKey, score, hours); err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
 		return
 	}

@@ -1,6 +1,9 @@
 package router
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 
 	"ai-gateway/internal/handler"
@@ -141,26 +144,6 @@ func Setup() *gin.Engine {
 			systemConfig.GET("/setup-status", systemConfigHandler.CheckSetupStatus)
 		}
 
-		extraRating := api.Group("/extra-rating")
-		{
-			extraRatingHandler := handler.NewExtraRatingHandler()
-			extraRating.GET("/config", extraRatingHandler.GetConfig)
-			extraRating.PUT("/config", extraRatingHandler.SetConfig)
-			extraRating.GET("/records", extraRatingHandler.GetRecords)
-			extraRating.GET("/model-scores", extraRatingHandler.GetAllModelExtraScores)
-			extraRating.DELETE("/records", extraRatingHandler.ClearRecords)
-			extraRating.DELETE("/records/:id", extraRatingHandler.DeleteRecord)
-		}
-
-		modelRating := api.Group("/model-rating")
-		{
-			modelRatingHandler := handler.NewModelRatingHandler()
-			modelRating.GET("/weights", modelRatingHandler.GetWeights)
-			modelRating.PUT("/weights", modelRatingHandler.UpdateWeights)
-			modelRating.GET("/cost-time", modelRatingHandler.GetCostTimeRatings)
-			modelRating.GET("/scores", modelRatingHandler.GetAllScores)
-		}
-
 		extraRatings := api.Group("/extra-ratings")
 		{
 			extraRatingHandler := handler.NewExtraRatingHandler()
@@ -175,21 +158,13 @@ func Setup() *gin.Engine {
 			extraRatings.GET("/model-scores", extraRatingHandler.GetAllModelExtraScores)
 		}
 
-		modelRatings := api.Group("/model-ratings")
+		modelRating := api.Group("/model-rating")
 		{
 			modelRatingHandler := handler.NewModelRatingHandler()
-			modelRatings.GET("", modelRatingHandler.GetAllScores)
-			modelRatings.GET("/weights", modelRatingHandler.GetWeights)
-			modelRatings.PUT("/weights", modelRatingHandler.UpdateWeights)
-			modelRatings.GET("/cost-time", modelRatingHandler.GetCostTimeRatings)
-			modelRatings.GET("/scores", modelRatingHandler.GetAllScores)
-		}
-
-		sampleAnalysisConfig := api.Group("/sample-analysis-config")
-		{
-			sampleAnalysisHandler := handler.NewSampleAnalysisHandler()
-			sampleAnalysisConfig.GET("", sampleAnalysisHandler.GetConfig)
-			sampleAnalysisConfig.PUT("", sampleAnalysisHandler.SaveConfig)
+			modelRating.GET("/weights", modelRatingHandler.GetWeights)
+			modelRating.PUT("/weights", modelRatingHandler.UpdateWeights)
+			modelRating.GET("/cost-time", modelRatingHandler.GetCostTimeRatings)
+			modelRating.GET("/scores", modelRatingHandler.GetAllScores)
 		}
 
 		invocations := api.Group("/invocations")
@@ -215,6 +190,11 @@ func Setup() *gin.Engine {
 	}
 
 	r.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+		if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/v1/") || strings.HasPrefix(path, "/v2/") {
+			c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "API路由不存在"})
+			return
+		}
 		c.File("./web/dist/index.html")
 	})
 

@@ -548,6 +548,30 @@ func SeedDemoData() error {
 		}
 	}
 
+	// Insert demo tokens
+	demoTokens := []struct {
+		name       string
+		key        string
+		format     string
+		modelName  string
+		rateLimits string
+	}{
+		{"Demo-Minimax-2.7", "sk-demo-minimax-27-fixed-20241201", "openai", "minimaxai/minimax-m2.7", "[]"},
+		{"Demo-Auto-Unlimited", "sk-demo-auto-unlimited-20241201", "openai", "auto", "[]"},
+		{"Demo-Auto-500K-Hourly", "sk-demo-auto-500k-hourly-20241201", "openai", "auto", "[{\"type\":\"tokens\",\"window\":\"hour\",\"max_count\":500000}]"},
+	}
+
+	for _, t := range demoTokens {
+		_, err := DB.Exec(`
+			INSERT INTO tokens (name, key, format, type, model_name, enabled, rate_limits, total_token_limit)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			t.name, t.key, t.format, "chat", t.modelName, 1, t.rateLimits, 0,
+		)
+		if err != nil {
+			log.Printf("Warning: failed to insert demo token %s: %v", t.name, err)
+		}
+	}
+
 	log.Println("Demo seed data inserted successfully")
 	return nil
 }

@@ -97,6 +97,24 @@ curl -s -X POST "https://***REDACTED***/api/auth/login" -H "Content-Type: applic
 - 测试: 5/5 成功请求
 - 状态: ✅ 正常工作
 
+## 2026-04-27 修复 (Iteration 41)
+
+### 1. Rate Limit API 格式修复 (Issue #173)
+- **问题**: API只接受字符串格式，不接受对象数组格式
+- **修复**: SetRateLimit现在接受两种格式
+  - 字符串: `{"rate_limits":"[{"type":"calls",...}]"}`
+  - 对象数组: `{"rate_limits":[{"type":"calls",...}]}`
+
+### 2. Reward/Penalty API 格式修复 (Issue #172)
+- **问题**: API只接受score/hours，不接受reward/reason
+- **修复**: UpdateReward/UpdatePenalty现在接受两种格式
+  - 旧格式: `{"model_key":"...","reward":10,"reason":"good"}`
+  - 新格式: `{"model_key":"...","score":10,"hours":24}`
+
+### 3. CORS环境变量修复 (Issue #170)
+- **问题**: docker-compose.yml没有传递CORS_ALLOWED_ORIGINS到容器
+- **修复**: 在environment中添加 `CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}`
+
 ## 2026-04-26 修复 (Iteration 38-39)
 
 ### 1. Rate Limit Headers 完整修复

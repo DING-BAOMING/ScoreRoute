@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -23,7 +24,7 @@ func NewTokenHandler() *TokenHandler {
 func (h *TokenHandler) Create(c *gin.Context) {
 	var req model.TokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})
+		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误：需要name(名称)、format(格式如openai)、type(类型如chat)，请参考API文档"})
 		return
 	}
 
@@ -186,11 +187,20 @@ func (h *TokenHandler) SetRateLimit(c *gin.Context) {
 	}
 
 	var req struct {
-		RateLimits string `json:"rate_limits"`
+		RateLimits any    `json:"rate_limits"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})
 		return
+	}
+
+	rateLimitsStr := ""
+	switch v := req.RateLimits.(type) {
+	case string:
+		rateLimitsStr = v
+	case []interface{}, map[string]interface{}:
+		data, _ := json.Marshal(v)
+		rateLimitsStr = string(data)
 	}
 
 	fullReq := model.TokenRequest{
@@ -199,7 +209,7 @@ func (h *TokenHandler) SetRateLimit(c *gin.Context) {
 		Type:       existing.Type,
 		ModelName:  existing.ModelName,
 		Enabled:    existing.Enabled,
-		RateLimits: req.RateLimits,
+		RateLimits: rateLimitsStr,
 	}
 
 	token, err := h.service.Update(id, &fullReq)

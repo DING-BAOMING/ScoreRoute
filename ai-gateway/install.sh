@@ -32,7 +32,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 show_banner() {
-    echo -e "${GREEN}ScoreRoute一键安装v2.0.3${NC}"
+    echo -e "${GREEN}ScoreRoute一键安装v2.0.4${NC}"
 }
 
 log_info() { echo -e "${BLUE}[INFO]${NC} $*"; }
@@ -93,7 +93,8 @@ setup_directory() {
 generate_config() {
     log_info "生成配置..."
     ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)}"
-    JWT_SECRET="$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 32)"
+    # Generate secure JWT secret using crypto/rand
+JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
     cat > .env << EOF
 PORT=${PORT}
 DATABASE_PATH=./data/gateway.db
@@ -116,18 +117,21 @@ update_docker_compose() {
 }
 
 build_and_start() {
-    log_info "构建镜像..."
+    log_info "构建镜像(首次可能需要2-5分钟)..."
     "$DC" down 2>/dev/null || true
     "$DC" up -d --build
     log_info "等待服务启动..."
-    for _ in $(seq 1 60); do
+    for i in $(seq 1 120); do
         if curl -s "http://localhost:${PORT}/health" >/dev/null 2>&1; then
             log_ok "服务启动成功"
             return 0
         fi
+        if [ $i -eq 30 ] || [ $i -eq 60 ] || [ $i -eq 90 ]; then
+            log_info "仍在构建中，请耐心等待..."
+        fi
         sleep 1
     done
-    log_error "服务启动超时"
+    log_error "服务启动超时(>120秒)，请检查Docker日志: docker logs ai-gateway-app-1"
 }
 
 show_complete() {

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -186,11 +187,20 @@ func (h *TokenHandler) SetRateLimit(c *gin.Context) {
 	}
 
 	var req struct {
-		RateLimits string `json:"rate_limits"`
+		RateLimits any    `json:"rate_limits"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})
 		return
+	}
+
+	rateLimitsStr := ""
+	switch v := req.RateLimits.(type) {
+	case string:
+		rateLimitsStr = v
+	case []interface{}, map[string]interface{}:
+		data, _ := json.Marshal(v)
+		rateLimitsStr = string(data)
 	}
 
 	fullReq := model.TokenRequest{
@@ -199,7 +209,7 @@ func (h *TokenHandler) SetRateLimit(c *gin.Context) {
 		Type:       existing.Type,
 		ModelName:  existing.ModelName,
 		Enabled:    existing.Enabled,
-		RateLimits: req.RateLimits,
+		RateLimits: rateLimitsStr,
 	}
 
 	token, err := h.service.Update(id, &fullReq)

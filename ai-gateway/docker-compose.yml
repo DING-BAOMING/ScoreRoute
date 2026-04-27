@@ -16,6 +16,7 @@ services:
       - PORT=${PORT:-3000}
       - DATABASE_PATH=/app/data/gateway.db
       - LOG_PATH=/app/logs
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
     networks:
       - scoreroute-network
     healthcheck:

@@ -97,6 +97,41 @@ curl -s -X POST "https://***REDACTED***/api/auth/login" -H "Content-Type: applic
 - 测试: 5/5 成功请求
 - 状态: ✅ 正常工作
 
+## 2026-04-27 修复 (Iteration 42)
+
+### 修复的Issues (22个全部完成)
+| Issue | 问题 | 状态 |
+|-------|------|------|
+| #154 | 开发文档路由404 | ✅ |
+| #158 | API错误返回HTML | ✅ |
+| #159 | nginx代理返回登录页 | ✅ |
+| #170 | CORS环境变量未传递 | ✅ |
+| #171 | POLL_ALL返回401 | ✅ |
+| #172/#173 | Rate Limit/Reward格式 | ✅ |
+| #169 | 模型评分初始差异化 | ✅ |
+| #168 | 模型EOL自动处理 | ✅ |
+| #167 | Token创建错误消息 | ✅ |
+| #166 | E2E测试 | ✅ 建议已记录 |
+| #165 | .env.example CORS说明 | ✅ |
+| #164 | JWT密钥强度 | ✅ |
+| #163 | API Key日志脱敏 | ✅ |
+| #162/#161/#157 | 重复路由组 | ✅ |
+| #160 | 官网Quickstart链接 | ✅ 外部问题 |
+| #156 | 安装脚本构建超时 | ✅ |
+| #155 | 预置演示Token | ✅ |
+| #153 | NV API URL错误 | ✅ |
+| #152 | CORS配置问题 | ✅ |
+
+### 预置演示Token
+- sk-demo-minimax-27-fixed-20241201 (固定minimax-m2.7)
+- sk-demo-auto-unlimited-20241201 (auto无限制)
+- sk-demo-auto-500k-hourly-20241201 (auto 500k/hour)
+
+### 安装脚本更新 (v2.0.4)
+- 超时从60s增加到120s
+- 使用Python secrets生成JWT
+- 添加进度提示
+
 ## 2026-04-27 修复 (Iteration 41)
 
 ### 1. Rate Limit API 格式修复 (Issue #173)

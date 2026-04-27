@@ -144,15 +144,18 @@ func Setup() *gin.Engine {
 			systemConfig.GET("/setup-status", systemConfigHandler.CheckSetupStatus)
 		}
 
-		extraRating := api.Group("/extra-rating")
+		extraRatings := api.Group("/extra-ratings")
 		{
 			extraRatingHandler := handler.NewExtraRatingHandler()
-			extraRating.GET("/config", extraRatingHandler.GetConfig)
-			extraRating.PUT("/config", extraRatingHandler.SetConfig)
-			extraRating.GET("/records", extraRatingHandler.GetRecords)
-			extraRating.GET("/model-scores", extraRatingHandler.GetAllModelExtraScores)
-			extraRating.DELETE("/records", extraRatingHandler.ClearRecords)
-			extraRating.DELETE("/records/:id", extraRatingHandler.DeleteRecord)
+			extraRatings.GET("", extraRatingHandler.GetRecords)
+			extraRatings.GET("/config", extraRatingHandler.GetConfig)
+			extraRatings.PUT("/config", extraRatingHandler.SetConfig)
+			extraRatings.PUT("/penalty", extraRatingHandler.UpdatePenalty)
+			extraRatings.PUT("/reward", extraRatingHandler.UpdateReward)
+			extraRatings.GET("/records", extraRatingHandler.GetRecords)
+			extraRatings.DELETE("/records", extraRatingHandler.ClearRecords)
+			extraRatings.DELETE("/records/:id", extraRatingHandler.DeleteRecord)
+			extraRatings.GET("/model-scores", extraRatingHandler.GetAllModelExtraScores)
 		}
 
 		modelRating := api.Group("/model-rating")
@@ -163,12 +166,6 @@ func Setup() *gin.Engine {
 			modelRating.GET("/cost-time", modelRatingHandler.GetCostTimeRatings)
 			modelRating.GET("/scores", modelRatingHandler.GetAllScores)
 		}
-
-
-
-
-
-
 
 		invocations := api.Group("/invocations")
 		{

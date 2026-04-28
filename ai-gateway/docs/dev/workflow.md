@@ -1328,3 +1328,29 @@ router.beforeEach(async (to, from, next) => {
 - 换浏览器访问: ✅ 不再要求密码
 - API正常: ✅
 
+
+---
+
+## 2026-04-28 修复 - Iteration 48
+
+### Issue #225: Channel Rate Limit API格式错误 ✅
+- **问题**: API只接受字符串格式的rate_limits
+- **修复**: 接受字符串或数组格式，内部统一转换为字符串
+- **文件**: `internal/handler/channel.go`
+
+### Issue #224: Model批量创建API格式 ✅
+- **问题**: API格式要求不明确
+- **验证**: `{"channel_id":2,"model_names":["xxx","yyy"],"type":"chat"}` 工作正常
+
+### Demo Token状态
+| Token | Key | 状态 |
+|-------|-----|------|
+| Demo-Minimax-2.7 | sk-demo-minimax-27-fixed-20260428 | ✅ |
+| Demo-Auto-Unlimited | sk-demo-auto-unlimited-20260428 | ✅ |
+| Demo-Auto-1M-Hourly | sk-demo-auto-1m-hourly-20260428 | ✅ |
+
+### 系统状态
+- Health: ✅ healthy
+- GIN_MODE: ✅ release
+- Docker Build: ✅ 成功
+

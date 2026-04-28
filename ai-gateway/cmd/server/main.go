@@ -9,7 +9,13 @@ import (
 	"ai-gateway/internal/repository"
 	"ai-gateway/internal/router"
 	"ai-gateway/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
+
+func init() {
+	gin.SetMode(gin.ReleaseMode)
+}
 
 func main() {
 	cfg, err := config.Load()

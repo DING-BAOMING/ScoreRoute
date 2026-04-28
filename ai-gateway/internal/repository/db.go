@@ -503,11 +503,11 @@ func SeedDemoData() error {
 	_, err := DB.Exec(`
 		INSERT INTO channels (name, format, base_url, api_key, enabled, rate_limits, total_token_limit)
 		VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		"Demo-MiniMax",
+		"Demo-Placeholder (Please Configure)",
 		"openai",
 		"https://api.minimax.chat/v1",
-		"YOUR_MINIMAX_API_KEY",
-		1,
+		"PLEASE_CONFIGURE_API_KEY",
+		0,
 		"[]",
 		0,
 	)
@@ -516,7 +516,7 @@ func SeedDemoData() error {
 	}
 
 	var channelID int64
-	row = DB.QueryRow("SELECT id FROM channels WHERE name = 'Demo-MiniMax'")
+	row = DB.QueryRow("SELECT id FROM channels WHERE name = 'Demo-Placeholder (Please Configure)'")
 	if err := row.Scan(&channelID); err != nil {
 		return fmt.Errorf("failed to get demo channel ID: %w", err)
 	}
@@ -565,7 +565,7 @@ func SeedDemoData() error {
 		_, err := DB.Exec(`
 			INSERT INTO tokens (name, key, format, type, model_name, enabled, rate_limits, total_token_limit)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			t.name, t.key, t.format, "chat", t.modelName, 1, t.rateLimits, 0,
+			t.name, t.key, t.format, "chat", t.modelName, 0, t.rateLimits, 0,
 		)
 		if err != nil {
 			log.Printf("Warning: failed to insert demo token %s: %v", t.name, err)

@@ -97,6 +97,21 @@ curl -s -X POST "https://***REDACTED***/api/auth/login" -H "Content-Type: applic
 - 测试: 5/5 成功请求
 - 状态: ✅ 正常工作
 
+## 2026-04-28 修复 (Iteration 43)
+
+### 新修复的问题
+| Issue | 问题 | 状态 |
+|-------|------|------|
+| #179 | install.sh版本号不一致 | ✅ 已修复 |
+| #180 | JWT生成添加python3/openssl fallback | ✅ 已修复 |
+| #183 | Reward API 500错误 | ✅ 已验证正常 |
+| #177 | User Rating API响应 | ✅ 已验证正常 |
+| #176 | 模型统计 | ✅ 已验证正常 |
+
+### 修复内容
+1. **install.sh**: 版本号统一为v2.0.4
+2. **JWT生成**: 添加python3优先，openssl作为fallback
+
 ## 2026-04-27 修复 (Iteration 42)
 
 ### 修复的Issues (22个全部完成)

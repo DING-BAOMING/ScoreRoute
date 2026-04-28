@@ -131,7 +131,7 @@ build_and_start() {
             log_ok "服务启动成功"
             return 0
         fi
-        if [ $i -eq 30 ] || [ $i -eq 60 ] || [ $i -eq 90 ]; then
+        if [ "$i" -eq 30 ] || [ "$i" -eq 60 ] || [ "$i" -eq 90 ]; then
             log_info "仍在构建中，请耐心等待..."
         fi
         sleep 1

@@ -97,6 +97,19 @@ curl -s -X POST "https://***REDACTED***/api/auth/login" -H "Content-Type: applic
 - 测试: 5/5 成功请求
 - 状态: ✅ 正常工作
 
+## 2026-04-28 修复 (Iteration 44)
+
+### 新修复的问题
+| Issue | 问题 | 状态 |
+|-------|------|------|
+| #157 | 重复路由定义 | ✅ 已修复 |
+| #161 | 重复路由组 modelRating | ✅ 已修复 |
+| #162 | 重复路由组 sampleAnalysis | ✅ 已修复 |
+
+### 修复内容
+1. **router.go**: 合并重复路由组
+2. **install.sh**: JWT生成添加python3/openssl fallback
+
 ## 2026-04-28 修复 (Iteration 43)
 
 ### 新修复的问题

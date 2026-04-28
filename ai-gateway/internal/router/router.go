@@ -135,13 +135,6 @@ func Setup() *gin.Engine {
 			sampleAnalysis.PUT("/ratings", sampleAnalysisHandler.UpdateRating)
 		}
 
-		sampleAnalysisConfig := api.Group("/sample-analysis-config")
-		{
-			sampleAnalysisHandler := handler.NewSampleAnalysisHandler()
-			sampleAnalysisConfig.GET("", sampleAnalysisHandler.GetConfig)
-			sampleAnalysisConfig.PUT("", sampleAnalysisHandler.SaveConfig)
-		}
-
 		systemConfig := api.Group("/system-config")
 		{
 			systemConfigHandler := handler.NewSystemConfigHandler()
@@ -172,16 +165,6 @@ func Setup() *gin.Engine {
 			modelRating.PUT("/weights", modelRatingHandler.UpdateWeights)
 			modelRating.GET("/cost-time", modelRatingHandler.GetCostTimeRatings)
 			modelRating.GET("/scores", modelRatingHandler.GetAllScores)
-		}
-
-		modelRatings := api.Group("/model-ratings")
-		{
-			modelRatingHandler := handler.NewModelRatingHandler()
-			modelRatings.GET("", modelRatingHandler.GetAllScores)
-			modelRatings.GET("/scores", modelRatingHandler.GetAllScores)
-			modelRatings.GET("/weights", modelRatingHandler.GetWeights)
-			modelRatings.PUT("/weights", modelRatingHandler.UpdateWeights)
-			modelRatings.GET("/cost-time", modelRatingHandler.GetCostTimeRatings)
 		}
 
 		invocations := api.Group("/invocations")

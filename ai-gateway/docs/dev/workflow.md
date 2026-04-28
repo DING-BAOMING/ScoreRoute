@@ -1227,3 +1227,48 @@ https://***REDACTED*** 正常访问
 **系统运行正常，核心功能验证通过。**
 **主要问题是上游API(minimax)慢，非代码问题。**
 
+
+---
+
+## 2026-04-28 第十七次验证 - Iteration 46
+
+### 日期: 2026-04-28
+### 系统状态: ✅ Healthy
+
+### 本次修复项目
+
+#### Issue #161, #162, #157: 重复路由清理 ✅
+- 移除了 `/api/model-ratings` 重复路由组
+- 移除了 `/api/sample-analysis-config` 重复路由组
+- 保留了 `/api/model-rating` 和 `/api/sample-analysis`
+
+#### Issue #170: CORS配置修复 ✅
+- 添加了 `CORS_ALLOWED_ORIGINS=https://api.029101.xyz,https://029101.xyz` 到 .env
+- 验证 `Access-Control-Allow-Origin` header正确返回
+
+### 修复的文件
+1. `internal/router/router.go` - 移除重复路由
+2. `.env` - 添加CORS配置
+3. `internal/repository/db.go` - 更新预置Token密钥
+
+### 预置Demo Token
+| Token | Key | 模型 | 限制 | 状态 |
+|-------|-----|------|------|------|
+| Demo-Minimax-2.7 | sk-demo-minimax-27-fixed-20260428 | minimaxai/minimax-m2.7 | 无 | ⚠️ NVIDIA API慢 |
+| Demo-Auto-Unlimited | sk-demo-auto-unlimited-20260428 | auto | 无 | ✅ ~1s |
+| Demo-Auto-1M-Hourly | sk-demo-auto-1m-hourly-20260428 | auto | 1M tokens/hour | ✅ ~1s |
+
+### 系统验证
+| 项目 | 状态 |
+|------|------|
+| Health | ✅ healthy |
+| Rate Limit Headers | ✅ |
+| API 404 JSON | ✅ |
+| CORS | ✅ |
+| Streaming | ✅ |
+| POLL_ALL | ✅ |
+
+### Git状态
+- Branch: main
+- 需要提交并推送
+

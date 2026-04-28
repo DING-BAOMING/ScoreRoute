@@ -556,9 +556,9 @@ func SeedDemoData() error {
 		modelName  string
 		rateLimits string
 	}{
-		{"Demo-Minimax-2.7", "sk-demo-minimax-27-fixed-20241201", "openai", "minimaxai/minimax-m2.7", "[]"},
-		{"Demo-Auto-Unlimited", "sk-demo-auto-unlimited-20241201", "openai", "auto", "[]"},
-		{"Demo-Auto-500K-Hourly", "sk-demo-auto-500k-hourly-20241201", "openai", "auto", "[{\"type\":\"tokens\",\"window\":\"hour\",\"max_count\":500000}]"},
+		{"Demo-Minimax-2.7", "sk-demo-minimax-27-fixed-20260428", "openai", "minimaxai/minimax-m2.7", "[]"},
+		{"Demo-Auto-Unlimited", "sk-demo-auto-unlimited-20260428", "openai", "auto", "[]"},
+		{"Demo-Auto-1M-Hourly", "sk-demo-auto-1m-hourly-20260428", "openai", "auto", "[{\"type\":\"tokens\",\"window\":\"hour\",\"max_count\":1000000}]"},
 	}
 
 	for _, t := range demoTokens {

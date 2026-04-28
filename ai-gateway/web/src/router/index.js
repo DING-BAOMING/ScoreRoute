@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import axios from 'axios'
 
 const routes = [
   {
@@ -82,7 +82,32 @@ const router = createRouter({
   routes
 })
 
+let passwordlessTokenFetched = false
+
+async function fetchPasswordlessToken() {
+  if (passwordlessTokenFetched) return
+  if (localStorage.getItem('password_less_mode') === 'true' && !localStorage.getItem('token')) {
+    try {
+      const noAuthApi = axios.create({
+        baseURL: '/api',
+        timeout: 30000
+      })
+      const res = await noAuthApi.post('/auth/passwordless-login', { username: 'admin' })
+      if (res.data?.token) {
+        localStorage.setItem('token', res.data.token)
+        passwordlessTokenFetched = true
+      }
+    } catch (e) {
+      console.error('Failed to fetch passwordless token:', e)
+    }
+  }
+}
+
 router.beforeEach(async (to, from, next) => {
+  if (to.meta.requiresAuth !== false) {
+    await fetchPasswordlessToken()
+  }
+  
   const hasToken = !!localStorage.getItem('token')
   const passwordLessMode = localStorage.getItem('password_less_mode') === 'true'
   

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -227,11 +228,29 @@ func (h *ChannelHandler) SetRateLimit(c *gin.Context) {
 	}
 
 	var req struct {
-		RateLimits string `json:"rate_limits"`
+		RateLimits interface{} `json:"rate_limits"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})
 		return
+	}
+
+	var rateLimitsStr string
+	switch v := req.RateLimits.(type) {
+	case string:
+		rateLimitsStr = v
+	case []interface{}:
+		rateLimitsJSON, err := json.Marshal(v)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "无效的rate_limits格式"})
+			return
+		}
+		rateLimitsStr = string(rateLimitsJSON)
+	default:
+		if req.RateLimits != nil {
+			c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "无效的rate_limits格式"})
+			return
+		}
 	}
 
 	fullReq := model.ChannelRequest{
@@ -240,7 +259,7 @@ func (h *ChannelHandler) SetRateLimit(c *gin.Context) {
 		BaseURL:    existing.BaseURL,
 		APIKey:     existing.APIKey,
 		Enabled:    existing.Enabled,
-		RateLimits: req.RateLimits,
+		RateLimits: rateLimitsStr,
 	}
 
 	channel, err := h.service.Update(id, &fullReq)

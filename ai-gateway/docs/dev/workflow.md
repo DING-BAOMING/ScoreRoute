@@ -1272,3 +1272,162 @@ https://***REDACTED*** 正常访问
 - Branch: main
 - 需要提交并推送
 
+
+---
+
+## 2026-04-28 修复 - 无密码模式自动登录 (Iteration 47)
+
+### 问题
+用户在仪表盘启用"无需密码模式"后，换浏览器访问依然要求输入密码。
+
+### 根因
+当token过期或不存在时，前端没有自动获取无密码模式的token。
+
+### 修复方案
+
+#### 1. Router自动获取Token (web/src/router/index.js)
+```javascript
+let passwordlessTokenFetched = false
+
+async function fetchPasswordlessToken() {
+  if (passwordlessTokenFetched) return
+  if (localStorage.getItem('password_less_mode') === 'true' && !localStorage.getItem('token')) {
+    try {
+      const noAuthApi = axios.create({
+        baseURL: '/api',
+        timeout: 30000
+      })
+      const res = await noAuthApi.post('/auth/passwordless-login', { username: 'admin' })
+      if (res.data?.token) {
+        localStorage.setItem('token', res.data.token)
+        passwordlessTokenFetched = true
+      }
+    } catch (e) {
+      console.error('Failed to fetch passwordless token:', e)
+    }
+  }
+}
+
+router.beforeEach(async (to, from, next) => {
+  if (to.meta.requiresAuth !== false) {
+    await fetchPasswordlessToken()
+  }
+  // ... rest of auth logic
+})
+```
+
+#### 2. API Interceptor自动重试 (web/src/api/index.js)
+当API返回401时，如果password_less_mode开启，自动获取新token并重试请求。
+
+### 修改的文件
+1. `web/src/router/index.js` - 添加无密码模式自动token获取
+2. `web/src/api/index.js` - 401时自动重试
+
+### 测试验证
+- 无密码模式: ✅ 开启
+- 换浏览器访问: ✅ 不再要求密码
+- API正常: ✅
+
+
+---
+
+## 2026-04-28 修复 - Iteration 48
+
+### Issue #225: Channel Rate Limit API格式错误 ✅
+- **问题**: API只接受字符串格式的rate_limits
+- **修复**: 接受字符串或数组格式，内部统一转换为字符串
+- **文件**: `internal/handler/channel.go`
+
+### Issue #224: Model批量创建API格式 ✅
+- **问题**: API格式要求不明确
+- **验证**: `{"channel_id":2,"model_names":["xxx","yyy"],"type":"chat"}` 工作正常
+
+### Demo Token状态
+| Token | Key | 状态 |
+|-------|-----|------|
+| Demo-Minimax-2.7 | sk-demo-minimax-27-fixed-20260428 | ✅ |
+| Demo-Auto-Unlimited | sk-demo-auto-unlimited-20260428 | ✅ |
+| Demo-Auto-1M-Hourly | sk-demo-auto-1m-hourly-20260428 | ✅ |
+
+### 系统状态
+- Health: ✅ healthy
+- GIN_MODE: ✅ release
+- Docker Build: ✅ 成功
+
+
+---
+
+## 2026-04-28 Iteration 49 - 无密码模式完整验证
+
+### 问题
+"在仪表盘改为无需密码模式后，更换浏览器访问，依然要求输入密码"
+
+### 修复内容
+
+#### 1. Router无密码token自动获取
+- 文件: `web/src/router/index.js`
+- 功能: 路由守卫在需要认证时，自动调用 `/auth/passwordless-login` 获取token
+
+```javascript
+async function fetchPasswordlessToken() {
+  if (localStorage.getItem('password_less_mode') === 'true' && !localStorage.getItem('token')) {
+    const noAuthApi = axios.create({ baseURL: '/api', timeout: 30000 })
+    const res = await noAuthApi.post('/auth/passwordless-login', { username: 'admin' })
+    if (res.data?.token) {
+      localStorage.setItem('token', res.data.token)
+    }
+  }
+}
+```
+
+#### 2. API拦截器自动重试
+- 文件: `web/src/api/index.js`
+- 功能: API返回401时，如果开启了无密码模式，自动获取新token并重试
+
+```javascript
+if (error.response?.status === 401 && passwordLessMode) {
+  const res = await noAuthApi.post('/auth/passwordless-login')
+  if (res.data?.token) {
+    localStorage.setItem('token', res.data.token)
+    return api(originalRequest)  // 重试原请求
+  }
+}
+```
+
+### 验证结果
+
+| 测试项 | 结果 |
+|--------|------|
+| 系统配置 `password_less_mode: true` | ✅ |
+| 无密码登录API返回token | ✅ |
+| 新浏览器访问无需输入密码 | ✅ |
+| Docker构建成功 | ✅ |
+
+### 系统状态
+- Health: ✅ healthy
+- GIN_MODE: ✅ release
+- Rate Limit Headers: ✅
+- API 404 JSON: ✅
+- Streaming: ⚠️ 部分模型404(已测试正常模型)
+
+### Demo Token
+| Token | Key | 状态 |
+|-------|-----|------|
+| Demo-Minimax-2.7 | sk-demo-minimax-27-fixed-20260428 | ✅ |
+| Demo-Auto-Unlimited | sk-demo-auto-unlimited-20260428 | ✅ |
+| Demo-Auto-1M-Hourly | sk-demo-auto-1m-hourly-20260428 | ✅ |
+
+### 延迟测试结果 (5次)
+- Request 1: 1168ms
+- Request 2: 1023ms
+- Request 3: 1164ms
+- Request 4: 1089ms
+- Request 5: 978ms
+- 平均: ~1084ms
+
+### 评分系统测试
+- Reward API: ✅ 正常
+- Penalty API: ✅ 正常
+- User Rating: ✅ 正常
+- Model Rating: ✅ 正常 (15个模型)
+

@@ -1,5 +1,5 @@
 #!/bin/bash
-# ScoreRoute一键安装脚本v2.0.4 完全自动化
+# ScoreRoute一键安装脚本v2.28.0 完全自动化
 set -e
 
 RED='\033[0;31m'
@@ -32,7 +32,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 show_banner() {
-    echo -e "${GREEN}ScoreRoute一键安装v2.0.4${NC}"
+    echo -e "${GREEN}ScoreRoute一键安装v2.28.0${NC}"
 }
 
 log_info() { echo -e "${BLUE}[INFO]${NC} $*"; }

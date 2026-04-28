@@ -45,6 +45,7 @@ func createTables() error {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			channel_id INTEGER NOT NULL,
 			name TEXT NOT NULL,
+			model_name TEXT DEFAULT '',
 			type TEXT NOT NULL DEFAULT 'chat',
 			enabled INTEGER DEFAULT 1,
 			call_count INTEGER DEFAULT 0,
@@ -286,6 +287,19 @@ func migrateTables() error {
 		log.Println("Models table already has updated_at column, skipping")
 	}
 
+	var modelNameCount int
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('models') WHERE name='model_name'")
+	if err := row.Scan(&modelNameCount); err != nil {
+		return fmt.Errorf("failed to check model_name column in models: %w", err)
+	}
+	if modelNameCount == 0 {
+		log.Println("Adding model_name column to models table...")
+		DB.Exec(`ALTER TABLE models ADD COLUMN model_name TEXT DEFAULT ''`)
+		log.Println("Model model_name column added successfully")
+	} else {
+		log.Println("Models table already has model_name column, skipping")
+	}
+
 	var tableCount int
 	row = DB.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE name='model_rate_limit_usage'")
 	if err := row.Scan(&tableCount); err != nil {
@@ -503,11 +517,11 @@ func SeedDemoData() error {
 	_, err := DB.Exec(`
 		INSERT INTO channels (name, format, base_url, api_key, enabled, rate_limits, total_token_limit)
 		VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		"Demo-MiniMax",
+		"Demo-Placeholder (Please Configure)",
 		"openai",
 		"https://api.minimax.chat/v1",
-		"YOUR_MINIMAX_API_KEY",
-		1,
+		"PLEASE_CONFIGURE_API_KEY",
+		0,
 		"[]",
 		0,
 	)
@@ -516,7 +530,7 @@ func SeedDemoData() error {
 	}
 
 	var channelID int64
-	row = DB.QueryRow("SELECT id FROM channels WHERE name = 'Demo-MiniMax'")
+	row = DB.QueryRow("SELECT id FROM channels WHERE name = 'Demo-Placeholder (Please Configure)'")
 	if err := row.Scan(&channelID); err != nil {
 		return fmt.Errorf("failed to get demo channel ID: %w", err)
 	}
@@ -565,7 +579,7 @@ func SeedDemoData() error {
 		_, err := DB.Exec(`
 			INSERT INTO tokens (name, key, format, type, model_name, enabled, rate_limits, total_token_limit)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			t.name, t.key, t.format, "chat", t.modelName, 1, t.rateLimits, 0,
+			t.name, t.key, t.format, "chat", t.modelName, 0, t.rateLimits, 0,
 		)
 		if err != nil {
 			log.Printf("Warning: failed to insert demo token %s: %v", t.name, err)

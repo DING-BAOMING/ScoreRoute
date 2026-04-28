@@ -58,6 +58,7 @@ type Model struct {
 	ID                int64      `json:"id"`
 	ChannelID         int64      `json:"channel_id"`
 	Name              string     `json:"name"`
+	ModelName         string     `json:"model_name"`
 	Type              string     `json:"type"` // chat, embedding, etc.
 	Enabled           int        `json:"enabled"`
 	CallCount         int        `json:"call_count"`
@@ -131,6 +132,7 @@ type LoginResponse struct {
 type ModelRequest struct {
 	ChannelID       int64      `json:"channel_id" binding:"required"`
 	Name            string     `json:"name" binding:"required"`
+	ModelName       string     `json:"model_name"`
 	Type            string     `json:"type"` // chat, embedding, etc.
 	Enabled         int        `json:"enabled"`
 	RateLimits      string     `json:"rate_limits"`
@@ -143,6 +145,7 @@ type ModelRequest struct {
 type ModelUpdateRequest struct {
 	ChannelID       int64      `json:"channel_id"`
 	Name            string     `json:"name"`
+	ModelName       string     `json:"model_name"`
 	Type            string     `json:"type"`
 	Enabled         int        `json:"enabled"`
 	RateLimits      string     `json:"rate_limits"`

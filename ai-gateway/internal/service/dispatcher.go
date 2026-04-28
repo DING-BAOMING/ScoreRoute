@@ -434,10 +434,19 @@ func (d *Dispatcher) selectModelAndChannel(token *model.Token, req map[string]in
 			return nil, nil, fmt.Errorf("no available models for format=%s type=%s", token.Format, token.Type)
 		}
 	} else if modelName != "" {
-		modelItem, err = d.modelService.GetByName(modelName)
+		// First try exact match on model_name (upstream API name)
+		modelItem, err = d.modelService.GetByModelName(modelName)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get model: %w", err)
 		}
+		// If not found, try name (display name)
+		if modelItem == nil {
+			modelItem, err = d.modelService.GetByName(modelName)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to get model: %w", err)
+			}
+		}
+		// If still not found, try prefix match
 		if modelItem == nil {
 			prefixModels, err := d.modelService.GetByNamePrefix(normalizeModelNameForPrefix(modelName))
 			if err != nil {
@@ -589,7 +598,12 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 
 		url := strings.TrimSuffix(selectedChannel.BaseURL, "/") + "/chat/completions"
 
-		req["model"] = modelItem.Name
+		// Use ModelName if available, otherwise fall back to Name for backward compatibility
+		modelNameForAPI := modelItem.Name
+		if modelItem.ModelName != "" {
+			modelNameForAPI = modelItem.ModelName
+		}
+		req["model"] = modelNameForAPI
 		modifiedBody, err := json.Marshal(req)
 		if err != nil {
 			lastErr = fmt.Errorf("failed to marshal request: %w", err)
@@ -862,7 +876,12 @@ func (d *Dispatcher) dispatch(token *model.Token, requestBody []byte, forceStrea
 
 		url := strings.TrimSuffix(selectedChannel.BaseURL, "/") + "/chat/completions"
 
-		req["model"] = modelItem.Name
+		// Use ModelName if available, otherwise fall back to Name for backward compatibility
+		modelNameForAPI := modelItem.Name
+		if modelItem.ModelName != "" {
+			modelNameForAPI = modelItem.ModelName
+		}
+		req["model"] = modelNameForAPI
 		modifiedBody, err := json.Marshal(req)
 		if err != nil {
 			lastErr = fmt.Errorf("failed to marshal request: %w", err)

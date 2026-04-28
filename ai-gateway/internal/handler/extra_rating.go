@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -103,62 +103,69 @@ func (h *ExtraRatingHandler) GetAllModelExtraScores(c *gin.Context) {
 		return
 	}
 
-	penaltyMap := make(map[string]int)
+	response := &model.ExtraRatingResponse{
+		PenaltyRecords: make([]model.ExtraRatingRecord, 0),
+		RewardRecords:  make([]model.ExtraRatingRecord, 0),
+	}
+
 	for _, p := range penaltyRecords {
-		if p.CurrentScore < 0 {
-			penaltyMap[p.ModelKey] = penaltyMap[p.ModelKey] + p.CurrentScore
-		}
+		response.PenaltyRecords = append(response.PenaltyRecords, *p)
 	}
-
-	rewardMap := make(map[string]int)
-	now := time.Now()
 	for _, r := range rewardRecords {
-		if r.RewardScore > 0 && r.ExpiresAt != nil && r.CreatedAt.Unix() > 0 {
-			totalDuration := r.ExpiresAt.Sub(r.CreatedAt).Minutes()
-			elapsed := now.Sub(r.CreatedAt).Minutes()
-			if elapsed < totalDuration {
-				remainingRatio := 1 - elapsed/totalDuration
-				rewardValue := float64(r.RewardScore) * remainingRatio
-				rewardMap[r.ModelKey] = rewardMap[r.ModelKey] + int(rewardValue)
-			}
-		}
+		response.RewardRecords = append(response.RewardRecords, *r)
 	}
 
-	result := make(map[string]map[string]int)
-	for key, penalty := range penaltyMap {
-		if result[key] == nil {
-			result[key] = map[string]int{"penalty": 0, "reward": 0}
-		}
-		result[key]["penalty"] = penalty
-	}
-	for key, reward := range rewardMap {
-		if result[key] == nil {
-			result[key] = map[string]int{"penalty": 0, "reward": 0}
-		}
-		result[key]["reward"] = reward
+	c.JSON(http.StatusOK, model.APIResponse{Code: 0, Message: "success", Data: response})
+}
+
+type PenaltyRequest struct {
+	ModelKey        string `json:"model_key"`
+	Score           int    `json:"score"`
+	DecayPerRequest int    `json:"decay_per_request"`
+	Penalty         int    `json:"penalty"`
+	PenaltyScore    int    `json:"penalty_score"`
+}
+
+func (r *PenaltyRequest) ParseAndValidate() (string, int, int, error) {
+	modelKey := r.ModelKey
+	if modelKey == "" {
+		return "", 0, 0, &json.UnmarshalTypeError{}
 	}
 
-	c.JSON(http.StatusOK, model.APIResponse{Code: 0, Message: "success", Data: result})
+	score := r.Score
+	if score == 0 && r.Penalty > 0 {
+		score = r.Penalty
+	}
+	if score == 0 && r.PenaltyScore > 0 {
+		score = r.PenaltyScore
+	}
+
+	if score <= 0 {
+		return "", 0, 0, &json.UnmarshalTypeError{}
+	}
+
+	decay := r.DecayPerRequest
+	if decay <= 0 {
+		decay = 1
+	}
+
+	return modelKey, score, decay, nil
 }
 
 func (h *ExtraRatingHandler) UpdatePenalty(c *gin.Context) {
-	var req struct {
-		ModelKey        string `json:"model_key" binding:"required"`
-		Score           int    `json:"score"`
-		DecayPerRequest int    `json:"decay_per_request"`
-		Penalty         int    `json:"penalty"`
-	}
+	var req PenaltyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})
+		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误：需要 model_key 和 score/penalty/penalty_score"})
 		return
 	}
 
-	score := req.Score
-	if score == 0 && req.Penalty > 0 {
-		score = req.Penalty
+	modelKey, score, decay, err := req.ParseAndValidate()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "惩罚分数必须在1-100之间，请使用 score、penalty 或 penalty_score 字段"})
+		return
 	}
 
-	if err := h.service.ApplyPenalty(req.ModelKey, score, req.DecayPerRequest); err != nil {
+	if err := h.service.ApplyPenalty(modelKey, score, decay); err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
 		return
 	}
@@ -166,30 +173,55 @@ func (h *ExtraRatingHandler) UpdatePenalty(c *gin.Context) {
 	c.JSON(http.StatusOK, model.APIResponse{Code: 0, Message: "惩罚已应用"})
 }
 
-func (h *ExtraRatingHandler) UpdateReward(c *gin.Context) {
-	var req struct {
-		ModelKey string `json:"model_key" binding:"required"`
-		Score    int    `json:"score"`
-		Hours    int    `json:"hours"`
-		Reward   int    `json:"reward"`
-		Reason   string `json:"reason"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})
-		return
+type RewardRequest struct {
+	ModelKey    string `json:"model_key"`
+	Score       int    `json:"score"`
+	Hours       int    `json:"hours"`
+	Reward      int    `json:"reward"`
+	RewardScore int    `json:"reward_score"`
+	Reason      string `json:"reason"`
+}
+
+func (r *RewardRequest) ParseAndValidate() (string, int, int, error) {
+	modelKey := r.ModelKey
+	if modelKey == "" {
+		return "", 0, 0, &json.UnmarshalTypeError{}
 	}
 
-	score := req.Score
-	hours := req.Hours
-
-	if score == 0 && req.Reward > 0 {
-		score = req.Reward
+	score := r.Score
+	if score == 0 && r.Reward > 0 {
+		score = r.Reward
 	}
-	if hours == 0 {
+	if score == 0 && r.RewardScore > 0 {
+		score = r.RewardScore
+	}
+
+	hours := r.Hours
+	if hours <= 0 {
 		hours = 24
 	}
 
-	if err := h.service.ApplyReward(req.ModelKey, score, hours); err != nil {
+	if score <= 0 {
+		return "", 0, 0, &json.UnmarshalTypeError{}
+	}
+
+	return modelKey, score, hours, nil
+}
+
+func (h *ExtraRatingHandler) UpdateReward(c *gin.Context) {
+	var req RewardRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误：需要 model_key 和 score/reward/reward_score"})
+		return
+	}
+
+	modelKey, score, hours, err := req.ParseAndValidate()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "奖励分数必须在1-100之间，请使用 score、reward 或 reward_score 字段"})
+		return
+	}
+
+	if err := h.service.ApplyReward(modelKey, score, hours); err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
 		return
 	}

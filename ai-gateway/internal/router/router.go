@@ -148,7 +148,6 @@ func Setup() *gin.Engine {
 		{
 			extraRatingHandler := handler.NewExtraRatingHandler()
 			extraRatings.GET("", extraRatingHandler.GetRecords)
-			extraRatings.GET("/records", extraRatingHandler.GetRecords)
 			extraRatings.GET("/config", extraRatingHandler.GetConfig)
 			extraRatings.PUT("/config", extraRatingHandler.SetConfig)
 			extraRatings.PUT("/penalty", extraRatingHandler.UpdatePenalty)
@@ -167,10 +166,6 @@ func Setup() *gin.Engine {
 			modelRating.GET("/scores", modelRatingHandler.GetAllScores)
 		}
 
-		invocations := api.Group("/invocations")
-		{
-			invocations.GET("", handler.NewLogHandler().List)
-		}
 	}
 
 	v1 := r.Group("/v1")

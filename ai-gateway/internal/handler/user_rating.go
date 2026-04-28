@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -20,19 +21,47 @@ func NewUserRatingHandler() *UserRatingHandler {
 	}
 }
 
+type UserRatingUpsertRequest struct {
+	ModelName  string `json:"model_name"`
+	UserRating int    `json:"user_rating"`
+	Rating     int    `json:"rating"`
+}
+
+func (r *UserRatingUpsertRequest) ParseAndValidate() (*model.UserRatingRequest, error) {
+	userRating := r.UserRating
+	if userRating == 0 && r.Rating != 0 {
+		userRating = r.Rating
+	}
+
+	if userRating < 1 || userRating > 100 {
+		return nil, &json.UnmarshalTypeError{}
+	}
+
+	return &model.UserRatingRequest{
+		ModelName:  r.ModelName,
+		UserRating: userRating,
+	}, nil
+}
+
 func (h *UserRatingHandler) Upsert(c *gin.Context) {
-	var req model.UserRatingRequest
+	var req UserRatingUpsertRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "无效的请求: " + err.Error()})
+		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "无效的请求: 请使用 user_rating 字段(值范围1-100)"})
 		return
 	}
 
-	if req.UserRating < 1 || req.UserRating > 100 {
-		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "评分必须在1-100之间"})
+	validReq, err := req.ParseAndValidate()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "评分必须在1-100之间，请使用 user_rating 或 rating 字段"})
 		return
 	}
 
-	if err := h.service.UpsertRating(&req); err != nil {
+	if validReq.ModelName == "" {
+		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "model_name 为必填字段"})
+		return
+	}
+
+	if err := h.service.UpsertRating(validReq); err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
 		return
 	}

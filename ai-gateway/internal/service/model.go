@@ -128,6 +128,7 @@ func (s *ModelService) BatchCreate(channelID int64, modelNames []string, modelTy
 			modelReq := &model.ModelRequest{
 				ChannelID: channelID,
 				Name:      name,
+			ModelName: name,
 				Type:      modelType,
 				Enabled:   1,
 			}

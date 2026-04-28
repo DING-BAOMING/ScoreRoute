@@ -45,6 +45,7 @@ func createTables() error {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			channel_id INTEGER NOT NULL,
 			name TEXT NOT NULL,
+			model_name TEXT DEFAULT '',
 			type TEXT NOT NULL DEFAULT 'chat',
 			enabled INTEGER DEFAULT 1,
 			call_count INTEGER DEFAULT 0,
@@ -284,6 +285,19 @@ func migrateTables() error {
 		log.Println("Model updated_at column added successfully")
 	} else {
 		log.Println("Models table already has updated_at column, skipping")
+	}
+
+	var modelNameCount int
+	row = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('models') WHERE name='model_name'")
+	if err := row.Scan(&modelNameCount); err != nil {
+		return fmt.Errorf("failed to check model_name column in models: %w", err)
+	}
+	if modelNameCount == 0 {
+		log.Println("Adding model_name column to models table...")
+		DB.Exec(`ALTER TABLE models ADD COLUMN model_name TEXT DEFAULT ''`)
+		log.Println("Model model_name column added successfully")
+	} else {
+		log.Println("Models table already has model_name column, skipping")
 	}
 
 	var tableCount int

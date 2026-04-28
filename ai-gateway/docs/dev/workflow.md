@@ -1142,3 +1142,88 @@ https://***REDACTED*** 正常访问
 | /api/extra-ratings/reward | PUT | 应用奖励 |
 | /api/extra-ratings/config | PUT | 配置 |
 
+
+---
+
+## 2026-04-28 第十六次验证 - Iteration 45
+
+### 日期: 2026-04-28
+### 系统状态: ✅ Healthy
+
+### 本次验证项目
+
+| 项目 | 状态 |
+|------|------|
+| Health Check | ✅ healthy |
+| Rate Limit Headers | ✅ Working |
+| API 404 JSON | ✅ Working |
+| CORS Preflight | ✅ Working |
+| Streaming | ✅ Working |
+| POLL_ALL Mode | ✅ Working |
+| Docker Build | ✅ Success |
+
+### 问题调查
+
+| Issue | 描述 | 状态 |
+|-------|------|------|
+| #210 | POLL_ALL模式验证 | ✅ 已验证工作 |
+| #183 | Reward API 500错误 | ✅ API正常(需正确格式) |
+| #177 | User Rating API | ✅ API正常 |
+| #176 | Model Stats | ✅ 正常显示 |
+| #173 | Rate Limit格式 | ✅ 正常 |
+| #172 | Reward格式 | ✅ 正常 |
+| #170 | CORS配置 | ✅ 正常 |
+| #159 | 默认路由HTML | ✅ 预期行为 |
+| #158 | API错误JSON | ✅ 正常 |
+| #181 | GIN_MODE安全 | ✅ release模式 |
+| #203 | GIN_MODE优化 | ✅ release模式 |
+| #182 | Docker构建 | ✅ 成功 |
+| #179 | install.sh版本 | ✅ 已修复 |
+| #180 | JWT python3 | ✅ 已修复 |
+
+### 功能测试结果
+
+#### 延迟测试 (5次auto模式)
+- Request 1: 1221ms
+- Request 2: 3947ms
+- Request 3: 936ms
+- Request 4: 4082ms
+- Request 5: 1120ms
+
+#### POLL_ALL测试 (3次)
+- Request 1: mistralai/mistral-large-3-675b-instruct-2512 ✅
+- Request 2: mistralai/mistral-large-3-675b-instruct-2512 ✅
+- Request 3: mistralai/mistral-large-3-675b-instruct-2512 ✅
+
+#### Demo Token状态
+| Token | Key | 模型 | 状态 |
+|-------|-----|------|------|
+| Demo-Minimax-2.7 | (regenerated) | minimaxai/minimax-m2.7 | ⚠️ NVIDIA API慢 |
+| Demo-Auto-Unlimited | sk-78fd26d0-... | auto | ✅ 快速(llama) |
+
+### 发现的问题
+
+#### 1. minimax模型在NVIDIA API极慢
+- 问题: minimaxai/minimax-m2.7 在 NVIDIA API 上响应时间 >3分钟
+- 原因: 上游API问题，非代码问题
+- 影响: Demo-Minimax-2.7 token 使用困难
+
+#### 2. Demo Token密钥不匹配
+- 问题: 代码中的seed data密钥与报告不符
+- 实际密钥格式: sk-demo-minimax-27-fixed-20241201
+- 建议: 更新文档或重新生成统一格式
+
+#### 3. 重复API端点(非阻塞)
+- /model-rating 和 /model-ratings 都存在
+- /sample-analysis 和 /sample-analysis-config 都存在
+- 不影响功能，但造成混乱
+
+### Git状态
+- Branch: main
+- Status: Up to date with origin/main
+- No pending changes
+
+### 结论
+**系统运行正常，核心功能验证通过。**
+**主要问题是上游API(minimax)慢，非代码问题。**
+

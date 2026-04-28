@@ -1,5 +1,5 @@
 #!/bin/bash
-# ScoreRoute一键安装脚本v2.0.3 完全自动化
+# ScoreRoute一键安装脚本v2.0.4 完全自动化
 set -e
 
 RED='\033[0;31m'
@@ -93,9 +93,14 @@ setup_directory() {
 generate_config() {
     log_info "生成配置..."
     ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)}"
-    # Generate secure JWT secret using crypto/rand
-JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
-    cat > .env << EOF
+# Generate secure JWT secret with fallback
+if command -v python3 >/dev/null 2>&1; then
+    JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
+else
+    JWT_SECRET=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 32)
+fi
+
+cat > .env << EOF
 PORT=${PORT}
 DATABASE_PATH=./data/gateway.db
 LOG_PATH=./logs

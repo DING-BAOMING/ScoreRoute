@@ -15,11 +15,30 @@ api.interceptors.request.use(config => {
 
 api.interceptors.response.use(
   response => response.data,
-  error => {
+  async error => {
     if (error.response?.status === 401) {
       const passwordLessMode = localStorage.getItem('password_less_mode') === 'true'
       localStorage.removeItem('token')
-      if (passwordLessMode) { return Promise.reject(error); }
+      if (passwordLessMode) {
+        try {
+          const noAuthApi = axios.create({
+            baseURL: '/api',
+            timeout: 30000
+          })
+          const res = await noAuthApi.post('/auth/passwordless-login')
+          const newToken = res.data?.token
+          if (newToken) {
+            localStorage.setItem('token', newToken)
+            api.defaults.headers.Authorization = `Bearer ${newToken}`
+            const originalRequest = error.config
+            originalRequest.headers.Authorization = `Bearer ${newToken}`
+            return api(originalRequest)
+          }
+        } catch (e) {
+          console.error('Passwordless login failed:', e)
+        }
+        return Promise.reject(error)
+      }
       window.location.href = '/login'
     }
     return Promise.reject(error)

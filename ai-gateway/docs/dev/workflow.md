@@ -1272,3 +1272,59 @@ https://***REDACTED*** 正常访问
 - Branch: main
 - 需要提交并推送
 
+
+---
+
+## 2026-04-28 修复 - 无密码模式自动登录 (Iteration 47)
+
+### 问题
+用户在仪表盘启用"无需密码模式"后，换浏览器访问依然要求输入密码。
+
+### 根因
+当token过期或不存在时，前端没有自动获取无密码模式的token。
+
+### 修复方案
+
+#### 1. Router自动获取Token (web/src/router/index.js)
+```javascript
+let passwordlessTokenFetched = false
+
+async function fetchPasswordlessToken() {
+  if (passwordlessTokenFetched) return
+  if (localStorage.getItem('password_less_mode') === 'true' && !localStorage.getItem('token')) {
+    try {
+      const noAuthApi = axios.create({
+        baseURL: '/api',
+        timeout: 30000
+      })
+      const res = await noAuthApi.post('/auth/passwordless-login', { username: 'admin' })
+      if (res.data?.token) {
+        localStorage.setItem('token', res.data.token)
+        passwordlessTokenFetched = true
+      }
+    } catch (e) {
+      console.error('Failed to fetch passwordless token:', e)
+    }
+  }
+}
+
+router.beforeEach(async (to, from, next) => {
+  if (to.meta.requiresAuth !== false) {
+    await fetchPasswordlessToken()
+  }
+  // ... rest of auth logic
+})
+```
+
+#### 2. API Interceptor自动重试 (web/src/api/index.js)
+当API返回401时，如果password_less_mode开启，自动获取新token并重试请求。
+
+### 修改的文件
+1. `web/src/router/index.js` - 添加无密码模式自动token获取
+2. `web/src/api/index.js` - 401时自动重试
+
+### 测试验证
+- 无密码模式: ✅ 开启
+- 换浏览器访问: ✅ 不再要求密码
+- API正常: ✅
+

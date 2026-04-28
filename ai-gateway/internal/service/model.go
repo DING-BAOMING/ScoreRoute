@@ -91,6 +91,10 @@ func (s *ModelService) GetByName(name string) (*model.Model, error) {
 	return s.repo.GetByName(name)
 }
 
+func (s *ModelService) GetByModelName(modelName string) (*model.Model, error) {
+	return s.repo.GetByModelName(modelName)
+}
+
 func (s *ModelService) GetByNamePrefix(prefix string) ([]*model.Model, error) {
 	return s.repo.GetByNamePrefix(prefix)
 }

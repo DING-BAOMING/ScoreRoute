@@ -343,6 +343,29 @@ func (r *ModelRepo) GetByName(name string) (*model.Model, error) {
 	return model, nil
 }
 
+func (r *ModelRepo) GetByModelName(modelName string) (*model.Model, error) {
+	if modelName == "" {
+		return nil, nil
+	}
+	model := &model.Model{}
+	err := DB.QueryRow(
+		`SELECT m.id, m.channel_id, m.name, m.model_name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format
+		 FROM models m LEFT JOIN channels c ON m.channel_id = c.id
+		 WHERE m.model_name = ? AND m.enabled = 1 AND m.auto_disabled = 0 AND c.enabled = 1
+		 ORDER BY m.call_count ASC LIMIT 1`,
+		modelName,
+	).Scan(&model.ID, &model.ChannelID, &model.Name, &model.ModelName, &model.Type, &model.Enabled, &model.CallCount, &model.RateLimits, &model.TotalTokenLimit, &model.ExpiresAt, &model.TotalCalls, &model.TotalTokens, &model.CostPerToken, &model.Currency, &model.CreatedAt, &model.ChannelName, &model.Format)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	DB.Exec(`UPDATE models SET call_count = call_count + 1 WHERE id = ?`, model.ID)
+	DB.Exec(`UPDATE channels SET call_count = call_count + 1 WHERE id = ?`, model.ChannelID)
+	return model, nil
+}
+
 func (r *ModelRepo) GetByNamePrefix(prefix string) ([]*model.Model, error) {
 	rows, err := DB.Query(
 		`SELECT m.id, m.channel_id, m.name, m.model_name, m.type, m.enabled, m.call_count, m.rate_limits, m.total_token_limit, m.expires_at, m.total_calls, m.total_tokens, m.cost_per_token, m.currency, m.created_at, c.name as channel_name, c.format as channel_format

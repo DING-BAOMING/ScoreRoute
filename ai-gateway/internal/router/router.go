@@ -155,6 +155,7 @@ func Setup() *gin.Engine {
 		{
 			extraRatingHandler := handler.NewExtraRatingHandler()
 			extraRatings.GET("", extraRatingHandler.GetRecords)
+			extraRatings.GET("/records", extraRatingHandler.GetRecords)
 			extraRatings.GET("/config", extraRatingHandler.GetConfig)
 			extraRatings.PUT("/config", extraRatingHandler.SetConfig)
 			extraRatings.PUT("/penalty", extraRatingHandler.UpdatePenalty)

@@ -1608,3 +1608,53 @@ curl -X DELETE /api/logs/cleanup -d '{"days":30}'
 **Issues #255, #257 已验证正常（无需修复）**
 **Issues #256, #258 已修复并推送**
 **auto 模型 404 是 NVIDIA upstream 问题，非代码问题**
+
+---
+
+## 2026-04-29 Iteration 53 - Issue #262 Fix: Extra Ratings API model_name support
+
+### Issue Fixed
+
+| Issue | 描述 | 状态 |
+|-------|------|------|
+| #262 | Extra Ratings API使用model_key而非model_name，字段名称易混淆 | ✅ 已修复 |
+
+### 修复内容
+
+#### Issue #262: Extra Ratings API now supports model_name
+- **文件**: `internal/handler/extra_rating.go`
+- **支持格式**:
+  1. 使用 `model_key`: `{"model_key": "baoming_openai_chat_minimaxai-minimax-m2.7", "score": 10}`
+  2. 使用 `model_name`: `{"model_name": "minimaxai/minimax-m2.7", "score": 10}`
+  3. 使用部分model_name: `{"model_name": "minimax-m2.7", "score": 10}`
+- **新字段**: RewardRequest 和 PenaltyRequest 添加了 model_name 字段
+- **自动查找**: ParseAndValidate 现在可以根据 model_name 前缀匹配查找 model_key
+
+### 测试验证
+
+```bash
+# 使用 model_key (原有方式)
+curl -X PUT /api/extra-ratings/reward -d '{"model_key":"baoming_openai_chat_minimaxai-minimax-m2.7","score":10}'
+
+# 使用完整 model_name (新方式)
+curl -X PUT /api/extra-ratings/reward -d '{"model_name":"minimaxai/minimax-m2.7","score":10}'
+
+# 使用部分 model_name (新方式)
+curl -X PUT /api/extra-ratings/reward -d '{"model_name":"minimax-m2.7","score":10}'
+```
+
+### Git Branch Pushed
+- `fix/issue-262-model-key-lookup` - Extra Ratings API 支持 model_name
+
+### 系统状态
+
+| 项目 | 状态 |
+|------|------|
+| Health | ✅ healthy |
+| Extra Ratings Reward (model_key) | ✅ Works |
+| Extra Ratings Reward (model_name) | ✅ Works |
+| Extra Ratings Penalty (model_name) | ✅ Works |
+
+### 结论
+**Issue #262 已修复并推送**
+**NVIDIA upstream minimax模型延迟高是上游问题，非代码问题**

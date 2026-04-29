@@ -108,8 +108,11 @@ func (d *Dispatcher) ListEnabledModels() ([]*model.Model, error) {
 
 func (d *Dispatcher) GetNextModelSmart(format, modelType string) (*model.Model, error) {
 	models, err := d.GetRankedModelsSmart(format, modelType, 1)
-	if err != nil || len(models) == 0 {
-		return d.modelService.GetNextModelGlobal(format, modelType)
+	if err != nil {
+		return nil, fmt.Errorf("smart dispatch failed: %w", err)
+	}
+	if len(models) == 0 {
+		return nil, fmt.Errorf("no models available for smart dispatch (format=%s, type=%s)", format, modelType)
 	}
 	return models[0], nil
 }

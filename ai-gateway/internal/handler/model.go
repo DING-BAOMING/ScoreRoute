@@ -182,11 +182,11 @@ func (h *ModelHandler) BatchCreate(c *gin.Context) {
 		ChannelID  int64    `json:"channel_id" binding:"required"`
 		ModelNames []string `json:"model_names"`
 		Models     []struct {
-			Name     string `json:"name"`
+			Name      string `json:"name"`
 			ModelName string `json:"model_name"`
-			Type     string `json:"type"`
+			Type      string `json:"type"`
 		} `json:"models"`
-		Type       string   `json:"type"`
+		Type string `json:"type"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "请求参数错误"})

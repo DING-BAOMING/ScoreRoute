@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"ai-gateway/internal/model"
@@ -130,6 +131,45 @@ func (s *ModelService) BatchCreate(channelID int64, modelNames []string, modelTy
 				Name:      name,
 				ModelName: name,
 				Type:      modelType,
+				Enabled:   1,
+			}
+			created, err := s.repo.Create(modelReq)
+			if err == nil && created != nil {
+				modelKey := NormalizeModelKey(channel.Name, created.Format, created.Type, created.Name)
+				createdKeys = append(createdKeys, modelKey)
+			}
+		}
+	}
+	return createdKeys, nil
+}
+
+func (s *ModelService) BatchCreateWithDetails(channelID int64, modelNames []string, modelType string) ([]string, error) {
+	createdKeys := []string{}
+	channel, err := s.channelRepo.GetByID(channelID)
+	if err != nil || channel == nil {
+		return createdKeys, nil
+	}
+
+	for _, name := range modelNames {
+		var actualModelName, actualType, actualName string
+		if strings.Contains(name, "||") {
+			parts := strings.Split(name, "||")
+			actualModelName = parts[0]
+			actualType = parts[1]
+			actualName = parts[2]
+		} else {
+			actualModelName = name
+			actualType = modelType
+			actualName = name
+		}
+
+		existing, _ := s.repo.GetByChannelAndName(channelID, actualName)
+		if existing == nil {
+			modelReq := &model.ModelRequest{
+				ChannelID: channelID,
+				Name:      actualName,
+				ModelName: actualModelName,
+				Type:      actualType,
 				Enabled:   1,
 			}
 			created, err := s.repo.Create(modelReq)

@@ -181,7 +181,11 @@ func (h *ModelHandler) BatchCreate(c *gin.Context) {
 	var req struct {
 		ChannelID  int64    `json:"channel_id" binding:"required"`
 		ModelNames []string `json:"model_names"`
-		Models     []string `json:"models"`
+		Models     []struct {
+			Name     string `json:"name"`
+			ModelName string `json:"model_name"`
+			Type     string `json:"type"`
+		} `json:"models"`
 		Type       string   `json:"type"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -190,7 +194,20 @@ func (h *ModelHandler) BatchCreate(c *gin.Context) {
 	}
 
 	if len(req.ModelNames) == 0 && len(req.Models) > 0 {
-		req.ModelNames = req.Models
+		for _, m := range req.Models {
+			modelType := m.Type
+			if modelType == "" {
+				modelType = req.Type
+			}
+			if modelType == "" {
+				modelType = "chat"
+			}
+			modelName := m.ModelName
+			if modelName == "" {
+				modelName = m.Name
+			}
+			req.ModelNames = append(req.ModelNames, modelName+"||"+modelType+"||"+m.Name)
+		}
 	}
 
 	if len(req.ModelNames) == 0 {
@@ -203,7 +220,7 @@ func (h *ModelHandler) BatchCreate(c *gin.Context) {
 		modelType = "chat"
 	}
 
-	createdKeys, err := h.service.BatchCreate(req.ChannelID, req.ModelNames, modelType)
+	createdKeys, err := h.service.BatchCreateWithDetails(req.ChannelID, req.ModelNames, modelType)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Code: 500, Message: err.Error()})
 		return

@@ -79,9 +79,21 @@ func (h *LogHandler) Cleanup(c *gin.Context) {
 	var req struct {
 		Days int `json:"days"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil || req.Days <= 0 {
-		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "无效的天数"})
-		return
+
+	// Try to bind from query parameter first (for DELETE /cleanup?days=30)
+	daysStr := c.Query("days")
+	if daysStr != "" {
+		if days, err := strconv.Atoi(daysStr); err == nil && days > 0 {
+			req.Days = days
+		}
+	}
+
+	// If no days from query, try to bind from JSON body
+	if req.Days == 0 {
+		if err := c.ShouldBindJSON(&req); err != nil || req.Days <= 0 {
+			c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "无效的天数"})
+			return
+		}
 	}
 
 	if err := h.service.Cleanup(req.Days); err != nil {

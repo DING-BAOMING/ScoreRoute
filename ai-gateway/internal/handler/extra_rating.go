@@ -1,10 +1,10 @@
 package handler
 
 import (
-	"strings"
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -132,7 +132,7 @@ type PenaltyRequest struct {
 
 func (r *PenaltyRequest) ParseAndValidate(h *ExtraRatingHandler) (string, int, int, error) {
 	modelKey := r.ModelKey
-	
+
 	// If model_key is empty but model_name is provided, try to look up model_key
 	if modelKey == "" && r.ModelName != "" {
 		models, err := h.modelService.GetByNamePrefix(r.ModelName)
@@ -142,7 +142,7 @@ func (r *PenaltyRequest) ParseAndValidate(h *ExtraRatingHandler) (string, int, i
 			modelKey = normalizeModelKey(model.ChannelName, model.Format, model.Type, model.Name)
 		}
 	}
-	
+
 	if modelKey == "" {
 		return "", 0, 0, &json.UnmarshalTypeError{}
 	}
@@ -200,7 +200,7 @@ type RewardRequest struct {
 
 func (r *RewardRequest) ParseAndValidate(h *ExtraRatingHandler) (string, int, int, error) {
 	modelKey := r.ModelKey
-	
+
 	// If model_key is empty but model_name is provided, try to look up model_key
 	if modelKey == "" && r.ModelName != "" {
 		models, err := h.modelService.GetByNamePrefix(r.ModelName)
@@ -210,7 +210,7 @@ func (r *RewardRequest) ParseAndValidate(h *ExtraRatingHandler) (string, int, in
 			modelKey = normalizeModelKey(model.ChannelName, model.Format, model.Type, model.Name)
 		}
 	}
-	
+
 	if modelKey == "" {
 		return "", 0, 0, &json.UnmarshalTypeError{}
 	}

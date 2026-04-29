@@ -1744,3 +1744,51 @@ if tokenUsed > 0 {
 **#269 已修复** - Smart模式失败时返回错误而非静默降级到轮询
 **#268 已验证** - 轮询模式对固定模型已正确工作（SQL使用ORDER BY call_count ASC）
 **剩余Issues** - 设计/架构问题，不影响基本功能
+
+---
+
+## 2026-04-29 Iteration 56 - New Issues #278, #279, #280 Analysis
+
+### New Issues Analyzed
+
+| Issue | 描述 | 类型 | 结论 |
+|-------|------|------|------|
+| #278 | Precompiled binary missing web/dist | Bug | **部署问题** - Docker部署正常，预编译包需手动处理 |
+| #279 | curl Login API 400错误 | User Error | **非代码问题** - curl默认不发送Content-Type: application/json |
+| #280 | 官网指引需要非Docker部署步骤 | Docs | **文档问题** - 需要补充非Docker安装说明 |
+
+### Issue #279 Analysis (curl登录问题)
+
+**问题原因**: curl默认使用`Content-Type: application/x-www-form-urlencoded`
+Gin的`ShouldBindJSON`需要`Content-Type: application/json`
+
+**解决方案**: 用户应使用以下任一方式:
+```bash
+# 方式1: 添加Content-Type头
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"your_password"}'
+
+# 方式2: 使用--json (curl 7.82.0+)
+curl --json '{"username":"admin","password":"your_password"}'
+
+# 方式3: 使用-H简化
+curl -X POST http://localhost:3000/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"your_password"}'
+```
+
+**Python requests工作原因**: requests自动设置Content-Type: application/json
+
+### 系统状态
+
+| 项目 | 状态 |
+|------|------|
+| Health | ✅ healthy |
+| Login API | ✅ 正常工作 |
+| Docs | ✅ 可访问 |
+| V1 Models | ✅ 46个模型 |
+
+### 结论
+**Issue #279 不是代码问题** - 是用户curl使用方式问题
+**Issue #278/#280** - 文档/部署问题，非紧急bug

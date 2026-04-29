@@ -1706,3 +1706,41 @@ if tokenUsed > 0 {
 ### 结论
 **Issues #267, #275 已修复并推送**
 **streaming和non-streaming请求都会正确保存样本**
+
+---
+
+## 2026-04-29 Iteration 55 - Issues #268, #269, #270, #271, #272 Analysis
+
+### Issues Analysis
+
+| Issue | 类型 | 结论 |
+|-------|------|------|
+| #268 | Bug | **已验证非问题** - GetByModelName/GetByName 使用 ORDER BY call_count ASC，轮询已生效 |
+| #269 | Bug | ✅ **已修复** - GetNextModelSmart 不再静默降级到轮询 |
+| #270 | Bug | **设计如此** - 前缀匹配失败时返回第一个是合理fallback |
+| #271 | TechDebt | **技术债** - 代码重复95%是重构问题，不影响功能 |
+| #272 | Design | **架构问题** - 单实例部署无影响，分布式需Redis共享状态 |
+
+### Issues Fixed in This Iteration
+
+| Issue | 描述 | 状态 |
+|-------|------|------|
+| #269 | GetNextModelSmart静默降级 | ✅ 已修复并推送 |
+
+### Git Branch Pushed
+- `fix/issue-269-smart-dispatch` - Smart dispatch不再静默降级
+
+### 系统状态
+
+| 项目 | 状态 |
+|------|------|
+| Health | ✅ healthy |
+| Extra Ratings (model_name) | ✅ Works |
+| Penalty API (all fields) | ✅ Works |
+| Batch Create | ✅ Works |
+| Smart Dispatch | ✅ 不再静默降级 |
+
+### 结论
+**#269 已修复** - Smart模式失败时返回错误而非静默降级到轮询
+**#268 已验证** - 轮询模式对固定模型已正确工作（SQL使用ORDER BY call_count ASC）
+**剩余Issues** - 设计/架构问题，不影响基本功能

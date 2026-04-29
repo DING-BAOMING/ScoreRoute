@@ -1658,3 +1658,51 @@ curl -X PUT /api/extra-ratings/reward -d '{"model_name":"minimax-m2.7","score":1
 ### 结论
 **Issue #262 已修复并推送**
 **NVIDIA upstream minimax模型延迟高是上游问题，非代码问题**
+
+---
+
+## 2026-04-29 Iteration 54 - Issue #267/#275 Fix: Streaming requests save samples
+
+### Issues Fixed
+
+| Issue | 描述 | 状态 |
+|-------|------|------|
+| #267 | DispatchStreamDirect不保存样本 - 流式请求无法进行样本收集 | ✅ 已修复 |
+| #275 | 流式请求不保存样本 - DispatchStreamDirect缺少saveSampleAsyncContext调用 | ✅ 已修复 |
+
+### 修复内容
+
+#### Issues #267/#275: Streaming requests now save samples
+- **文件**: `internal/service/dispatcher.go`
+- **问题**: DispatchStreamDirect成功响应后没有调用saveSampleAsyncContext
+- **修复**: 在DispatchStreamDirect成功后添加异步样本保存逻辑
+
+### 代码变更
+
+```go
+// DispatchStreamDirect成功响应后添加:
+if tokenUsed > 0 {
+    go func() {
+        ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+        defer cancel()
+        if err := d.saveSampleAsyncContext(ctx, modelKey, string(requestBody), string(body), tokenUsed); err != nil {
+            log.Printf("[ERROR] saveSampleAsync failed: model=%s, err=%v", modelItem.Name, err)
+        }
+    }()
+}
+```
+
+### Git Branch Pushed
+- `fix/issue-267-streaming-samples` - 流式请求样本保存修复
+
+### 系统状态
+
+| 项目 | 状态 |
+|------|------|
+| Health | ✅ healthy |
+| Streaming requests | ✅ Now saves samples |
+| Non-streaming requests | ✅ Works (unchanged) |
+
+### 结论
+**Issues #267, #275 已修复并推送**
+**streaming和non-streaming请求都会正确保存样本**

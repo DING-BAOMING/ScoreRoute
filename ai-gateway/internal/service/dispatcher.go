@@ -673,6 +673,18 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 			}
 			log.Printf("[DispatchStreamDirect] succeeded on try %d: %s/%s score rank %d", i+1, selectedChannel.Name, modelItem.Name, i+1)
 
+			// Save sample asynchronously (similar to dispatch function)
+			tokenUsed := d.calculateTokenUsage(body, true, modelItem.Name)
+			if tokenUsed > 0 {
+				go func() {
+					ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+					defer cancel()
+					if err := d.saveSampleAsyncContext(ctx, modelKey, string(requestBody), string(body), tokenUsed); err != nil {
+						log.Printf("[ERROR] saveSampleAsync failed: model=%s, err=%v", modelItem.Name, err)
+					}
+				}()
+			}
+
 			reader := bytes.NewReader(body)
 			return &StreamResponse{
 				Resp: &http.Response{

@@ -1537,3 +1537,74 @@ if (error.response?.status === 401 && passwordLessMode) {
 
 ### 结论
 **系统运行正常，所有Issues已修复，无需新修改。**
+
+---
+
+## 2026-04-29 Iteration 52 - Issues #255, #256, #257, #258 Fixes
+
+### Issues Fixed
+
+| Issue | 描述 | 状态 |
+|-------|------|------|
+| #255 | Extra Ratings Reward API rejects valid score | ✅ 验证正常 - API works with score, reward, reward_score |
+| #256 | Model Batch Create API returns 400 with models array | ✅ 已修复 - 支持 models object array 格式 |
+| #257 | Extra Ratings Penalty API rejects valid score | ✅ 验证正常 - API works with score, penalty, penalty_score |
+| #258 | Logs Cleanup API文档与实际行为不一致 | ✅ 已修复 - 支持 JSON body 和 query 参数两种格式 |
+
+### 修复内容
+
+#### #256 Batch Create API 增强
+- **文件**: `internal/handler/model.go`, `internal/service/model.go`
+- **支持格式**:
+  1. `{"channel_id":2,"model_names":["name1","name2"]}` - 字符串数组
+  2. `{"channel_id":2,"models":[{"name":"...","model_name":"...","type":"..."}]}` - 对象数组
+- **新函数**: `BatchCreateWithDetails` 处理解析
+
+#### #258 Logs Cleanup API 增强
+- **文件**: `internal/handler/log.go`
+- **支持格式**:
+  1. DELETE `/api/logs/cleanup` with JSON body: `{"days": 30}`
+  2. DELETE `/api/logs/cleanup?days=30` (query parameter)
+
+### Pre-set Tokens 创建完成
+
+| Token名称 | Key | 模型 | 限制 | 状态 |
+|-----------|-----|------|------|------|
+| PreSet-Minimax-2.7-Fixed | sk-bce28103-... | minimaxai/minimax-m2.7 | 无 | ✅ Working |
+| PreSet-Auto-Unlimited-Fixed | sk-f7969bb8-... | auto | 无 | ⚠️ 404 (NVIDIA upstream) |
+| PreSet-Auto-1M-Hourly-Fixed | sk-951df96-... | auto | 1M tokens/hour | ⚠️ 404 (NVIDIA upstream) |
+
+### Git Branches Pushed
+
+1. `fix/issue-256-batch-create` - Batch Create API 支持对象数组格式
+2. `fix/issue-258-logs-cleanup` - Logs Cleanup API 支持 query 参数
+
+### 系统状态
+
+| 项目 | 状态 |
+|------|------|
+| Health | ✅ healthy |
+| Batch Create (string) | ✅ Works |
+| Batch Create (objects) | ✅ Works |
+| Extra Ratings Reward | ✅ Works |
+| Extra Ratings Penalty | ✅ Works |
+| Logs Cleanup (JSON) | ✅ Works |
+| Logs Cleanup (query) | ✅ Works |
+
+### 测试验证
+
+```bash
+# Batch Create with objects
+curl -X POST /api/models/batch -d '{"channel_id":2,"models":[{"name":"Test","model_name":"test/m","type":"chat"}]}'
+
+# Logs Cleanup with query
+curl -X DELETE "/api/logs/cleanup?days=7"
+
+# Logs Cleanup with JSON
+curl -X DELETE /api/logs/cleanup -d '{"days":30}'
+```
+
+### 结论
+**Issues #255, #257 已验证正常（无需修复）**
+**Issues #256, #258 已修复并推送**
+**auto 模型 404 是 NVIDIA upstream 问题，非代码问题**

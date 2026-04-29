@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"strings"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -12,12 +13,14 @@ import (
 )
 
 type ExtraRatingHandler struct {
-	service *service.ExtraRatingService
+	service      *service.ExtraRatingService
+	modelService *service.ModelService
 }
 
 func NewExtraRatingHandler() *ExtraRatingHandler {
 	return &ExtraRatingHandler{
-		service: service.NewExtraRatingService(),
+		service:      service.NewExtraRatingService(),
+		modelService: service.NewModelService(),
 	}
 }
 
@@ -120,14 +123,26 @@ func (h *ExtraRatingHandler) GetAllModelExtraScores(c *gin.Context) {
 
 type PenaltyRequest struct {
 	ModelKey        string `json:"model_key"`
+	ModelName       string `json:"model_name"`
 	Score           int    `json:"score"`
 	DecayPerRequest int    `json:"decay_per_request"`
 	Penalty         int    `json:"penalty"`
 	PenaltyScore    int    `json:"penalty_score"`
 }
 
-func (r *PenaltyRequest) ParseAndValidate() (string, int, int, error) {
+func (r *PenaltyRequest) ParseAndValidate(h *ExtraRatingHandler) (string, int, int, error) {
 	modelKey := r.ModelKey
+	
+	// If model_key is empty but model_name is provided, try to look up model_key
+	if modelKey == "" && r.ModelName != "" {
+		models, err := h.modelService.GetByNamePrefix(r.ModelName)
+		if err == nil && len(models) > 0 {
+			// Use the first matching model
+			model := models[0]
+			modelKey = normalizeModelKey(model.ChannelName, model.Format, model.Type, model.Name)
+		}
+	}
+	
 	if modelKey == "" {
 		return "", 0, 0, &json.UnmarshalTypeError{}
 	}
@@ -159,7 +174,7 @@ func (h *ExtraRatingHandler) UpdatePenalty(c *gin.Context) {
 		return
 	}
 
-	modelKey, score, decay, err := req.ParseAndValidate()
+	modelKey, score, decay, err := req.ParseAndValidate(h)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "惩罚分数必须在1-100之间，请使用 score、penalty 或 penalty_score 字段"})
 		return
@@ -175,6 +190,7 @@ func (h *ExtraRatingHandler) UpdatePenalty(c *gin.Context) {
 
 type RewardRequest struct {
 	ModelKey    string `json:"model_key"`
+	ModelName   string `json:"model_name"`
 	Score       int    `json:"score"`
 	Hours       int    `json:"hours"`
 	Reward      int    `json:"reward"`
@@ -182,8 +198,19 @@ type RewardRequest struct {
 	Reason      string `json:"reason"`
 }
 
-func (r *RewardRequest) ParseAndValidate() (string, int, int, error) {
+func (r *RewardRequest) ParseAndValidate(h *ExtraRatingHandler) (string, int, int, error) {
 	modelKey := r.ModelKey
+	
+	// If model_key is empty but model_name is provided, try to look up model_key
+	if modelKey == "" && r.ModelName != "" {
+		models, err := h.modelService.GetByNamePrefix(r.ModelName)
+		if err == nil && len(models) > 0 {
+			// Use the first matching model
+			model := models[0]
+			modelKey = normalizeModelKey(model.ChannelName, model.Format, model.Type, model.Name)
+		}
+	}
+	
 	if modelKey == "" {
 		return "", 0, 0, &json.UnmarshalTypeError{}
 	}
@@ -208,6 +235,13 @@ func (r *RewardRequest) ParseAndValidate() (string, int, int, error) {
 	return modelKey, score, hours, nil
 }
 
+func normalizeModelKey(channelName, format, modelType, modelName string) string {
+	name := strings.ToLower(channelName) + "_" + strings.ToLower(format) + "_" + strings.ToLower(modelType) + "_" + strings.ToLower(modelName)
+	name = strings.ReplaceAll(name, "/", "-")
+	name = strings.ReplaceAll(name, " ", "-")
+	return name
+}
+
 func (h *ExtraRatingHandler) UpdateReward(c *gin.Context) {
 	var req RewardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -215,7 +249,7 @@ func (h *ExtraRatingHandler) UpdateReward(c *gin.Context) {
 		return
 	}
 
-	modelKey, score, hours, err := req.ParseAndValidate()
+	modelKey, score, hours, err := req.ParseAndValidate(h)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, model.APIResponse{Code: 400, Message: "奖励分数必须在1-100之间，请使用 score、reward 或 reward_score 字段"})
 		return

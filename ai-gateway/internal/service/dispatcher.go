@@ -108,8 +108,11 @@ func (d *Dispatcher) ListEnabledModels() ([]*model.Model, error) {
 
 func (d *Dispatcher) GetNextModelSmart(format, modelType string) (*model.Model, error) {
 	models, err := d.GetRankedModelsSmart(format, modelType, 1)
-	if err != nil || len(models) == 0 {
-		return d.modelService.GetNextModelGlobal(format, modelType)
+	if err != nil {
+		return nil, fmt.Errorf("smart dispatch failed: %w", err)
+	}
+	if len(models) == 0 {
+		return nil, fmt.Errorf("no models available for smart dispatch (format=%s, type=%s)", format, modelType)
 	}
 	return models[0], nil
 }
@@ -672,6 +675,18 @@ func (d *Dispatcher) DispatchStreamDirect(token *model.Token, requestBody []byte
 				log.Printf("[DispatchStreamDirect] ApplyPenaltyAndReward failed: model=%s, err=%v", modelItem.Name, err)
 			}
 			log.Printf("[DispatchStreamDirect] succeeded on try %d: %s/%s score rank %d", i+1, selectedChannel.Name, modelItem.Name, i+1)
+
+			// Save sample asynchronously (similar to dispatch function)
+			tokenUsed := d.calculateTokenUsage(body, true, modelItem.Name)
+			if tokenUsed > 0 {
+				go func() {
+					ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+					defer cancel()
+					if err := d.saveSampleAsyncContext(ctx, modelKey, string(requestBody), string(body), tokenUsed); err != nil {
+						log.Printf("[ERROR] saveSampleAsync failed: model=%s, err=%v", modelItem.Name, err)
+					}
+				}()
+			}
 
 			reader := bytes.NewReader(body)
 			return &StreamResponse{

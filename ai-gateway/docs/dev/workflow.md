@@ -1658,3 +1658,89 @@ curl -X PUT /api/extra-ratings/reward -d '{"model_name":"minimax-m2.7","score":1
 ### 结论
 **Issue #262 已修复并推送**
 **NVIDIA upstream minimax模型延迟高是上游问题，非代码问题**
+
+---
+
+## 2026-04-29 Iteration 54 - Issue #267/#275 Fix: Streaming requests save samples
+
+### Issues Fixed
+
+| Issue | 描述 | 状态 |
+|-------|------|------|
+| #267 | DispatchStreamDirect不保存样本 - 流式请求无法进行样本收集 | ✅ 已修复 |
+| #275 | 流式请求不保存样本 - DispatchStreamDirect缺少saveSampleAsyncContext调用 | ✅ 已修复 |
+
+### 修复内容
+
+#### Issues #267/#275: Streaming requests now save samples
+- **文件**: `internal/service/dispatcher.go`
+- **问题**: DispatchStreamDirect成功响应后没有调用saveSampleAsyncContext
+- **修复**: 在DispatchStreamDirect成功后添加异步样本保存逻辑
+
+### 代码变更
+
+```go
+// DispatchStreamDirect成功响应后添加:
+if tokenUsed > 0 {
+    go func() {
+        ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+        defer cancel()
+        if err := d.saveSampleAsyncContext(ctx, modelKey, string(requestBody), string(body), tokenUsed); err != nil {
+            log.Printf("[ERROR] saveSampleAsync failed: model=%s, err=%v", modelItem.Name, err)
+        }
+    }()
+}
+```
+
+### Git Branch Pushed
+- `fix/issue-267-streaming-samples` - 流式请求样本保存修复
+
+### 系统状态
+
+| 项目 | 状态 |
+|------|------|
+| Health | ✅ healthy |
+| Streaming requests | ✅ Now saves samples |
+| Non-streaming requests | ✅ Works (unchanged) |
+
+### 结论
+**Issues #267, #275 已修复并推送**
+**streaming和non-streaming请求都会正确保存样本**
+
+---
+
+## 2026-04-29 Iteration 55 - Issues #268, #269, #270, #271, #272 Analysis
+
+### Issues Analysis
+
+| Issue | 类型 | 结论 |
+|-------|------|------|
+| #268 | Bug | **已验证非问题** - GetByModelName/GetByName 使用 ORDER BY call_count ASC，轮询已生效 |
+| #269 | Bug | ✅ **已修复** - GetNextModelSmart 不再静默降级到轮询 |
+| #270 | Bug | **设计如此** - 前缀匹配失败时返回第一个是合理fallback |
+| #271 | TechDebt | **技术债** - 代码重复95%是重构问题，不影响功能 |
+| #272 | Design | **架构问题** - 单实例部署无影响，分布式需Redis共享状态 |
+
+### Issues Fixed in This Iteration
+
+| Issue | 描述 | 状态 |
+|-------|------|------|
+| #269 | GetNextModelSmart静默降级 | ✅ 已修复并推送 |
+
+### Git Branch Pushed
+- `fix/issue-269-smart-dispatch` - Smart dispatch不再静默降级
+
+### 系统状态
+
+| 项目 | 状态 |
+|------|------|
+| Health | ✅ healthy |
+| Extra Ratings (model_name) | ✅ Works |
+| Penalty API (all fields) | ✅ Works |
+| Batch Create | ✅ Works |
+| Smart Dispatch | ✅ 不再静默降级 |
+
+### 结论
+**#269 已修复** - Smart模式失败时返回错误而非静默降级到轮询
+**#268 已验证** - 轮询模式对固定模型已正确工作（SQL使用ORDER BY call_count ASC）
+**剩余Issues** - 设计/架构问题，不影响基本功能

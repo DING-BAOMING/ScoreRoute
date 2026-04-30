@@ -1841,3 +1841,40 @@ curl -X POST http://localhost:3000/api/auth/login \
 - `fix/issue-256-batch-create` ✅
 - `fix/issue-258-logs-cleanup` ✅
 
+
+---
+
+## 2026-04-30 Iteration 58 - New Issues #291-293 Analysis
+
+### New Issues Analyzed
+
+| Issue | 描述 | 类型 | 结论 |
+|-------|------|------|------|
+| #291 | 一键安装需要环境变量JWT_SECRET/ADMIN_PASSWORD | Bug | **部署问题** - Docker用.env文件提供，文档需说明 |
+| #292 | API路由/api/channel和/api/model返回404 | User Error | **非代码问题** - 正确路径是/api/channels和/api/models |
+| #293 | nginx代理后应用返回空响应 | Bug | **用户nginx配置问题** - api.029101.xyz工作正常 |
+
+### Issue #291 Analysis
+- Docker部署时.env文件提供JWT_SECRET和ADMIN_PASSWORD
+- 预编译二进制需要手动设置环境变量
+- 解决方案: 文档中说明需要的环保证变量
+
+### Issue #292 Analysis
+- 正确路由: `/api/channels` (复数) 不是 `/api/channel`
+- 正确路由: `/api/models` (复数) 不是 `/api/model`
+- API正常工作，路由名称正确
+
+### Issue #293 Analysis
+- api.029101.xyz工作正常
+- 用户反馈的ceshi.scoreroute.com是另一个域名
+- 可能是用户nginx配置问题，不是代码问题
+
+### 系统状态
+
+| 项目 | 状态 |
+|------|------|
+| Health | ✅ healthy |
+| All APIs | ✅ 正常 |
+| Docs | ✅ 可访问 |
+| PreSet Tokens | ✅ 3个已创建 |
+

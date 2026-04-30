@@ -1792,3 +1792,52 @@ curl -X POST http://localhost:3000/api/auth/login \
 ### 结论
 **Issue #279 不是代码问题** - 是用户curl使用方式问题
 **Issue #278/#280** - 文档/部署问题，非紧急bug
+
+---
+
+## 2026-04-29 Iteration 57 - New Issues #283-288 Analysis
+
+### New Issues Analyzed
+
+| Issue | 描述 | 类型 | 结论 |
+|-------|------|------|------|
+| #283 | Proxy API returns 401 | Bug | **NVIDIA upstream问题** - auto模型不存在 |
+| #284 | 官网缺少非Docker部署步骤 | Docs | **文档问题** - 已存在(#280) |
+| #285 | Streaming API 401 | Bug | **NVIDIA upstream问题** - 同#283 |
+| #286 | 轮询模式+固定模型未生效 | Test | **已验证正常** - SQL ORDER BY call_count |
+| #287 | 智能模式+Auto未生效 | Test | **需AUTO关键字** - 不是系统配置 |
+| #288 | 完整功能清单测试 | Feature | **Feature Request** - 测试清单 |
+
+### Issue #283/#285 Analysis (401 Unauthorized)
+
+**原因**: NVIDIA upstream API没有"auto"这个模型
+- `auto` 模型需要在多个具体模型间选择
+- 但NVIDIA endpoint只接受具体模型名如 `meta/llama-3.1-8b-instruct`
+
+**实际测试**:
+- `minimaxai/minimax-m2.7` → ✅ SUCCESS
+- `auto` → ❌ 404 (upstream不接受auto)
+
+**解决方案**: 使用具体模型名，不要使用auto指向NVIDIA
+
+### Issue #286/#287 Analysis
+
+**轮询模式**: SQL使用 `ORDER BY call_count ASC`，已正确实现
+**智能模式**: 需要使用AUTO关键字强制智能调度，配置里的dispatch_mode影响无AUTO时的行为
+
+### 系统状态
+
+| 项目 | 状态 |
+|------|------|
+| Health | ✅ healthy |
+| minimax模型 | ✅ 正常工作 |
+| NVIDIA upstream | ⚠️ 不支持auto模型 |
+| PreSet Tokens | ✅ 3个已创建 |
+
+### Git Branches Status
+- `fix/issue-262-model-key-lookup` ✅
+- `fix/issue-267-streaming-samples` ✅
+- `fix/issue-269-smart-dispatch` ✅
+- `fix/issue-256-batch-create` ✅
+- `fix/issue-258-logs-cleanup` ✅
+

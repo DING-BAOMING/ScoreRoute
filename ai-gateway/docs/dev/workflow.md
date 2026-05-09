@@ -1951,3 +1951,31 @@ Remaining 28 issues are either:
 - Documentation issues  
 - User configuration issues
 - Feature requests (not bugs)
+
+## 2026-05-09 修复 (Iteration 63)
+
+### 1. Docs.vue Bug修复
+- **问题**: 前端文档页面点击任何文档都只显示"ScoreRoute 文档中心 选择一个文档开始阅读"
+- **原因**: Docs.vue模板中引用了未定义的变量，实际应为
+- **修复**: 修改web/src/views/Docs.vue
+  - Line 46: `has-content': htmlContent` → `has-content': sanitizedContent`
+  - Line 57: `v-else-if="htmlContent"` → `v-else-if="sanitizedContent"`
+- **文件**: web/src/views/Docs.vue
+
+### 2. 密码less登录
+- **问题**: 容器重启后password_less_mode被重置
+- **修复**: 数据库中system_config表设置password_less_mode=1
+- **验证**: /api/auth/passwordless-login 可正常获取admin token
+
+### 3. NVIDIA上游问题
+- **问题**: 部分NVIDIA模型(minimax-m2.7, llama-3.1-8b)超时
+- **原因**: NVIDIA upstream API返回504
+- **解决方案**: 
+  - 禁用超时模型的enabled标志
+  - 保留正常工作的模型(qwen, mistral-large)
+
+### 4. 系统测试结果
+- 非流式请求: 10/10成功
+- 平均延迟: 1847ms
+- 流式请求: 正常返回chunk
+- 评分/奖励/惩罚API: 正常工作

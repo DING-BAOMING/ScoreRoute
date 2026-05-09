@@ -84,6 +84,8 @@ func (h *ProxyHandler) Handle(c *gin.Context) {
 		if strings.Contains(errMsg, "rate limit") {
 			h.setRateLimitHeaders(c, token)
 			c.JSON(http.StatusTooManyRequests, gin.H{"error": gin.H{"message": errMsg}})
+		} else if strings.Contains(errMsg, "model not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": gin.H{"message": errMsg}})
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": errMsg}})
 		}

@@ -284,7 +284,13 @@ async function handlePasswordLessModeChange(value) {
   try {
     await logAPI.setPasswordLessMode({ enabled: value })
     localStorage.setItem('password_less_mode', value ? 'true' : 'false')
-    ElMessage.success(value ? '已启用无需密码访问' : '已禁用无需密码访问')
+    if (!value) {
+      localStorage.removeItem('token')
+      ElMessage.warning('已禁用无需密码访问，3秒后跳转到登录页...')
+      setTimeout(() => { window.location.href = '/login' }, 3000)
+    } else {
+      ElMessage.success('已启用无需密码访问')
+    }
   } catch (e) {
     ElMessage.error('设置失败：' + (e.message || '未知错误'))
     passwordLessMode.value = !value

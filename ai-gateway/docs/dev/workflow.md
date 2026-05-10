@@ -1990,3 +1990,15 @@ Remaining 28 issues are either:
   - 添加 @click="handleMarkdownClick" 到markdown容器div
   - 添加handleMarkdownClick函数拦截链接点击
   - 将相对路径(如 getting-started.md)转换为完整路径(/docs/getting-started.md)
+
+## 2026-05-10 修复 (Iteration 66)
+
+### Issue #2.10.1: Dashboard关闭无需密码访问后无反应
+- **问题**: 关闭"无需密码访问"后刷新无反应
+- **修复**: Dashboard.vue - handlePasswordLessModeChange函数
+  - 关闭时显示警告并移除token
+  - 3秒后自动跳转到/login页面
+
+### Issue #2.11: Docs页面点击链接显示空白
+- **问题**: Markdown相对链接无法正确处理
+- **修复**: 添加handleMarkdownClick函数

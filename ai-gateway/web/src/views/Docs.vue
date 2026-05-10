@@ -43,7 +43,7 @@
       </div>
     </div>
 
-    <div class="docs-main" :class="{ 'has-content': htmlContent }">
+    <div class="docs-main" :class="{ 'has-content': sanitizedContent }">
       <div v-if="loading" class="loading">
         <el-icon class="is-loading"><Loading /></el-icon>
         <span>加载中...</span>
@@ -54,7 +54,7 @@
         <el-button @click.prevent="loadDoc('/docs/README.md')">返回首页</el-button>
       </div>
       
-      <div v-else-if="htmlContent" class="markdown-body" v-html="sanitizedContent"></div>
+      <div v-else-if="sanitizedContent" class="markdown-body" v-html="sanitizedContent"></div>
       
       <div v-else class="welcome">
         <h1>ScoreRoute 文档中心</h1>

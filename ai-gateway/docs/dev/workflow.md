@@ -2002,3 +2002,13 @@ Remaining 28 issues are either:
 ### Issue #2.11: Docs页面点击链接显示空白
 - **问题**: Markdown相对链接无法正确处理
 - **修复**: 添加handleMarkdownClick函数
+
+## 2026-05-10 修复 (Iteration 67)
+
+### Issue #2.11: Docs页面路由冲突
+- **问题**: 访问 /docs 显示markdown文本而不是Docs组件
+- **原因**: Backend router.go的 /docs 路由与Vue Router冲突
+- **修复**: 移除 router.go 中的 /docs 路由
+  - /docs/*.md 静态文件仍通过 StaticFile 访问
+  - Vue Router 的 /docs 现在正确加载 Docs.vue
+- **文件**: internal/router/router.go

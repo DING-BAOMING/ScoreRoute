@@ -34,10 +34,8 @@ func Setup() *gin.Engine {
 		c.HTML(200, "index.html", nil)
 	})
 
-	r.GET("/docs", func(c *gin.Context) {
-		c.Header("Content-Type", "text/markdown")
-		c.File("./docs/README.md")
-	})
+	// Removed: /docs route conflicts with Vue Router's /docs
+	// Docs content is fetched via loadDoc() using /docs/*.md paths
 
 	r.POST("/api/auth/login", handler.NewAuthHandler().Login)
 	r.POST("/api/auth/passwordless-login", handler.NewAuthHandler().PasswordLessLogin)

@@ -1979,3 +1979,14 @@ Remaining 28 issues are either:
 - 平均延迟: 1847ms
 - 流式请求: 正常返回chunk
 - 评分/奖励/惩罚API: 正常工作
+
+## 2026-05-10 修复 (Iteration 65)
+
+### Issue #2.11: Docs页面点击链接显示空白
+- **问题**: 点击文档中的相对链接显示空白
+- **原因**: Markdown渲染后的相对链接无法被正确处理
+- **修复**:
+  - 修改 web/src/views/Docs.vue
+  - 添加 @click="handleMarkdownClick" 到markdown容器div
+  - 添加handleMarkdownClick函数拦截链接点击
+  - 将相对路径(如 getting-started.md)转换为完整路径(/docs/getting-started.md)

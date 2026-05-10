@@ -54,7 +54,7 @@
         <el-button @click.prevent="loadDoc('/docs/README.md')">返回首页</el-button>
       </div>
       
-      <div v-else-if="sanitizedContent" class="markdown-body" v-html="sanitizedContent"></div>
+      <div v-else-if="sanitizedContent" class="markdown-body" v-html="sanitizedContent" @click="handleMarkdownClick"></div>
       
       <div v-else class="welcome">
         <h1>ScoreRoute 文档中心</h1>
@@ -147,6 +147,28 @@ async function loadDoc(path) {
   }
   
   loading.value = false
+}
+
+function handleMarkdownClick(event) {
+  const link = event.target.closest('a')
+  if (link) {
+    event.preventDefault()
+    const href = link.getAttribute('href')
+    if (href) {
+      // Convert relative paths to absolute /docs/ paths
+      let docPath = href
+      if (!href.startsWith('/') && !href.starts('http')) {
+        // Relative path - prepend /docs/
+        docPath = '/docs/' + href
+      } else if (href.startsWith('/') && !href.starts('/docs/')) {
+        // Absolute path but not /docs/ - add /docs prefix
+        docPath = '/docs' + href
+      }
+      // Normalize double slashes
+      docPath = docPath.replace(/\/+/g, '/')
+      loadDoc(docPath)
+    }
+  }
 }
 
 onMounted(() => {

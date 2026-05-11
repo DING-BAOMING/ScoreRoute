@@ -43,7 +43,9 @@ func Setup() *gin.Engine {
 	r.POST("/api/system-config/setup-password", handler.NewSystemConfigHandler().SetupPassword)
 	r.PUT("/api/system-config/password-less", handler.NewSystemConfigHandler().EnablePasswordLessMode)
 	r.GET("/health", handler.NewAuthHandler().HealthCheck)
+	r.HEAD("/health", handler.NewAuthHandler().HealthCheck)
 	r.GET("/api/health", handler.NewAuthHandler().HealthCheck)
+	r.HEAD("/api/health", handler.NewAuthHandler().HealthCheck)
 
 	api := r.Group("/api")
 	api.Use(middleware.AuthMiddleware())

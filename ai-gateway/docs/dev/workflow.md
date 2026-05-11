@@ -2012,3 +2012,20 @@ Remaining 28 issues are either:
   - /docs/*.md 静态文件仍通过 StaticFile 访问
   - Vue Router 的 /docs 现在正确加载 Docs.vue
 - **文件**: internal/router/router.go
+
+## 2026-05-11 修复 (Iteration 68)
+
+### Issue #307: HEAD /health Content-Type bug
+- **问题**: HTTP HEAD /health 返回 text/html 而非 JSON
+- **修复**: 在 router.go 中添加 HEAD 路由
+  - 
+  - 
+- **文件**: internal/router/router.go
+## 2026-05-11 修复 (Iteration 68)
+
+### Issue #307: HEAD /health Content-Type bug
+- **问题**: HTTP HEAD /health 返回 text/html 而非 JSON
+- **修复**: 在 router.go 中添加 HEAD 路由
+  - r.HEAD("/health", handler.NewAuthHandler().HealthCheck)
+  - r.HEAD("/api/health", handler.NewAuthHandler().HealthCheck)
+- **文件**: internal/router/router.go

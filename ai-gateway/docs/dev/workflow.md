@@ -2029,3 +2029,27 @@ Remaining 28 issues are either:
   - r.HEAD("/health", handler.NewAuthHandler().HealthCheck)
   - r.HEAD("/api/health", handler.NewAuthHandler().HealthCheck)
 - **文件**: internal/router/router.go
+
+## 2026-05-11 修复 (Iteration 69)
+
+### Issue 处理结果汇总
+
+| Issue | Title | Status |
+|-------|-------|--------|
+| #307 | HEAD /health Content-Type | ✅ 已修复 |
+| #301 | unknown model returns 500 | ✅ 已修复 |
+| #262 | Extra Ratings model_name | ✅ 已修复 |
+| #269 | GetNextModelSmart静默降级 | ✅ 已修复 |
+| #270 | selectBestPrefixModels静默降级 | ✅ 已修复 |
+| #274 | Penalty API字段名 | ✅ 已修复 |
+| #275/#267 | 流式请求不保存样本 | ✅ 已修复 |
+| #300 | install.sh版本 | ✅ 已验证 |
+| #308 | Audit inventory | 📋 不需要处理 |
+| #272 | CircuitBreaker分布式 | 📋 需要Redis |
+| #271 | 代码重复95% | 📋 TechDebt |
+| #299/#282/#280 | 文档问题 | 📋 建议添加文档 |
+
+### 测试结果
+- 非流式请求: 3/3成功
+- 流式请求: 正常工作
+- Admin APIs: 正常

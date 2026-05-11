@@ -34,10 +34,8 @@ func Setup() *gin.Engine {
 		c.HTML(200, "index.html", nil)
 	})
 
-	r.GET("/docs", func(c *gin.Context) {
-		c.Header("Content-Type", "text/markdown")
-		c.File("./docs/README.md")
-	})
+	// Removed: /docs route conflicts with Vue Router's /docs
+	// Docs content is fetched via loadDoc() using /docs/*.md paths
 
 	r.POST("/api/auth/login", handler.NewAuthHandler().Login)
 	r.POST("/api/auth/passwordless-login", handler.NewAuthHandler().PasswordLessLogin)
@@ -45,7 +43,9 @@ func Setup() *gin.Engine {
 	r.POST("/api/system-config/setup-password", handler.NewSystemConfigHandler().SetupPassword)
 	r.PUT("/api/system-config/password-less", handler.NewSystemConfigHandler().EnablePasswordLessMode)
 	r.GET("/health", handler.NewAuthHandler().HealthCheck)
+	r.HEAD("/health", handler.NewAuthHandler().HealthCheck)
 	r.GET("/api/health", handler.NewAuthHandler().HealthCheck)
+	r.HEAD("/api/health", handler.NewAuthHandler().HealthCheck)
 
 	api := r.Group("/api")
 	api.Use(middleware.AuthMiddleware())
@@ -147,7 +147,7 @@ func Setup() *gin.Engine {
 		extraRatings := api.Group("/extra-ratings")
 		{
 			extraRatingHandler := handler.NewExtraRatingHandler()
-			extraRatings.GET("", extraRatingHandler.GetRecords)
+			extraRatings.GET("/records", extraRatingHandler.GetRecords)
 			extraRatings.GET("/config", extraRatingHandler.GetConfig)
 			extraRatings.PUT("/config", extraRatingHandler.SetConfig)
 			extraRatings.PUT("/penalty", extraRatingHandler.UpdatePenalty)

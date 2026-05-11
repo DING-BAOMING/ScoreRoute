@@ -143,12 +143,12 @@ export const systemConfigAPI = {
 }
 
 export const extraRatingAPI = {
-  getConfig: () => api.get('/extra-rating/config'),
-  setConfig: (data) => api.put('/extra-rating/config', data),
-  getRecords: () => api.get('/extra-rating/records'),
-  getModelScores: () => api.get('/extra-rating/model-scores'),
-  clearRecords: () => api.delete('/extra-rating/records'),
-  deleteRecord: (id) => api.delete(`/extra-rating/records/${id}`)
+  getConfig: () => api.get('/extra-ratings/config'),
+  setConfig: (data) => api.put('/extra-ratings/config', data),
+  getRecords: () => api.get('/extra-ratings/records'),
+  getModelScores: () => api.get('/extra-ratings/model-scores'),
+  clearRecords: () => api.delete('/extra-ratings/records'),
+  deleteRecord: (id) => api.delete(`/extra-ratings/records/${id}`)
 }
 
 export const modelRatingAPI = {

@@ -2002,3 +2002,54 @@ Remaining 28 issues are either:
 ### Issue #2.11: Docs页面点击链接显示空白
 - **问题**: Markdown相对链接无法正确处理
 - **修复**: 添加handleMarkdownClick函数
+
+## 2026-05-10 修复 (Iteration 67)
+
+### Issue #2.11: Docs页面路由冲突
+- **问题**: 访问 /docs 显示markdown文本而不是Docs组件
+- **原因**: Backend router.go的 /docs 路由与Vue Router冲突
+- **修复**: 移除 router.go 中的 /docs 路由
+  - /docs/*.md 静态文件仍通过 StaticFile 访问
+  - Vue Router 的 /docs 现在正确加载 Docs.vue
+- **文件**: internal/router/router.go
+
+## 2026-05-11 修复 (Iteration 68)
+
+### Issue #307: HEAD /health Content-Type bug
+- **问题**: HTTP HEAD /health 返回 text/html 而非 JSON
+- **修复**: 在 router.go 中添加 HEAD 路由
+  - 
+  - 
+- **文件**: internal/router/router.go
+## 2026-05-11 修复 (Iteration 68)
+
+### Issue #307: HEAD /health Content-Type bug
+- **问题**: HTTP HEAD /health 返回 text/html 而非 JSON
+- **修复**: 在 router.go 中添加 HEAD 路由
+  - r.HEAD("/health", handler.NewAuthHandler().HealthCheck)
+  - r.HEAD("/api/health", handler.NewAuthHandler().HealthCheck)
+- **文件**: internal/router/router.go
+
+## 2026-05-11 修复 (Iteration 69)
+
+### Issue 处理结果汇总
+
+| Issue | Title | Status |
+|-------|-------|--------|
+| #307 | HEAD /health Content-Type | ✅ 已修复 |
+| #301 | unknown model returns 500 | ✅ 已修复 |
+| #262 | Extra Ratings model_name | ✅ 已修复 |
+| #269 | GetNextModelSmart静默降级 | ✅ 已修复 |
+| #270 | selectBestPrefixModels静默降级 | ✅ 已修复 |
+| #274 | Penalty API字段名 | ✅ 已修复 |
+| #275/#267 | 流式请求不保存样本 | ✅ 已修复 |
+| #300 | install.sh版本 | ✅ 已验证 |
+| #308 | Audit inventory | 📋 不需要处理 |
+| #272 | CircuitBreaker分布式 | 📋 需要Redis |
+| #271 | 代码重复95% | 📋 TechDebt |
+| #299/#282/#280 | 文档问题 | 📋 建议添加文档 |
+
+### 测试结果
+- 非流式请求: 3/3成功
+- 流式请求: 正常工作
+- Admin APIs: 正常

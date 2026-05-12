@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.33.0] - 2026-05-12
+
+### Fixed
+- Release packaging: include web/dist in tarball (#282)
+- Reverse proxy configuration guide (#313)
+- Dashboard stats API endpoint (#333)
+
+### Changed
+- Updated session state documentation
+
 ## [2.32.0] - 2026-05-11
 
 ### Fixed

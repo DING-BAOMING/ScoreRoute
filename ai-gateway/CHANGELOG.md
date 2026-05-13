@@ -6,15 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.34.0] - 2026-05-13
+
+### Fixed
+- Issue #270: selectBestFromPrefixModels returns error instead of silent degradation
+- Issue #313: Add reverse proxy configuration guide for production deployment
+
 ## [2.33.0] - 2026-05-12
 
 ### Fixed
-- Release packaging: include web/dist in tarball (#282)
-- Reverse proxy configuration guide (#313)
-- Dashboard stats API endpoint (#333)
-
-### Changed
-- Updated session state documentation
+- Issue #282: Release packaging - include web/dist in tarball
+- Issue #313: Reverse proxy configuration guide
+- Issue #333: Dashboard stats API endpoint
 
 ## [2.32.0] - 2026-05-11
 
@@ -30,9 +33,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Dashboard password_less_mode toggle redirect
 - Docs.vue htmlContent bug
 - 流式请求不保存样本问题
-
-### Changed
-- Updated workflow.md and session_state.md documentation
 
 ## [2.30.0] - 2026-05-08
 

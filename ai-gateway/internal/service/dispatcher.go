@@ -327,7 +327,7 @@ func (d *Dispatcher) selectBestFromPrefixModels(prefixModels []*model.Model, for
 	if len(prefixModels) == 1 {
 		d.modelRepo.IncrementCallCount(prefixModels[0].ID)
 		d.modelRepo.IncrementChannelCallCount(prefixModels[0].ChannelID)
-		return prefixModels[0], nil
+		return nil, fmt.Errorf("selectBestFromPrefixModels: smart mode failed: %w", err)
 	}
 
 	config, err := d.systemConfigRepo.Get()
@@ -345,7 +345,7 @@ func (d *Dispatcher) selectBestFromPrefixModels(prefixModels []*model.Model, for
 		allScores, err := modelRatingSvc.CalculateAllScores()
 		if err != nil {
 			log.Printf("[selectBestFromPrefixModels] failed to calculate scores: %v", err)
-			return prefixModels[0], nil
+			return nil, fmt.Errorf("selectBestFromPrefixModels: smart mode failed: %w", err)
 		}
 
 		scoreMap := make(map[string]float64)

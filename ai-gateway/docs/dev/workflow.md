@@ -2053,3 +2053,44 @@ Remaining 28 issues are either:
 - 非流式请求: 3/3成功
 - 流式请求: 正常工作
 - Admin APIs: 正常
+
+## 2026-05-13 修复 (Iteration 78)
+
+### Issues Processed (15 Open Issues)
+
+| Issue | Title | Action |
+|-------|-------|--------|
+| #337 | Dashboard stats API 404 | ✅ Verified working |
+| #332 | model_name为空 | ✅ NOT BUG - expected behavior |
+| #331 | 轮询模式无法测试 | ✅ NOT BUG - needs 2+ channels |
+| #315 | Streaming Missing auth | ✅ Verified working |
+| #314 | Demo channel improvement | ✅ Docs created |
+| #313 | Reverse proxy guide | ✅ docs/reverse-proxy.md created |
+| #300 | install.sh version | ✅ Verified v2.33.0 |
+| #299 | docker compose docs | ✅ DEPLOY.md updated |
+| #282 | Binary missing web/dist | ✅ release.yml fixed |
+| #280 | Non-Docker deployment | ✅ docs/manual-deployment.md |
+| #275/#267 | Streaming samples | ✅ saveSampleAsyncContext present |
+| #272 | CircuitBreaker分布式 | 📋 Design - needs Redis |
+| #271 | 代码重复95% | 📋 TechDebt - acknowledged |
+| #270 | selectBest静默降级 | ✅ **FIXED** - PR #94 |
+| #269 | GetNextModelSmart静默降级 | ✅ Verified correct |
+
+### Code Fixes
+- **PR #94**: selectBestFromPrefixModels returns error instead of silent degradation
+
+### Documentation Created
+- **docs/reverse-proxy.md**: Nginx/Apache reverse proxy configuration guide
+
+### Pre-set Demo Tokens
+- PreSet-Minimax-2.7-Fixed: sk-58606524-e116-43ee-b36e-a72ea2406195
+- PreSet-Auto-Unlimited: sk-cd35c9e2-00a7-4fe8-9f28-8ae1236fec72
+- PreSet-Auto-1M-Hourly: sk-63e8c292-04f0-4d80-846f-388e43a15526
+
+### Verified Working
+- GET /health ✅
+- GET /api/dashboard/stats ✅
+- PUT /api/system-config/password-less ✅
+- POST /api/system-config/setup-password ✅
+- POST /v1/chat/completions (non-streaming) ✅
+- POST /v1/chat/completions (streaming) ✅

@@ -2094,3 +2094,37 @@ Remaining 28 issues are either:
 - POST /api/system-config/setup-password ✅
 - POST /v1/chat/completions (non-streaming) ✅
 - POST /v1/chat/completions (streaming) ✅
+
+## 2026-05-14 修复 (Iteration 80)
+
+### 系统检查
+- Health: healthy
+- Dashboard APIs: all working
+- Password-less toggle: working
+- Password change: working
+
+### Issues 状态 (Iteration 80)
+所有15个Issues已处理完成，注释数量充足。
+
+| Issue | 状态 |
+|-------|------|
+| #337 | ✅ VERIFIED |
+| #332 | ✅ NOT BUG |
+| #331 | ✅ NOT BUG |
+| #315 | ✅ VERIFIED |
+| #314 | ✅ FIXED |
+| #313 | ✅ FIXED |
+| #300 | ✅ VERIFIED |
+| #299 | ✅ FIXED |
+| #282 | ✅ FIXED |
+| #280 | ✅ FIXED |
+| #275 | ✅ FIXED |
+| #272 | 📋 Design |
+| #271 | 📋 TechDebt |
+| #270 | ✅ FIXED |
+| #269 | ✅ VERIFIED |
+
+### 预置Token
+- PreSet-Minimax-2.7-Fixed: sk-20c10620-ea50-45f3-a4b0-ed85a8a71aae
+- PreSet-Auto-Unlimited: sk-8d7c0267-067c-44aa-b66c-84059a44aa50
+- PreSet-Auto-500K-Hourly: sk-95039684-0916-4faa-8a97-69747ad7db18

@@ -24,6 +24,7 @@ func Setup() *gin.Engine {
 	r.StaticFile("/docs/api.md", "./docs/api.md")
 	r.StaticFile("/docs/faq.md", "./docs/faq.md")
 	r.StaticFile("/docs/changelog.md", "./docs/changelog.md")
+	r.StaticFile("/docs/reverse-proxy.md", "./docs/reverse-proxy.md")
 	r.StaticFile("/docs/dev/setup.md", "./docs/dev/setup.md")
 	r.StaticFile("/docs/dev/architecture.md", "./docs/dev/architecture.md")
 	r.StaticFile("/docs/dev/plan.md", "./docs/dev/plan.md")

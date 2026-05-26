@@ -327,7 +327,7 @@ func (d *Dispatcher) selectBestFromPrefixModels(prefixModels []*model.Model, for
 	if len(prefixModels) == 1 {
 		d.modelRepo.IncrementCallCount(prefixModels[0].ID)
 		d.modelRepo.IncrementChannelCallCount(prefixModels[0].ChannelID)
-		return nil, fmt.Errorf("selectBestFromPrefixModels: smart mode failed: single model only")
+		return prefixModels[0], nil
 	}
 
 	config, err := d.systemConfigRepo.Get()

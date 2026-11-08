@@ -1,0 +1,36 @@
+version: 2
+updates:
+  # Go module dependencies live in ai-gateway/go.mod (go 1.25.0).
+  - package-ecosystem: gomod
+    directory: "/ai-gateway"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      go-deps:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+  # Vue frontend lives in ai-gateway/web.
+  - package-ecosystem: npm
+    directory: "/ai-gateway/web"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      web-deps:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
